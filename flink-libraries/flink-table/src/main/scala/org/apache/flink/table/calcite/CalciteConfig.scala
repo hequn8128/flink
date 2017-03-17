@@ -144,9 +144,9 @@ class CalciteConfigBuilder {
 
 
   /**
-    * Make the [[RuleSet]] List to [[Option]] type
+    * Convert the [[RuleSet]] List to [[Option]] type
     */
-  def getOptionRuleSet(inputRuleSet: List[RuleSet]): Option[RuleSet] = {
+  def getRuleSet(inputRuleSet: List[RuleSet]): Option[RuleSet] = {
     inputRuleSet match {
       case Nil => None
       case h :: Nil => Some(h)
@@ -162,11 +162,11 @@ class CalciteConfigBuilder {
     * Builds a new [[CalciteConfig]].
     */
   def build(): CalciteConfig = new CalciteConfigImpl(
-    getOptionRuleSet(normRuleSets),
+    getRuleSet(normRuleSets),
     replaceNormRules,
-    getOptionRuleSet(optRuleSets),
+    getRuleSet(optRuleSets),
     replaceOptRules,
-    getOptionRuleSet(decoRuleSets),
+    getRuleSet(decoRuleSets),
     replaceDecoRules,
     operatorTables match {
       case Nil => None
