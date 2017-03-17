@@ -39,6 +39,9 @@ class CalciteConfigBuilderTest {
 
     assertFalse(cc.replacesOptRuleSet)
     assertFalse(cc.getOptRuleSet.isDefined)
+
+    assertFalse(cc.replacesDecoRuleSet)
+    assertFalse(cc.getDecoRuleSet.isDefined)
   }
 
   @Test
@@ -47,6 +50,7 @@ class CalciteConfigBuilderTest {
     val cc: CalciteConfig = new CalciteConfigBuilder()
       .addNormRuleSet(RuleSets.ofList(ReduceExpressionsRule.FILTER_INSTANCE))
       .replaceOptRuleSet(RuleSets.ofList(FilterMergeRule.INSTANCE))
+      .replaceDecoRuleSet(RuleSets.ofList(FilterMergeRule.INSTANCE))
       .build()
 
     assertFalse(cc.replacesNormRuleSet)
@@ -54,6 +58,9 @@ class CalciteConfigBuilderTest {
 
     assertTrue(cc.replacesOptRuleSet)
     assertTrue(cc.getOptRuleSet.isDefined)
+
+    assertTrue(cc.replacesDecoRuleSet)
+    assertTrue(cc.getDecoRuleSet.isDefined)
   }
 
   @Test
@@ -174,6 +181,68 @@ class CalciteConfigBuilderTest {
     assertEquals(false, cc.replacesOptRuleSet)
     assertTrue(cc.getOptRuleSet.isDefined)
     val cSet = cc.getOptRuleSet.get.iterator().asScala.toSet
+    assertEquals(3, cSet.size)
+    assertTrue(cSet.contains(FilterMergeRule.INSTANCE))
+    assertTrue(cSet.contains(CalcMergeRule.INSTANCE))
+    assertTrue(cSet.contains(CalcSplitRule.INSTANCE))
+  }
+
+  @Test
+  def testReplaceDecorationRules(): Unit = {
+
+    val cc: CalciteConfig = new CalciteConfigBuilder()
+      .replaceDecoRuleSet(RuleSets.ofList(FilterMergeRule.INSTANCE))
+      .build()
+
+    assertEquals(true, cc.replacesDecoRuleSet)
+    assertTrue(cc.getDecoRuleSet.isDefined)
+    val cSet = cc.getDecoRuleSet.get.iterator().asScala.toSet
+    assertEquals(1, cSet.size)
+    assertTrue(cSet.contains(FilterMergeRule.INSTANCE))
+  }
+
+  @Test
+  def testReplaceDecorationAddRules(): Unit = {
+
+    val cc: CalciteConfig = new CalciteConfigBuilder()
+      .replaceDecoRuleSet(RuleSets.ofList(FilterMergeRule.INSTANCE))
+      .addDecoRuleSet(RuleSets.ofList(CalcMergeRule.INSTANCE, CalcSplitRule.INSTANCE))
+      .build()
+
+    assertEquals(true, cc.replacesDecoRuleSet)
+    assertTrue(cc.getDecoRuleSet.isDefined)
+    val cSet = cc.getDecoRuleSet.get.iterator().asScala.toSet
+    assertEquals(3, cSet.size)
+    assertTrue(cSet.contains(FilterMergeRule.INSTANCE))
+    assertTrue(cSet.contains(CalcMergeRule.INSTANCE))
+    assertTrue(cSet.contains(CalcSplitRule.INSTANCE))
+  }
+
+  @Test
+  def testAddDecorationRules(): Unit = {
+
+    val cc: CalciteConfig = new CalciteConfigBuilder()
+      .addDecoRuleSet(RuleSets.ofList(FilterMergeRule.INSTANCE))
+      .build()
+
+    assertEquals(false, cc.replacesDecoRuleSet)
+    assertTrue(cc.getDecoRuleSet.isDefined)
+    val cSet = cc.getDecoRuleSet.get.iterator().asScala.toSet
+    assertEquals(1, cSet.size)
+    assertTrue(cSet.contains(FilterMergeRule.INSTANCE))
+  }
+
+  @Test
+  def testAddAddDecorationRules(): Unit = {
+
+    val cc: CalciteConfig = new CalciteConfigBuilder()
+      .addDecoRuleSet(RuleSets.ofList(FilterMergeRule.INSTANCE))
+      .addDecoRuleSet(RuleSets.ofList(CalcMergeRule.INSTANCE, CalcSplitRule.INSTANCE))
+      .build()
+
+    assertEquals(false, cc.replacesDecoRuleSet)
+    assertTrue(cc.getDecoRuleSet.isDefined)
+    val cSet = cc.getDecoRuleSet.get.iterator().asScala.toSet
     assertEquals(3, cSet.size)
     assertTrue(cSet.contains(FilterMergeRule.INSTANCE))
     assertTrue(cSet.contains(CalcMergeRule.INSTANCE))
