@@ -142,39 +142,31 @@ class CalciteConfigBuilder {
     val getSqlParserConfig: Option[SqlParser.Config])
     extends CalciteConfig
 
+
+  /**
+    * Make the [[RuleSet]] List to [[Option]] type
+    */
+  def getOptionRuleSet(inputRuleSet: List[RuleSet]): Option[RuleSet] = {
+    inputRuleSet match {
+      case Nil => None
+      case h :: Nil => Some(h)
+      case _ =>
+        // concat rule sets
+        val concatRules =
+          inputRuleSet.foldLeft(Nil: Iterable[RelOptRule])((c, r) => r.asScala ++ c)
+        Some(RuleSets.ofList(concatRules.asJava))
+    }
+  }
+
   /**
     * Builds a new [[CalciteConfig]].
     */
   def build(): CalciteConfig = new CalciteConfigImpl(
-    normRuleSets match {
-      case Nil => None
-      case h :: Nil => Some(h)
-      case _ =>
-        // concat rule sets
-        val concatRules =
-          normRuleSets.foldLeft(Nil: Iterable[RelOptRule])((c, r) => r.asScala ++ c)
-        Some(RuleSets.ofList(concatRules.asJava))
-    },
+    getOptionRuleSet(normRuleSets),
     replaceNormRules,
-    optRuleSets match {
-      case Nil => None
-      case h :: Nil => Some(h)
-      case _ =>
-        // concat rule sets
-        val concatRules =
-          optRuleSets.foldLeft(Nil: Iterable[RelOptRule])((c, r) => r.asScala ++ c)
-        Some(RuleSets.ofList(concatRules.asJava))
-    },
+    getOptionRuleSet(optRuleSets),
     replaceOptRules,
-    decoRuleSets match {
-      case Nil => None
-      case h :: Nil => Some(h)
-      case _ =>
-        // concat rule sets
-        val concatRules =
-          decoRuleSets.foldLeft(Nil: Iterable[RelOptRule])((c, r) => r.asScala ++ c)
-        Some(RuleSets.ofList(concatRules.asJava))
-    },
+    getOptionRuleSet(decoRuleSets),
     replaceDecoRules,
     operatorTables match {
       case Nil => None
