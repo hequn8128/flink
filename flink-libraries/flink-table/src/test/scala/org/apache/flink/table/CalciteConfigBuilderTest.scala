@@ -50,7 +50,7 @@ class CalciteConfigBuilderTest {
     val cc: CalciteConfig = new CalciteConfigBuilder()
       .addNormRuleSet(RuleSets.ofList(ReduceExpressionsRule.FILTER_INSTANCE))
       .replaceOptRuleSet(RuleSets.ofList(FilterMergeRule.INSTANCE))
-      .replaceDecoRuleSet(RuleSets.ofList(FilterMergeRule.INSTANCE))
+      .replaceDecoRuleSet(RuleSets.ofList(ReduceExpressionsRule.FILTER_INSTANCE))
       .build()
 
     assertFalse(cc.replacesNormRuleSet)
