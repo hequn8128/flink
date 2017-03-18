@@ -189,64 +189,64 @@ class CalciteConfigBuilderTest {
 
   @Test
   def testReplaceDecorationRules(): Unit = {
-
+    // TODO: rules will be replaced to retraction rules in FLINK-6090
     val cc: CalciteConfig = new CalciteConfigBuilder()
-      .replaceDecoRuleSet(RuleSets.ofList(FilterMergeRule.INSTANCE))
+      .replaceDecoRuleSet(RuleSets.ofList(ReduceExpressionsRule.FILTER_INSTANCE))
       .build()
 
     assertEquals(true, cc.replacesDecoRuleSet)
     assertTrue(cc.getDecoRuleSet.isDefined)
     val cSet = cc.getDecoRuleSet.get.iterator().asScala.toSet
     assertEquals(1, cSet.size)
-    assertTrue(cSet.contains(FilterMergeRule.INSTANCE))
+    assertTrue(cSet.contains(ReduceExpressionsRule.FILTER_INSTANCE))
   }
 
   @Test
   def testReplaceDecorationAddRules(): Unit = {
-
+    // TODO: rules will be replaced to retraction rules in FLINK-6090
     val cc: CalciteConfig = new CalciteConfigBuilder()
-      .replaceDecoRuleSet(RuleSets.ofList(FilterMergeRule.INSTANCE))
-      .addDecoRuleSet(RuleSets.ofList(CalcMergeRule.INSTANCE, CalcSplitRule.INSTANCE))
+      .replaceDecoRuleSet(RuleSets.ofList(ReduceExpressionsRule.FILTER_INSTANCE))
+      .addDecoRuleSet(RuleSets.ofList(ReduceExpressionsRule.PROJECT_INSTANCE))
       .build()
 
     assertEquals(true, cc.replacesDecoRuleSet)
     assertTrue(cc.getDecoRuleSet.isDefined)
     val cSet = cc.getDecoRuleSet.get.iterator().asScala.toSet
-    assertEquals(3, cSet.size)
-    assertTrue(cSet.contains(FilterMergeRule.INSTANCE))
-    assertTrue(cSet.contains(CalcMergeRule.INSTANCE))
-    assertTrue(cSet.contains(CalcSplitRule.INSTANCE))
+    assertEquals(2, cSet.size)
+    assertTrue(cSet.contains(ReduceExpressionsRule.FILTER_INSTANCE))
+    assertTrue(cSet.contains(ReduceExpressionsRule.PROJECT_INSTANCE))
   }
 
   @Test
   def testAddDecorationRules(): Unit = {
-
+    // TODO: rules will be replaced to retraction rules in FLINK-6090
     val cc: CalciteConfig = new CalciteConfigBuilder()
-      .addDecoRuleSet(RuleSets.ofList(FilterMergeRule.INSTANCE))
+      .addDecoRuleSet(RuleSets.ofList(ReduceExpressionsRule.FILTER_INSTANCE))
       .build()
 
     assertEquals(false, cc.replacesDecoRuleSet)
     assertTrue(cc.getDecoRuleSet.isDefined)
     val cSet = cc.getDecoRuleSet.get.iterator().asScala.toSet
     assertEquals(1, cSet.size)
-    assertTrue(cSet.contains(FilterMergeRule.INSTANCE))
+    assertTrue(cSet.contains(ReduceExpressionsRule.FILTER_INSTANCE))
   }
 
   @Test
   def testAddAddDecorationRules(): Unit = {
-
+    // TODO: rules will be replaced to retraction rules in FLINK-6090
     val cc: CalciteConfig = new CalciteConfigBuilder()
-      .addDecoRuleSet(RuleSets.ofList(FilterMergeRule.INSTANCE))
-      .addDecoRuleSet(RuleSets.ofList(CalcMergeRule.INSTANCE, CalcSplitRule.INSTANCE))
+      .addDecoRuleSet(RuleSets.ofList(ReduceExpressionsRule.FILTER_INSTANCE))
+      .addDecoRuleSet(RuleSets.ofList(ReduceExpressionsRule.PROJECT_INSTANCE,
+                                      ReduceExpressionsRule.CALC_INSTANCE))
       .build()
 
     assertEquals(false, cc.replacesDecoRuleSet)
     assertTrue(cc.getDecoRuleSet.isDefined)
-    val cSet = cc.getDecoRuleSet.get.iterator().asScala.toSet
-    assertEquals(3, cSet.size)
-    assertTrue(cSet.contains(FilterMergeRule.INSTANCE))
-    assertTrue(cSet.contains(CalcMergeRule.INSTANCE))
-    assertTrue(cSet.contains(CalcSplitRule.INSTANCE))
+    val cList = cc.getDecoRuleSet.get.iterator().asScala.toList
+    assertEquals(3, cList.size)
+    assertEquals(cList.head, ReduceExpressionsRule.FILTER_INSTANCE)
+    assertEquals(cList(1), ReduceExpressionsRule.PROJECT_INSTANCE)
+    assertEquals(cList(2), ReduceExpressionsRule.CALC_INSTANCE)
   }
 
   @Test
