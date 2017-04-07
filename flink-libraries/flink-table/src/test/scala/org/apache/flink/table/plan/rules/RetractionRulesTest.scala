@@ -48,7 +48,7 @@ class RetractionRulesTest extends TableTestBase {
     util.verifyTableTrait(resultTable, expected)
   }
 
-  // one level unbounded group by
+  // one level unbounded groupBy
   @Test
   def testGroupBy(): Unit = {
     val util = streamTestForRetractionUtil()
@@ -56,8 +56,8 @@ class RetractionRulesTest extends TableTestBase {
     val defaultStatus = RetractionTrait.DEFAULT.toString
 
     val resultTable = table
-                      .groupBy('word)
-                      .select('number.count)
+      .groupBy('word)
+      .select('number.count)
 
     val expected =
       unaryNode(
@@ -78,7 +78,7 @@ class RetractionRulesTest extends TableTestBase {
   }
 
 
-  // two level unbounded group by
+  // two level unbounded groupBy
   @Test
   def testTwoGroupBy(): Unit = {
     val util = streamTestForRetractionUtil()
@@ -86,10 +86,10 @@ class RetractionRulesTest extends TableTestBase {
     val defaultStatus = RetractionTrait.DEFAULT.toString
 
     val resultTable = table
-                      .groupBy('word)
-                      .select('word, 'number.count as 'count)
-                      .groupBy('count)
-                      .select('count, 'count.count as 'frequency)
+      .groupBy('word)
+      .select('word, 'number.count as 'count)
+      .groupBy('count)
+      .select('count, 'count.count as 'frequency)
 
     val expected =
       unaryNode(
@@ -122,9 +122,9 @@ class RetractionRulesTest extends TableTestBase {
     val defaultStatus = RetractionTrait.DEFAULT.toString
 
     val resultTable = table
-                      .window(Tumble over 50.milli as 'w)
-                      .groupBy('w, 'word)
-                      .select('word, 'number.count as 'count)
+      .window(Tumble over 50.milli as 'w)
+      .groupBy('w, 'word)
+      .select('word, 'number.count as 'count)
 
     val expected =
       unaryNode(
@@ -142,7 +142,7 @@ class RetractionRulesTest extends TableTestBase {
 
 
 
-  // group window after unbounded group by
+  // group window after unbounded groupBy
   @Test
   def testGroupWindowAfterGroupBy(): Unit = {
     val util = streamTestForRetractionUtil()
@@ -150,11 +150,11 @@ class RetractionRulesTest extends TableTestBase {
     val defaultStatus = RetractionTrait.DEFAULT.toString
 
     val resultTable = table
-                      .groupBy('word)
-                      .select('word, 'number.count as 'count)
-                      .window(Tumble over 50.milli as 'w)
-                      .groupBy('w, 'count)
-                      .select('count, 'count.count as 'frequency)
+      .groupBy('word)
+      .select('word, 'number.count as 'count)
+      .window(Tumble over 50.milli as 'w)
+      .groupBy('w, 'count)
+      .select('count, 'count.count as 'frequency)
 
     val expected =
       unaryNode(
@@ -212,7 +212,7 @@ class RetractionRulesTest extends TableTestBase {
   }
 
 
-  // over window after unbounded group by
+  // over window after unbounded groupBy
   @Test
   def testOverWindowAfterGroupBy(): Unit = {
     val util = streamTestForRetractionUtil()
@@ -258,11 +258,11 @@ class RetractionRulesTest extends TableTestBase {
     val defaultStatus = RetractionTrait.DEFAULT.toString
 
     val resultTable = lTable
-                      .groupBy('word)
-                      .select('word, 'number.count as 'count)
-                      .unionAll(rTable)
-                      .groupBy('count)
-                      .select('count, 'count.count as 'frequency)
+      .groupBy('word)
+      .select('word, 'number.count as 'count)
+      .unionAll(rTable)
+      .groupBy('count)
+      .select('count, 'count.count as 'frequency)
 
     val expected =
       unaryNode(
