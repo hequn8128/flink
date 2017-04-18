@@ -75,6 +75,7 @@ class ProcTimeUnboundedNonPartitionedOver(
     out: Collector[Row]): Unit = {
 
     if (input.command == Command.Delete) {
+      // accumulator do retraction process, so future output will be right
       function.retract(accumulators, input)
     } else {
       function.setForwardedFields(input, output)

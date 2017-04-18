@@ -72,6 +72,7 @@ class ProcTimeUnboundedPartitionedOver(
     }
 
     if (input.command == Command.Delete) {
+      // accumulator do retraction process, so future output will be right
       function.retract(accumulators, input)
       state.update(accumulators)
     } else {
