@@ -31,18 +31,14 @@ import org.apache.flink.types.Row
   */
 class CRow(var row: Row, var change: Boolean) {
 
+  def this() {
+    this(null, true)
+  }
+
   override def toString: String = s"${if(change) "+" else "-"}$row"
 
   override def equals(other: scala.Any): Boolean = {
     val otherCRow = other.asInstanceOf[CRow]
     row.equals(otherCRow.row) && change == otherCRow.change
   }
-}
-
-class XRow(arity: Int, var change: Boolean) extends Row(arity) {
-
-  def this(arity: Int) {
-    this(arity, true)
-  }
-
 }

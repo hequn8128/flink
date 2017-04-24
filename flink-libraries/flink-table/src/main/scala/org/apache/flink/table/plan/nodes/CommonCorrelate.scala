@@ -57,7 +57,7 @@ trait CommonCorrelate {
     : CorrelateFlatMapRunner[T, T] = {
 
     val returnType = FlinkTypeFactory
-      .toInternalRowTypeInfo(rowType, inputTypeInfo.getTypeClass)
+      .toInternalRowTypeInfo(rowType)
       .asInstanceOf[TypeInformation[T]]
 
     val flatMap = generateFunction[T](

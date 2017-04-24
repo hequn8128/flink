@@ -26,6 +26,7 @@ import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.sql2rel.RelDecorrelator
 import org.apache.calcite.tools.{RuleSet, RuleSets}
+import org.apache.flink.api.common.functions.MapFunction
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.typeutils.GenericTypeInfo
 import org.apache.flink.streaming.api.datastream.DataStream
@@ -35,9 +36,11 @@ import org.apache.flink.table.expressions.Expression
 import org.apache.flink.table.plan.nodes.datastream.{DataStreamConvention, DataStreamRel}
 import org.apache.flink.table.plan.rules.FlinkRuleSets
 import org.apache.flink.table.plan.schema.{DataStreamTable, TableSourceTable}
+import org.apache.flink.table.runtime.RetractMapRunner2
 import org.apache.flink.table.runtime.types.CRow
 import org.apache.flink.table.sinks.{StreamTableSink, TableSink}
 import org.apache.flink.table.sources.{StreamTableSource, TableSource}
+import org.apache.flink.types.Row
 
 import _root_.scala.collection.JavaConverters._
 
@@ -166,6 +169,49 @@ abstract class StreamTableEnvironment(
       case _ =>
         throw new TableException("StreamTableSink required to emit streaming Table")
     }
+  }
+
+  /**
+    * Creates a final converter that maps the internal row type to external type.
+    *
+    * @param physicalTypeInfo the input of the sink
+    * @param logicalRowType the logical type with correct field names (esp. for POJO field mapping)
+    * @param requestedTypeInfo the output type of the sink
+    * @param functionName name of the map function. Must not be unique but has to be a
+    *                     valid Java class identifier.
+    */
+  override protected def sinkConversion[IN, OUT](
+      physicalTypeInfo: TypeInformation[IN],
+      logicalRowType: RelDataType,
+      requestedTypeInfo: TypeInformation[OUT],
+      functionName: String):
+  Option[MapFunction[IN, OUT]] = {
+
+    // early out
+    requestedTypeInfo match {
+      case r: TypeInformation[_] if r.getTypeClass == classOf[Row] =>
+        // CRow to Row only needs to be unwrapped
+        return Some(
+          new MapFunction[CRow, Row] {
+            override def map(value: CRow): Row = value.row
+          }.asInstanceOf[MapFunction[IN, OUT]]
+        )
+      case _ =>
+    }
+
+    val converterFunction = generateRowConverterFunction[OUT](
+      physicalTypeInfo.asInstanceOf[TypeInformation[Row]],
+      logicalRowType,
+      requestedTypeInfo,
+      functionName
+    )
+
+    val mapFunction = new RetractMapRunner2[OUT](
+      converterFunction.name,
+      converterFunction.code,
+      converterFunction.returnType).asInstanceOf[MapFunction[IN, OUT]]
+
+    Some(mapFunction)
   }
 
   /**
@@ -321,12 +367,12 @@ abstract class StreamTableEnvironment(
     TableEnvironment.validateType(tpe)
 
     logicalPlan match {
-      case node: DataStreamRel[CRow] =>
+      case node: DataStreamRel =>
         val plan = node.translateToPlan(this)
         val conversion = sinkConversion(plan.getType, logicalType, tpe, "DataStreamSinkConversion")
         conversion match {
           case None => plan.asInstanceOf[DataStream[A]] // no conversion necessary
-          case Some(mapFunction) =>
+          case Some(mapFunction: MapFunction[CRow, A]) =>
             plan.map(mapFunction).name(s"to: $tpe").asInstanceOf[DataStream[A]]
         }
 

@@ -95,11 +95,11 @@ object DataStreamRetractionRules {
     */
   class AssignDefaultRetractionRule extends RelOptRule(
     operand(
-      classOf[DataStreamRel[CRow]], none()),
+      classOf[DataStreamRel], none()),
     "AssignDefaultRetractionRule") {
 
     override def onMatch(call: RelOptRuleCall): Unit = {
-      val rel = call.rel(0).asInstanceOf[DataStreamRel[CRow]]
+      val rel = call.rel(0).asInstanceOf[DataStreamRel]
       val traits = rel.getTraitSet
 
       val traitsWithUpdateAsRetrac = if (!traits.contains(UpdateAsRetractionTraitDef.INSTANCE)) {
@@ -126,7 +126,7 @@ object DataStreamRetractionRules {
     */
   class SetUpdatesAsRetractionRule extends RelOptRule(
     operand(
-      classOf[DataStreamRel[CRow]], none()),
+      classOf[DataStreamRel], none()),
     "SetUpdatesAsRetractionRule") {
 
     /**
@@ -136,7 +136,7 @@ object DataStreamRetractionRules {
     def needsUpdatesAsRetraction(node: RelNode): Boolean = {
       node match {
         case _ if sendsUpdatesAsRetraction(node) => true
-        case dsr: DataStreamRel[CRow] => dsr.needsUpdatesAsRetraction
+        case dsr: DataStreamRel => dsr.needsUpdatesAsRetraction
       }
     }
 
@@ -161,7 +161,7 @@ object DataStreamRetractionRules {
       *
       */
     override def onMatch(call: RelOptRuleCall): Unit = {
-      val parent = call.rel(0).asInstanceOf[DataStreamRel[CRow]]
+      val parent = call.rel(0).asInstanceOf[DataStreamRel]
 
       val children = getChildRelNodes(parent)
       // check if children need to sent out retraction messages
@@ -185,7 +185,7 @@ object DataStreamRetractionRules {
     */
   class SetAccModeRule extends RelOptRule(
     operand(
-      classOf[DataStreamRel[CRow]], none()),
+      classOf[DataStreamRel], none()),
     "SetAccModeRule") {
 
     /**
@@ -193,7 +193,7 @@ object DataStreamRetractionRules {
       */
     def producesUpdates(relNode: RelNode): Boolean = {
       relNode match {
-        case dsr: DataStreamRel[CRow] => dsr.producesUpdates
+        case dsr: DataStreamRel => dsr.producesUpdates
       }
     }
 
@@ -212,7 +212,7 @@ object DataStreamRetractionRules {
       */
     def consumesRetractions(relNode: RelNode): Boolean = {
       relNode match {
-        case dsr: DataStreamRel[CRow] => dsr.consumesRetractions
+        case dsr: DataStreamRel => dsr.consumesRetractions
       }
     }
 
@@ -234,7 +234,7 @@ object DataStreamRetractionRules {
       * Updates the [[AccMode]] of a [[RelNode]] and its children if necessary.
       */
     override def onMatch(call: RelOptRuleCall): Unit = {
-      val parent = call.rel(0).asInstanceOf[DataStreamRel[CRow]]
+      val parent = call.rel(0).asInstanceOf[DataStreamRel]
       val children = getChildRelNodes(parent)
 
       // check if the AccMode of the parent needs to be updated

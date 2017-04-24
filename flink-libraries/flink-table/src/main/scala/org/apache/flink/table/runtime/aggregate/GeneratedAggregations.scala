@@ -34,7 +34,7 @@ abstract class GeneratedAggregations extends Function {
     *                     aggregated results
     * @param output       output results collected in a command row
     */
-  def setAggregationResults(accumulators: Row, output: CRow)
+  def setAggregationResults(accumulators: Row, output: Row)
 
   /**
     * Copies forwarded fields from input row to output row.
@@ -42,7 +42,7 @@ abstract class GeneratedAggregations extends Function {
     * @param input  input values bundled in a command row
     * @param output output results collected in a command row
     */
-  def setForwardedFields(input: CRow, output: CRow)
+  def setForwardedFields(input: Row, output: Row)
 
   /**
     * Accumulate the input values to the accumulators
@@ -51,7 +51,7 @@ abstract class GeneratedAggregations extends Function {
     *                     aggregated results
     * @param input        input values bundled in a command row
     */
-  def accumulate(accumulators: Row, input: CRow)
+  def accumulate(accumulators: Row, input: Row)
 
   /**
     * Retract the input values from the accumulators
@@ -60,7 +60,7 @@ abstract class GeneratedAggregations extends Function {
     *                     aggregated results
     * @param input        input values bundled in a command row
     */
-  def retract(accumulators: Row, input: CRow)
+  def retract(accumulators: Row, input: Row)
 
   /**
     * Init the accumulators, and save them to a accumulators Row.
@@ -74,6 +74,6 @@ abstract class GeneratedAggregations extends Function {
     *
     * @return an output command row object with the correct arity.
     */
-  def createOutputRow(): CRow
+  def createOutputRow(): Row
 
 }

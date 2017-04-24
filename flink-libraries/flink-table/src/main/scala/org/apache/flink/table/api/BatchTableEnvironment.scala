@@ -26,6 +26,7 @@ import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.sql2rel.RelDecorrelator
 import org.apache.calcite.tools.RuleSet
+import org.apache.flink.api.common.functions.MapFunction
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.io.DiscardingOutputFormat
 import org.apache.flink.api.java.typeutils.GenericTypeInfo
@@ -35,6 +36,7 @@ import org.apache.flink.table.expressions.Expression
 import org.apache.flink.table.plan.nodes.dataset.{DataSetConvention, DataSetRel}
 import org.apache.flink.table.plan.rules.FlinkRuleSets
 import org.apache.flink.table.plan.schema.{DataSetTable, TableSourceTable}
+import org.apache.flink.table.runtime.MapRunner
 import org.apache.flink.table.sinks.{BatchTableSink, TableSink}
 import org.apache.flink.table.sources.{BatchTableSource, TableSource}
 import org.apache.flink.types.Row
@@ -124,6 +126,45 @@ abstract class BatchTableEnvironment(
       case _ =>
         throw new TableException("BatchTableSink required to emit batch Table")
     }
+  }
+
+  /**
+    * Creates a final converter that maps the internal row type to external type.
+    *
+    * @param physicalTypeInfo the input of the sink
+    * @param logicalRowType the logical type with correct field names (esp. for POJO field mapping)
+    * @param requestedTypeInfo the output type of the sink
+    * @param functionName name of the map function. Must not be unique but has to be a
+    *                     valid Java class identifier.
+    */
+  override protected def sinkConversion[IN, OUT](
+      physicalTypeInfo: TypeInformation[IN],
+      logicalRowType: RelDataType,
+      requestedTypeInfo: TypeInformation[OUT],
+      functionName: String):
+    Option[MapFunction[IN, OUT]] = {
+
+    // early out
+    requestedTypeInfo match {
+      case r: TypeInformation[_] if r.getTypeClass == classOf[Row] =>
+        // Row to Row doesn't need a conversion
+        return None
+      case _ =>
+    }
+
+    val converterFunction = generateRowConverterFunction[OUT](
+      physicalTypeInfo.asInstanceOf[TypeInformation[Row]],
+      logicalRowType,
+      requestedTypeInfo,
+      functionName
+    )
+
+    val mapFunction = new MapRunner[IN, OUT](
+      converterFunction.name,
+      converterFunction.code,
+      converterFunction.returnType)
+
+    Some(mapFunction)
   }
 
   /**
@@ -278,7 +319,7 @@ abstract class BatchTableEnvironment(
         val conversion = sinkConversion(plan.getType, logicalType, tpe, "DataSetSinkConversion")
         conversion match {
           case None => plan.asInstanceOf[DataSet[A]] // no conversion necessary
-          case Some(mapFunction) => plan.map(mapFunction).name(s"to: $tpe")
+          case Some(mapFunction: MapFunction[Row, A]) => plan.map(mapFunction).name(s"to: $tpe")
         }
 
       case _ =>
