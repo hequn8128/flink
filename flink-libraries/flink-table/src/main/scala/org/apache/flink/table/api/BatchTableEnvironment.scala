@@ -31,7 +31,6 @@ import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.io.DiscardingOutputFormat
 import org.apache.flink.api.java.typeutils.GenericTypeInfo
 import org.apache.flink.api.java.{DataSet, ExecutionEnvironment}
-import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.explain.PlanJsonParser
 import org.apache.flink.table.expressions.Expression
 import org.apache.flink.table.plan.nodes.dataset.{DataSetConvention, DataSetRel}
@@ -146,25 +145,15 @@ abstract class BatchTableEnvironment(
     Option[MapFunction[IN, OUT]] = {
 
     // early out
-    requestedTypeInfo match {
-      case r: TypeInformation[_] if r.getTypeClass == classOf[Row] =>
-        // Row to Row doesn't need a conversion
-        return None
-      case _ =>
-    }
-
-    // validate that at least the field types of physical and logical type match
-    // we do that here to make sure that plan translation was correct
-    val logicalRowTypeInfo = FlinkTypeFactory.toInternalRowTypeInfo(logicalRowType)
-    if (logicalRowTypeInfo != physicalTypeInfo) {
-      throw TableException("The field types of physical and logical row types do not match." +
-        "This is a bug and should not happen. Please file an issue.")
+    if (requestedTypeInfo.getTypeClass == classOf[Row]) {
+      // Row to Row, no conversion needed
+      return None
     }
 
     val converterFunction = generateRowConverterFunction[OUT](
       physicalTypeInfo.asInstanceOf[TypeInformation[Row]],
       logicalRowType,
-      requestedTypeInfo.asInstanceOf[TypeInformation[Any]],
+      requestedTypeInfo,
       functionName
     )
 
@@ -328,7 +317,11 @@ abstract class BatchTableEnvironment(
         val conversion = sinkConversion(plan.getType, logicalType, tpe, "DataSetSinkConversion")
         conversion match {
           case None => plan.asInstanceOf[DataSet[A]] // no conversion necessary
-          case Some(mapFunction: MapFunction[Row, A]) => plan.map(mapFunction).name(s"to: $tpe")
+          case Some(mapFunction: MapFunction[Row, A]) =>
+            plan.map(mapFunction)
+              .returns(tpe)
+              .name(s"to: ${tpe.getTypeClass.getSimpleName}")
+              .asInstanceOf[DataSet[A]]
         }
 
       case _ =>

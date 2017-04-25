@@ -39,8 +39,8 @@ trait CommonCalc[T] {
       inputType: TypeInformation[Row],
       rowType: RelDataType,
       calcProgram: RexProgram,
-      config: TableConfig)
-    : GeneratedFunction[FlatMapFunction[Row, Row], Row] = {
+      config: TableConfig):
+    GeneratedFunction[FlatMapFunction[Row, Row], Row] = {
 
     val returnType = FlinkTypeFactory.toInternalRowTypeInfo(rowType)
 

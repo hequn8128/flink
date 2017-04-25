@@ -55,7 +55,6 @@ import org.apache.flink.table.functions.{ScalarFunction, TableFunction}
 import org.apache.flink.table.plan.cost.DataSetCostFactory
 import org.apache.flink.table.plan.logical.{CatalogNode, LogicalRelNode}
 import org.apache.flink.table.plan.schema.RelTable
-import org.apache.flink.table.runtime.types.CRowTypeInfo
 import org.apache.flink.table.sinks.TableSink
 import org.apache.flink.table.sources.{DefinedFieldNames, TableSource}
 import org.apache.flink.table.validate.FunctionCatalog
@@ -635,11 +634,19 @@ abstract class TableEnvironment(val config: TableConfig) {
     Option[MapFunction[IN, OUT]]
 
   protected def generateRowConverterFunction[OUT](
-      physicalTypeInfo: TypeInformation[Row],
+      inputTypeInfo: TypeInformation[Row],
       logicalRowType: RelDataType,
-      requestedTypeInfo: TypeInformation[Any],
+      requestedTypeInfo: TypeInformation[OUT],
       functionName: String):
-  GeneratedFunction[MapFunction[Row, OUT], OUT] = {
+    GeneratedFunction[MapFunction[Row, OUT], OUT] = {
+
+    // validate that at least the field types of physical and logical type match
+    // we do that here to make sure that plan translation was correct
+    val logicalRowTypeInfo = FlinkTypeFactory.toInternalRowTypeInfo(logicalRowType)
+    if (logicalRowTypeInfo != inputTypeInfo) {
+      throw TableException("The field types of physical and logical row types do not match." +
+        "This is a bug and should not happen. Please file an issue.")
+    }
 
     // convert to type information
     val logicalFieldTypes = logicalRowType.getFieldList.asScala
@@ -700,7 +707,7 @@ abstract class TableEnvironment(val config: TableConfig) {
     val generator = new CodeGenerator(
       config,
       false,
-      physicalTypeInfo,
+      inputTypeInfo,
       None,
       None)
 
@@ -718,7 +725,7 @@ abstract class TableEnvironment(val config: TableConfig) {
       functionName,
       classOf[MapFunction[Row, OUT]],
       body,
-      requestedTypeInfo).asInstanceOf[GeneratedFunction[MapFunction[Row, OUT], OUT]]
+      requestedTypeInfo)
   }
 }
 

@@ -50,8 +50,8 @@ trait CommonCorrelate[T] {
       rexCall: RexCall,
       condition: Option[RexNode],
       pojoFieldMapping: Option[Array[Int]], // udtf return type pojo field mapping
-      ruleDescription: String)
-    : RichFlatMapFunction[T, T]
+      ruleDescription: String):
+    RichFlatMapFunction[T, T]
 
   /**
     * Generates the flat map function to run the user-defined table function.
@@ -65,8 +65,8 @@ trait CommonCorrelate[T] {
       joinType: SemiJoinType,
       rexCall: RexCall,
       pojoFieldMapping: Option[Array[Int]],
-      ruleDescription: String)
-    : GeneratedFunction[FlatMapFunction[Row, Row], Row] = {
+      ruleDescription: String):
+    GeneratedFunction[FlatMapFunction[Row, Row], Row] = {
 
     val functionGenerator = new CodeGenerator(
       config,
