@@ -60,7 +60,8 @@ trait StreamScan extends CommonScan[CRow] with DataStreamRel {
 
       val opName = s"from: (${getRowType.getFieldNames.asScala.toList.mkString(", ")})"
 
-      input.map(mapFunc).name(opName)
+      val result = input.map(mapFunc).name(opName).returns(physicalInternalType)
+      result.asInstanceOf[DataStream[CRow]]
     }
     // no conversion necessary, forward
     else {

@@ -90,8 +90,8 @@ class DataStreamCorrelate(
       rexCall: RexCall,
       condition: Option[RexNode],
       pojoFieldMapping: Option[Array[Int]], // udtf return type pojo field mapping
-      ruleDescription: String)
-    : RetractCorrelateFlatMapRunner = {
+      ruleDescription: String):
+    RetractCorrelateFlatMapRunner = {
 
     val inputRowType = inputTypeInfo.asInstanceOf[CRowTypeInfo].rowType
     val returnType = FlinkTypeFactory.toInternalRowTypeInfo(rowType)
@@ -131,7 +131,7 @@ class DataStreamCorrelate(
 
     // we do not need to specify input type
     val inputDS = getInput.asInstanceOf[DataStreamRel].translateToPlan(tableEnv)
-    val inputRowType = inputDS.getType.asInstanceOf[CRowTypeInfo].rowType
+    val inputRowType = inputDS.getType.asInstanceOf[CRowTypeInfo]
 
     val funcRel = scan.asInstanceOf[LogicalTableFunctionScan]
     val rexCall = funcRel.getCall.asInstanceOf[RexCall]
@@ -141,7 +141,7 @@ class DataStreamCorrelate(
 
     val mapFunc = correlateMapFunction(
       config,
-      CRowTypeInfo(inputRowType),
+      inputRowType,
       udtfTypeInfo,
       getRowType,
       joinType,

@@ -19,7 +19,6 @@
 package org.apache.flink.table.runtime.aggregate
 
 import org.apache.flink.api.common.functions.Function
-import org.apache.flink.table.runtime.types.CRow
 import org.apache.flink.types.Row
 
 /**
@@ -32,15 +31,15 @@ abstract class GeneratedAggregations extends Function {
     *
     * @param accumulators the accumulators (saved in a row) which contains the current
     *                     aggregated results
-    * @param output       output results collected in a command row
+    * @param output       output results collected in a row
     */
   def setAggregationResults(accumulators: Row, output: Row)
 
   /**
     * Copies forwarded fields from input row to output row.
     *
-    * @param input  input values bundled in a command row
-    * @param output output results collected in a command row
+    * @param input  input values bundled in a row
+    * @param output output results collected in a row
     */
   def setForwardedFields(input: Row, output: Row)
 
@@ -49,7 +48,7 @@ abstract class GeneratedAggregations extends Function {
     *
     * @param accumulators the accumulators (saved in a row) which contains the current
     *                     aggregated results
-    * @param input        input values bundled in a command row
+    * @param input        input values bundled in a row
     */
   def accumulate(accumulators: Row, input: Row)
 
@@ -58,7 +57,7 @@ abstract class GeneratedAggregations extends Function {
     *
     * @param accumulators the accumulators (saved in a row) which contains the current
     *                     aggregated results
-    * @param input        input values bundled in a command row
+    * @param input        input values bundled in a row
     */
   def retract(accumulators: Row, input: Row)
 
@@ -72,7 +71,7 @@ abstract class GeneratedAggregations extends Function {
   /**
     * Creates an output row object with the correct arity.
     *
-    * @return an output command row object with the correct arity.
+    * @return an output row object with the correct arity.
     */
   def createOutputRow(): Row
 

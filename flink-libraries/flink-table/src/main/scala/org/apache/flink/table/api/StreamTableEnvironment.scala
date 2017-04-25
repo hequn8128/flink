@@ -27,18 +27,16 @@ import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.sql2rel.RelDecorrelator
 import org.apache.calcite.tools.{RuleSet, RuleSets}
 import org.apache.flink.api.common.functions.MapFunction
-import org.apache.flink.api.common.typeinfo.{AtomicType, TypeInformation}
-import org.apache.flink.api.java.typeutils.{GenericTypeInfo, PojoTypeInfo, TupleTypeInfoBase}
+import org.apache.flink.api.common.typeinfo.TypeInformation
+import org.apache.flink.api.java.typeutils.GenericTypeInfo
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
-import org.apache.flink.table.calcite.FlinkTypeFactory
-import org.apache.flink.table.codegen.{CodeGenerator, GeneratedFunction}
 import org.apache.flink.table.explain.PlanJsonParser
 import org.apache.flink.table.expressions.Expression
 import org.apache.flink.table.plan.nodes.datastream.{DataStreamConvention, DataStreamRel}
 import org.apache.flink.table.plan.rules.FlinkRuleSets
 import org.apache.flink.table.plan.schema.{DataStreamTable, TableSourceTable}
-import org.apache.flink.table.runtime.{RetractMapRunner2, RetractMapRunner3}
+import org.apache.flink.table.runtime.RetractMapRunner2
 import org.apache.flink.table.runtime.types.{CRow, CRowTypeInfo}
 import org.apache.flink.table.sinks.{StreamTableSink, TableSink}
 import org.apache.flink.table.sources.{StreamTableSource, TableSource}
@@ -191,66 +189,33 @@ abstract class StreamTableEnvironment(
   Option[MapFunction[IN, OUT]] = {
 
     // early out
-    requestedTypeInfo match {
+    if (requestedTypeInfo.getTypeClass == classOf[CRow]) {
+      // CRow to CRow, no conversion needed
+      None
+    } else if (requestedTypeInfo.getTypeClass == classOf[Row]) {
+      // CRow to Row, only needs to be unwrapped
+      Some(
+        new MapFunction[CRow, Row] {
+          override def map(value: CRow): Row = value.row
+        }.asInstanceOf[MapFunction[IN, OUT]]
+      )
+    } else {
+      // Some type that is neither CRow nor Row
 
-      // CRow to generic CRow, no conversion needed
-      case pt: PojoTypeInfo[_]
-        if pt.getTypeClass == classOf[CRow] && pt.getTypeAt(1).isInstanceOf[GenericTypeInfo[_]] =>
-        return None
+      val converterFunction = generateRowConverterFunction[OUT](
+        physicalTypeInfo.asInstanceOf[CRowTypeInfo].rowType,
+        logicalRowType,
+        requestedTypeInfo,
+        functionName
+      )
 
-      // CRow to generic Row, only needs to be unwrapped
-      case gt: GenericTypeInfo[_] if gt.getTypeClass == classOf[Row] =>
-        return Some(
-          new MapFunction[CRow, Row] {
-            override def map(value: CRow): Row = value.row
-          }.asInstanceOf[MapFunction[IN, OUT]]
-        )
-      case _ =>
+      Some(new RetractMapRunner2[OUT](
+        converterFunction.name,
+        converterFunction.code,
+        converterFunction.returnType)
+        .asInstanceOf[MapFunction[IN, OUT]])
+
     }
-
-    // validate that at least the field types of physical and logical type match
-    // we do that here to make sure that plan translation was correct
-    val logicalRowTypeInfo = CRowTypeInfo(FlinkTypeFactory.toInternalRowTypeInfo(logicalRowType))
-    if (logicalRowTypeInfo != physicalTypeInfo) {
-      throw TableException("The field types of physical and logical row types do not match." +
-        "This is a bug and should not happen. Please file an issue.")
-    }
-
-    val mapFunction =
-    requestedTypeInfo match {
-      case crt: CRowTypeInfo => {
-        val converterFunction = generateRowConverterFunction[OUT](
-          physicalTypeInfo.asInstanceOf[CRowTypeInfo].rowType,
-          logicalRowType,
-          crt.rowType.asInstanceOf[TypeInformation[Any]],
-          functionName
-        ).asInstanceOf[GeneratedFunction[MapFunction[Row, Row], Row]]
-
-        new RetractMapRunner3(
-          converterFunction.name,
-          converterFunction.code,
-          converterFunction.returnType.asInstanceOf[TypeInformation[CRow]])
-          .asInstanceOf[MapFunction[IN, OUT]]
-      }
-
-      case _ => {
-        val converterFunction = generateRowConverterFunction[OUT](
-          physicalTypeInfo.asInstanceOf[CRowTypeInfo].rowType,
-          logicalRowType,
-          requestedTypeInfo.asInstanceOf[TypeInformation[Any]],
-          functionName
-        )
-
-        new RetractMapRunner2[OUT](
-          converterFunction.name,
-          converterFunction.code,
-          converterFunction.returnType)
-          .asInstanceOf[MapFunction[IN, OUT]]
-      }
-    }
-
-    Some(mapFunction.asInstanceOf[MapFunction[IN, OUT]])
-//    return None
   }
 
   /**
@@ -412,7 +377,10 @@ abstract class StreamTableEnvironment(
         conversion match {
           case None => plan.asInstanceOf[DataStream[A]] // no conversion necessary
           case Some(mapFunction: MapFunction[CRow, A]) =>
-            plan.map(mapFunction).name(s"to: $tpe").asInstanceOf[DataStream[A]]
+            plan.map(mapFunction)
+              .returns(tpe)
+              .name(s"to: ${tpe.getTypeClass.getSimpleName}")
+              .asInstanceOf[DataStream[A]]
         }
 
       case _ =>

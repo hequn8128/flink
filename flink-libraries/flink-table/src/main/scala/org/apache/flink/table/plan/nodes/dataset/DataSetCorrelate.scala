@@ -97,8 +97,8 @@ class DataSetCorrelate(
       rexCall: RexCall,
       condition: Option[RexNode],
       pojoFieldMapping: Option[Array[Int]], // udtf return type pojo field mapping
-      ruleDescription: String)
-    : CorrelateFlatMapRunner[Row, Row] = {
+      ruleDescription: String):
+    CorrelateFlatMapRunner[Row, Row] = {
 
     val returnType = FlinkTypeFactory.toInternalRowTypeInfo(rowType)
 
@@ -130,7 +130,6 @@ class DataSetCorrelate(
       flatMap.returnType)
 
   }
-
 
   override def translateToPlan(tableEnv: BatchTableEnvironment): DataSet[Row] = {
 

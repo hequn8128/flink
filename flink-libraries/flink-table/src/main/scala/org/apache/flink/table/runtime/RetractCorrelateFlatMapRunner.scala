@@ -67,8 +67,9 @@ class RetractCorrelateFlatMapRunner(
     cRowWrapper.setChange(in.change)
 
     collector.setCollector(cRowWrapper)
-    collector.setInput(in)
+    collector.setInput(in.row)
     collector.reset()
+
     function.flatMap(in.row, cRowWrapper)
   }
 
