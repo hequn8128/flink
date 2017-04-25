@@ -18,8 +18,8 @@
 
 package org.apache.flink.table.runtime
 
-import org.apache.flink.api.common.functions.util.FunctionUtils
 import org.apache.flink.api.common.functions.{FlatMapFunction, RichFlatMapFunction}
+import org.apache.flink.api.common.functions.util.FunctionUtils
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.typeutils.ResultTypeQueryable
 import org.apache.flink.configuration.Configuration
@@ -27,35 +27,48 @@ import org.apache.flink.table.codegen.Compiler
 import org.apache.flink.table.runtime.types.CRow
 import org.apache.flink.types.Row
 import org.apache.flink.util.Collector
-import org.slf4j.LoggerFactory
+import org.slf4j.{Logger, LoggerFactory}
 
-class RetractFlatMapRunner(
-    name: String,
-    code: String,
+
+class RetractCorrelateFlatMapRunner(
+    flatMapName: String,
+    flatMapCode: String,
+    collectorName: String,
+    collectorCode: String,
     @transient returnType: TypeInformation[CRow])
   extends RichFlatMapFunction[CRow, CRow]
   with ResultTypeQueryable[CRow]
-  with Compiler[FlatMapFunction[Row, Row]] {
+  with Compiler[Any] {
 
-  val LOG = LoggerFactory.getLogger(this.getClass)
+  val LOG: Logger = LoggerFactory.getLogger(this.getClass)
 
   private var function: FlatMapFunction[Row, Row] = _
+  private var collector: TableFunctionCollector[_] = _
   private var cRowWrapper: CRowWrappingCollector = _
 
   override def open(parameters: Configuration): Unit = {
-    LOG.debug(s"Compiling FlatMapFunction: $name \n\n Code:\n$code")
-    val clazz = compile(getRuntimeContext.getUserCodeClassLoader, name, code)
+    LOG.debug(s"Compiling TableFunctionCollector: $collectorName \n\n Code:\n$collectorCode")
+    val clazz = compile(getRuntimeContext.getUserCodeClassLoader, collectorName, collectorCode)
+    LOG.debug("Instantiating TableFunctionCollector.")
+    collector = clazz.newInstance().asInstanceOf[TableFunctionCollector[_]]
+    this.cRowWrapper = new CRowWrappingCollector()
+
+    LOG.debug(s"Compiling FlatMapFunction: $flatMapName \n\n Code:\n$flatMapCode")
+    val flatMapClazz = compile(getRuntimeContext.getUserCodeClassLoader, flatMapName, flatMapCode)
+    val constructor = flatMapClazz.getConstructor(classOf[TableFunctionCollector[_]])
     LOG.debug("Instantiating FlatMapFunction.")
-    function = clazz.newInstance()
+    function = constructor.newInstance(collector).asInstanceOf[FlatMapFunction[Row, Row]]
     FunctionUtils.setFunctionRuntimeContext(function, getRuntimeContext)
     FunctionUtils.openFunction(function, parameters)
-
-    this.cRowWrapper = new CRowWrappingCollector()
   }
 
   override def flatMap(in: CRow, out: Collector[CRow]): Unit = {
     cRowWrapper.out = out
     cRowWrapper.setChange(in.change)
+
+    collector.setCollector(cRowWrapper)
+    collector.setInput(in)
+    collector.reset()
     function.flatMap(in.row, cRowWrapper)
   }
 
@@ -65,5 +78,3 @@ class RetractFlatMapRunner(
     FunctionUtils.closeFunction(function)
   }
 }
-
-

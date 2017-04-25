@@ -18,52 +18,42 @@
 
 package org.apache.flink.table.runtime
 
-import org.apache.flink.api.common.functions.util.FunctionUtils
-import org.apache.flink.api.common.functions.{FlatMapFunction, RichFlatMapFunction}
+import org.apache.flink.api.common.functions.{MapFunction, RichMapFunction}
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.typeutils.ResultTypeQueryable
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.table.codegen.Compiler
 import org.apache.flink.table.runtime.types.CRow
 import org.apache.flink.types.Row
-import org.apache.flink.util.Collector
 import org.slf4j.LoggerFactory
 
-class RetractFlatMapRunner(
+
+class RetractMapRunner3 (
     name: String,
     code: String,
     @transient returnType: TypeInformation[CRow])
-  extends RichFlatMapFunction[CRow, CRow]
-  with ResultTypeQueryable[CRow]
-  with Compiler[FlatMapFunction[Row, Row]] {
+  extends RichMapFunction[CRow, CRow]
+          with ResultTypeQueryable[CRow]
+          with Compiler[MapFunction[Row, Row]] {
 
   val LOG = LoggerFactory.getLogger(this.getClass)
 
-  private var function: FlatMapFunction[Row, Row] = _
-  private var cRowWrapper: CRowWrappingCollector = _
+  private var function: MapFunction[Row, Row] = _
+  private var outCRow: CRow = _
 
   override def open(parameters: Configuration): Unit = {
-    LOG.debug(s"Compiling FlatMapFunction: $name \n\n Code:\n$code")
+    LOG.debug(s"Compiling MapFunction: $name \n\n Code:\n$code")
     val clazz = compile(getRuntimeContext.getUserCodeClassLoader, name, code)
-    LOG.debug("Instantiating FlatMapFunction.")
+    LOG.debug("Instantiating MapFunction.")
     function = clazz.newInstance()
-    FunctionUtils.setFunctionRuntimeContext(function, getRuntimeContext)
-    FunctionUtils.openFunction(function, parameters)
-
-    this.cRowWrapper = new CRowWrappingCollector()
+    outCRow = new CRow(null, true)
   }
 
-  override def flatMap(in: CRow, out: Collector[CRow]): Unit = {
-    cRowWrapper.out = out
-    cRowWrapper.setChange(in.change)
-    function.flatMap(in.row, cRowWrapper)
+  override def map(in: CRow): CRow = {
+    outCRow.row = function.map(in.row)
+    outCRow.change = in.change
+    outCRow
   }
 
   override def getProducedType: TypeInformation[CRow] = returnType
-
-  override def close(): Unit = {
-    FunctionUtils.closeFunction(function)
-  }
 }
-
-
