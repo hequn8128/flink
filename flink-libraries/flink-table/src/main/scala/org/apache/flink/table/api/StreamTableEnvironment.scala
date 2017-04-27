@@ -19,6 +19,7 @@
 package org.apache.flink.table.api
 
 import _root_.java.util.concurrent.atomic.AtomicInteger
+import _root_.java.lang.{Boolean => JBool}
 
 import org.apache.calcite.plan.RelOptUtil
 import org.apache.calcite.plan.hep.HepMatchOrder
@@ -27,9 +28,10 @@ import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.sql2rel.RelDecorrelator
 import org.apache.calcite.tools.{RuleSet, RuleSets}
 import org.apache.flink.api.common.functions.MapFunction
-import org.apache.flink.api.common.typeinfo.{BasicTypeInfo, TypeInformation}
+import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2}
-import org.apache.flink.api.java.typeutils.{GenericTypeInfo, TupleTypeInfo}
+import org.apache.flink.api.java.typeutils.TupleTypeInfo
+import org.apache.flink.api.scala.typeutils.CaseClassTypeInfo
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.table.explain.PlanJsonParser
@@ -37,9 +39,9 @@ import org.apache.flink.table.expressions.Expression
 import org.apache.flink.table.plan.nodes.datastream.{DataStreamConvention, DataStreamRel, UpdateAsRetractionTrait}
 import org.apache.flink.table.plan.rules.FlinkRuleSets
 import org.apache.flink.table.plan.schema.{DataStreamTable, TableSourceTable}
-import org.apache.flink.table.runtime.{CRowInputMapRunner, CRowInputTupleOutputMapRunner}
+import org.apache.flink.table.runtime.{CRowInputMapRunner, CRowInputJavaTupleOutputMapRunner, CRowInputScalaTupleOutputMapRunner}
 import org.apache.flink.table.runtime.types.{CRow, CRowTypeInfo}
-import org.apache.flink.table.sinks.{StreamRetractSink, StreamTableSink, TableSink}
+import org.apache.flink.table.sinks.{StreamTableSink, TableSink}
 import org.apache.flink.table.sources.{StreamTableSource, TableSource}
 import org.apache.flink.types.Row
 
@@ -164,22 +166,14 @@ abstract class StreamTableEnvironment(
       case streamSink: StreamTableSink[T] =>
         val outputType = sink.getOutputType
         // translate the Table into a DataStream and provide the type that the TableSink expects.
-        val result: DataStream[T] = translate(table)(outputType)
-        // Give the DataSet to the TableSink to emit it.
+        val result: DataStream[T] =
+          translate(table, updatesAsRetraction = false, withChangeFlag = false)(outputType)
+        // Give the DataStream to the TableSink to emit it.
         streamSink.emitDataStream(result)
-
-      case streamRetractSink: StreamRetractSink[T] =>
-        val outputType = sink.getOutputType
-        this.config.setNeedsUpdatesAsRetractionForSink(streamRetractSink.needsUpdatesAsRetraction)
-        // translate the Table into a DataStream and provide the type that the TableSink expects.
-        val result: DataStream[JTuple2[Boolean, T]] = translate(table, true)(outputType)
-        // Give the DataSet to the TableSink to emit it.
-        streamRetractSink.emitDataStreamWithChange(result)
       case _ =>
         throw new TableException("StreamTableSink required to emit streaming Table")
     }
   }
-
 
   /**
     * Creates a final converter that maps the internal row type to external type.
@@ -190,23 +184,18 @@ abstract class StreamTableEnvironment(
     * @param functionName name of the map function. Must not be unique but has to be a
     *                     valid Java class identifier.
     */
-  override protected def getConversionMapper[IN, OUT](
+  protected def getConversionMapper[IN, OUT](
       physicalTypeInfo: TypeInformation[IN],
       logicalRowType: RelDataType,
       requestedTypeInfo: TypeInformation[OUT],
       functionName: String):
-  Option[MapFunction[IN, OUT]] = {
+    MapFunction[IN, OUT] = {
 
-    if (requestedTypeInfo.getTypeClass == classOf[CRow]) {
-      // only used to explain table
-      None
-    } else if (requestedTypeInfo.getTypeClass == classOf[Row]) {
+    if (requestedTypeInfo.getTypeClass == classOf[Row]) {
       // CRow to Row, only needs to be unwrapped
-      Some(
-        new MapFunction[CRow, Row] {
-          override def map(value: CRow): Row = value.row
-        }.asInstanceOf[MapFunction[IN, OUT]]
-      )
+      new MapFunction[CRow, Row] {
+        override def map(value: CRow): Row = value.row
+      }.asInstanceOf[MapFunction[IN, OUT]]
     } else {
       // Some type that is neither CRow nor Row
       val converterFunction = generateRowConverterFunction[OUT](
@@ -216,16 +205,16 @@ abstract class StreamTableEnvironment(
         functionName
       )
 
-      Some(new CRowInputMapRunner[OUT](
+      new CRowInputMapRunner[OUT](
         converterFunction.name,
         converterFunction.code,
         converterFunction.returnType)
-        .asInstanceOf[MapFunction[IN, OUT]])
+        .asInstanceOf[MapFunction[IN, OUT]]
     }
   }
 
   /**
-    * Creates a final converter that maps the internal CRow type to external Tuple2 type.
+    * Creates a final converter that maps the internal CRow type to Tuple2 with change flag.
     *
     * @param physicalTypeInfo the input of the sink
     * @param logicalRowType the logical type with correct field names (esp. for POJO field mapping)
@@ -233,25 +222,74 @@ abstract class StreamTableEnvironment(
     * @param functionName name of the map function. Must not be unique but has to be a
     *                     valid Java class identifier.
     */
-  protected def getTupleConversionMapper[IN, OUT](
+  protected def getConversionMapperWithChanges[IN, OUT](
       physicalTypeInfo: TypeInformation[IN],
       logicalRowType: RelDataType,
       requestedTypeInfo: TypeInformation[OUT],
       functionName: String):
-  Option[MapFunction[IN, JTuple2[Boolean, OUT]]] = {
+    MapFunction[IN, OUT] = {
 
-    val converterFunction = generateRowConverterFunction(
-      physicalTypeInfo.asInstanceOf[CRowTypeInfo].rowType,
-      logicalRowType,
-      requestedTypeInfo,
-      functionName
-    )
+    val converterMapper: MapFunction[_, _] = requestedTypeInfo match {
+      // Java tuple
+      case t: TupleTypeInfo[_]
+        if t.getTypeClass == classOf[JTuple2[_, _]] && t.getTypeAt(0) == Types.BOOLEAN =>
 
-    Some(new CRowInputTupleOutputMapRunner[OUT](
-      converterFunction.name,
-      converterFunction.code,
-      new TupleTypeInfo(BasicTypeInfo.BOOLEAN_TYPE_INFO, requestedTypeInfo))
-           .asInstanceOf[MapFunction[IN, JTuple2[Boolean, OUT]]])
+        val reqType = t.getTypeAt(1).asInstanceOf[TypeInformation[Any]]
+        if (reqType.getTypeClass == classOf[Row]) {
+          // Requested type is Row. Just rewrap CRow in Tuple2
+          new MapFunction[CRow, JTuple2[JBool, Row]] {
+            val outT = new JTuple2(true.asInstanceOf[JBool], null.asInstanceOf[Row])
+            override def map(cRow: CRow): JTuple2[JBool, Row] = {
+              outT.f0 = cRow.change
+              outT.f1 = cRow.row
+              outT
+            }
+          }.asInstanceOf[MapFunction[IN, OUT]]
+        } else {
+          // Use a map function to convert Row into requested type and wrap result in Tuple2
+          val converterFunction = generateRowConverterFunction(
+            physicalTypeInfo.asInstanceOf[CRowTypeInfo].rowType,
+            logicalRowType,
+            reqType,
+            functionName
+          )
+
+          new CRowInputJavaTupleOutputMapRunner[OUT](
+            converterFunction.name,
+            converterFunction.code,
+            requestedTypeInfo)
+        }
+
+      // Scala tuple
+      case t: CaseClassTypeInfo[_]
+        if t.getTypeClass == classOf[(_, _)] && t.getTypeAt(0) == Types.BOOLEAN =>
+
+        val reqType = t.getTypeAt(1).asInstanceOf[TypeInformation[Any]]
+        if (reqType.getTypeClass == classOf[Row]) {
+          // Requested type is Row. Just rewrap CRow in Tuple2
+          new MapFunction[CRow, (Boolean, Row)] {
+            override def map(cRow: CRow): (Boolean, Row) = {
+              (cRow.change, cRow.row)
+            }
+          }
+        } else {
+          // Use a map function to convert Row into requested type and wrap result in Tuple2
+          val converterFunction = generateRowConverterFunction(
+            physicalTypeInfo.asInstanceOf[CRowTypeInfo].rowType,
+            logicalRowType,
+            reqType,
+            functionName
+          )
+
+          new CRowInputScalaTupleOutputMapRunner[OUT](
+            converterFunction.name,
+            converterFunction.code,
+            requestedTypeInfo)
+
+        }
+    }
+
+    converterMapper.asInstanceOf[MapFunction[IN, OUT]]
   }
 
   /**
@@ -337,9 +375,10 @@ abstract class StreamTableEnvironment(
     * Generates the optimized [[RelNode]] tree from the original relational node tree.
     *
     * @param relNode The root node of the relational expression tree.
+    * @param updatesAsRetraction True, indicates that the sink requested change flags.
     * @return The optimized [[RelNode]] tree
     */
-  private[flink] def optimize(relNode: RelNode): RelNode = {
+  private[flink] def optimize(relNode: RelNode, updatesAsRetraction: Boolean): RelNode = {
 
     // 1. decorrelate
     val decorPlan = RelDecorrelator.decorrelateQuery(relNode)
@@ -355,7 +394,7 @@ abstract class StreamTableEnvironment(
     // 3. optimize the logical Flink plan
     val optRuleSet = getOptRuleSet
     val flinkOutputProps = relNode.getTraitSet.replace(DataStreamConvention.INSTANCE).simplify()
-    var optimizedPlan = if (optRuleSet.iterator().hasNext) {
+    val optimizedPlan = if (optRuleSet.iterator().hasNext) {
       runVolcanoPlanner(optRuleSet, normalizedPlan, flinkOutputProps)
     } else {
       normalizedPlan
@@ -364,12 +403,18 @@ abstract class StreamTableEnvironment(
     // 4. decorate the optimized plan
     val decoRuleSet = getDecoRuleSet
     val decoratedPlan = if (decoRuleSet.iterator().hasNext) {
-      if (this.config.getNeedsUpdatesAsRetractionForSink) {
-        optimizedPlan = optimizedPlan.copy(
+      val planToDecorate = if (updatesAsRetraction) {
+        optimizedPlan.copy(
           optimizedPlan.getTraitSet.plus(new UpdateAsRetractionTrait(true)),
           optimizedPlan.getInputs)
+      } else {
+        optimizedPlan
       }
-      runHepPlanner(HepMatchOrder.BOTTOM_UP, decoRuleSet, optimizedPlan, optimizedPlan.getTraitSet)
+      runHepPlanner(
+        HepMatchOrder.BOTTOM_UP,
+        decoRuleSet,
+        planToDecorate,
+        planToDecorate.getTraitSet)
     } else {
       optimizedPlan
     }
@@ -383,14 +428,16 @@ abstract class StreamTableEnvironment(
     * Table API calls and / or SQL queries and generating corresponding [[DataStream]] operators.
     *
     * @param table The root node of the relational expression tree.
+    * @param withChangeFlag True, indicates that the sink requested change flags.
     * @param tpe The [[TypeInformation]] of the resulting [[DataStream]].
     * @tparam A The type of the resulting [[DataStream]].
     * @return The [[DataStream]] that corresponds to the translated [[Table]].
     */
-  protected def translate[A](table: Table)(implicit tpe: TypeInformation[A]): DataStream[A] = {
+  protected def translate[A](table: Table, updatesAsRetraction: Boolean, withChangeFlag: Boolean)
+      (implicit tpe: TypeInformation[A]): DataStream[A] = {
     val relNode = table.getRelNode
-    val dataStreamPlan = optimize(relNode)
-    translate(dataStreamPlan, relNode.getRowType)
+    val dataStreamPlan = optimize(relNode, updatesAsRetraction)
+    translate(dataStreamPlan, relNode.getRowType, withChangeFlag)
   }
 
   /**
@@ -399,62 +446,7 @@ abstract class StreamTableEnvironment(
     * @param logicalPlan The root node of the relational expression tree.
     * @param logicalType The row type of the result. Since the logicalPlan can lose the
     *                    field naming during optimization we pass the row type separately.
-    * @param tpe         The [[TypeInformation]] of the resulting [[DataStream]].
-    * @tparam A The type of the resulting [[DataStream]].
-    * @return The [[DataStream]] that corresponds to the translated [[Table]].
-    */
-  protected def translate[A](
-      logicalPlan: RelNode,
-      logicalType: RelDataType)
-      (implicit tpe: TypeInformation[A]): DataStream[A] = {
-
-    TableEnvironment.validateType(tpe)
-
-    logicalPlan match {
-      case node: DataStreamRel =>
-        val plan = node.translateToPlan(this)
-        val conversion =
-          getConversionMapper(plan.getType, logicalType, tpe, "DataStreamSinkConversion")
-        conversion match {
-          case None => plan.asInstanceOf[DataStream[A]] // no conversion necessary
-          case Some(mapFunction: MapFunction[CRow, A]) =>
-            plan.map(mapFunction)
-              .returns(tpe)
-              .name(s"to: ${tpe.getTypeClass.getSimpleName}")
-              .asInstanceOf[DataStream[A]]
-        }
-
-      case _ =>
-        throw TableException("Cannot generate DataStream due to an invalid logical plan. " +
-          "This is a bug and should not happen. Please file an issue.")
-    }
-  }
-
-  /**
-    * Translates a [[Table]] into a [[DataStream]] with change information.
-    *
-    * The transformation involves optimizing the relational expression tree as defined by
-    * Table API calls and / or SQL queries and generating corresponding [[DataStream]] operators.
-    *
-    * @param table       The root node of the relational expression tree.
-    * @param wrapToTuple True, if want to output chang information
-    * @param tpe         The [[TypeInformation]] of the resulting [[DataStream]].
-    * @tparam A The type of the resulting [[DataStream]].
-    * @return The [[DataStream]] that corresponds to the translated [[Table]].
-    */
-  protected def translate[A](table: Table, wrapToTuple: Boolean)(implicit tpe: TypeInformation[A])
-  : DataStream[JTuple2[Boolean, A]] = {
-    val relNode = table.getRelNode
-    val dataStreamPlan = optimize(relNode)
-    translate(dataStreamPlan, relNode.getRowType, wrapToTuple)
-  }
-
-  /**
-    * Translates a logical [[RelNode]] into a [[DataStream]] with change information.
-    *
-    * @param logicalPlan The root node of the relational expression tree.
-    * @param logicalType The row type of the result. Since the logicalPlan can lose the
-    * @param wrapToTuple True, if want to output chang information
+    * @param withChangeFlag True, indicates that the sink requested change flags.
     * @param tpe         The [[TypeInformation]] of the resulting [[DataStream]].
     * @tparam A The type of the resulting [[DataStream]].
     * @return The [[DataStream]] that corresponds to the translated [[Table]].
@@ -462,24 +454,39 @@ abstract class StreamTableEnvironment(
   protected def translate[A](
       logicalPlan: RelNode,
       logicalType: RelDataType,
-      wrapToTuple: Boolean)(implicit tpe: TypeInformation[A]): DataStream[JTuple2[Boolean, A]] = {
+      withChangeFlag: Boolean)
+      (implicit tpe: TypeInformation[A]): DataStream[A] = {
 
-    TableEnvironment.validateType(tpe)
+    // get CRow plan
+    val plan: DataStream[CRow] = translateToCRow(logicalPlan)
+
+    // convert CRow to output type
+    val conversion = if (withChangeFlag) {
+      getConversionMapperWithChanges(plan.getType, logicalType, tpe, "DataStreamSinkConversion")
+    } else {
+      getConversionMapper(plan.getType, logicalType, tpe, "DataStreamSinkConversion")
+    }
+
+    conversion match {
+      case mapFunction: MapFunction[CRow, A] =>
+        plan.map(mapFunction)
+          .returns(tpe)
+          .name(s"to: ${tpe.getTypeClass.getSimpleName}")
+    }
+  }
+
+  /**
+    * Translates a logical [[RelNode]] plan into a [[DataStream]] of type [[CRow]].
+    *
+    * @param logicalPlan The logical plan to translate.
+    * @return
+    */
+  protected def translateToCRow(
+    logicalPlan: RelNode): DataStream[CRow] = {
 
     logicalPlan match {
       case node: DataStreamRel =>
-        val plan = node.translateToPlan(this)
-        val conversion =
-          getTupleConversionMapper(plan.getType, logicalType, tpe, "DataStreamSinkConversion")
-        conversion match {
-          case None => plan.asInstanceOf[DataStream[JTuple2[Boolean, A]]] // no conversion necessary
-          case Some(mapFunction: MapFunction[CRow, JTuple2[Boolean, A]]) =>
-            plan.map(mapFunction)
-              .returns(new TupleTypeInfo[JTuple2[Boolean, A]](BasicTypeInfo.BOOLEAN_TYPE_INFO, tpe))
-              .name(s"to: ${tpe.getTypeClass.getSimpleName}")
-              .asInstanceOf[DataStream[JTuple2[Boolean, A]]]
-        }
-
+        node.translateToPlan(this)
       case _ =>
         throw TableException("Cannot generate DataStream due to an invalid logical plan. " +
           "This is a bug and should not happen. Please file an issue.")
@@ -494,10 +501,8 @@ abstract class StreamTableEnvironment(
     */
   def explain(table: Table): String = {
     val ast = table.getRelNode
-    val optimizedPlan = optimize(ast)
-    val dataStream = translate[CRow](
-      optimizedPlan,
-      ast.getRowType)(new GenericTypeInfo(classOf[CRow]))
+    val optimizedPlan = optimize(ast, updatesAsRetraction = false)
+    val dataStream = translateToCRow(optimizedPlan)
 
     val env = dataStream.getExecutionEnvironment
     val jsonSqlPlan = env.getExecutionPlan

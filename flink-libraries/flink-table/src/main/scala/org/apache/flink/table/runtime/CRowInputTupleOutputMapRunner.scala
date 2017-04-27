@@ -28,36 +28,62 @@ import org.apache.flink.types.Row
 import org.slf4j.LoggerFactory
 import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2}
 
-
 /**
-  * Convert [[CRow]] to a [[Tuple2]]
+  * Convert [[CRow]] to a [[JTuple2]]
   */
-class CRowInputTupleOutputMapRunner[OUT](
+class CRowInputJavaTupleOutputMapRunner[OUT <: JTuple2[Boolean, Any]](
     name: String,
     code: String,
-    @transient returnType: TypeInformation[JTuple2[Boolean, OUT]])
-  extends RichMapFunction[CRow, JTuple2[Boolean, OUT]]
-          with ResultTypeQueryable[JTuple2[Boolean, OUT]]
-          with Compiler[MapFunction[Row, OUT]] {
+    @transient returnType: TypeInformation[OUT])
+  extends RichMapFunction[CRow, OUT]
+          with ResultTypeQueryable[OUT]
+          with Compiler[MapFunction[Row, Any]] {
 
   val LOG = LoggerFactory.getLogger(this.getClass)
 
-  private var function: MapFunction[Row, OUT] = _
-  private var tupleWrapper: JTuple2[Boolean, OUT] = _
+  private var function: MapFunction[Row, Any] = _
+  private var tupleWrapper: OUT = _
 
   override def open(parameters: Configuration): Unit = {
     LOG.debug(s"Compiling MapFunction: $name \n\n Code:\n$code")
     val clazz = compile(getRuntimeContext.getUserCodeClassLoader, name, code)
     LOG.debug("Instantiating MapFunction.")
     function = clazz.newInstance()
-    tupleWrapper = new JTuple2[Boolean, OUT]()
+    tupleWrapper = new JTuple2[Boolean, Any]().asInstanceOf[OUT]
   }
 
-  override def map(in: CRow): JTuple2[Boolean, OUT] = {
+  override def map(in: CRow): OUT = {
     tupleWrapper.f0 = in.change
     tupleWrapper.f1 = function.map(in.row)
     tupleWrapper
   }
 
-  override def getProducedType: TypeInformation[JTuple2[Boolean, OUT]] = returnType
+  override def getProducedType: TypeInformation[OUT] = returnType
+}
+
+/**
+  * Convert [[CRow]] to a [[Tuple2]]
+  */
+class CRowInputScalaTupleOutputMapRunner[OUT <: (Boolean, Any)](
+  name: String,
+  code: String,
+  @transient returnType: TypeInformation[OUT])
+  extends RichMapFunction[CRow, OUT]
+    with ResultTypeQueryable[OUT]
+    with Compiler[MapFunction[Row, Any]] {
+
+  val LOG = LoggerFactory.getLogger(this.getClass)
+
+  private var function: MapFunction[Row, Any] = _
+
+  override def open(parameters: Configuration): Unit = {
+    LOG.debug(s"Compiling MapFunction: $name \n\n Code:\n$code")
+    val clazz = compile(getRuntimeContext.getUserCodeClassLoader, name, code)
+    LOG.debug("Instantiating MapFunction.")
+    function = clazz.newInstance()
+  }
+
+  override def map(in: CRow): OUT = (in.change, function.map(in.row)).asInstanceOf[OUT]
+
+  override def getProducedType: TypeInformation[OUT] = returnType
 }

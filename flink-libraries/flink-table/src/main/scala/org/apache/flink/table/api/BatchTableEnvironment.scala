@@ -137,7 +137,7 @@ abstract class BatchTableEnvironment(
     * @param functionName name of the map function. Must not be unique but has to be a
     *                     valid Java class identifier.
     */
-  override protected def getConversionMapper[IN, OUT](
+  protected def getConversionMapper[IN, OUT](
       physicalTypeInfo: TypeInformation[IN],
       logicalRowType: RelDataType,
       requestedTypeInfo: TypeInformation[OUT],

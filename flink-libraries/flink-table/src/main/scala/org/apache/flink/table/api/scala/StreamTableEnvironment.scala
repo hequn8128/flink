@@ -17,6 +17,7 @@
  */
 package org.apache.flink.table.api.scala
 
+import org.apache.flink.api.scala._
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.table.api.{TableEnvironment, Table, TableConfig}
 import org.apache.flink.table.functions.TableFunction
@@ -139,7 +140,16 @@ class StreamTableEnvironment(
     * @return The converted [[DataStream]].
     */
   def toDataStream[T: TypeInformation](table: Table): DataStream[T] = {
-    asScalaStream(translate(table))
+    val returnType = createTypeInformation[T]
+    asScalaStream(translate(table, updatesAsRetraction = false, withChangeFlag = false)(returnType))
+  }
+
+  /**
+    * TODO
+    */
+  def toDataStreamWithChangeFlag[T: TypeInformation](table: Table): DataStream[(Boolean, T)] = {
+    val returnType = createTypeInformation[(Boolean, T)]
+    asScalaStream(translate(table, updatesAsRetraction = true, withChangeFlag = true)(returnType))
   }
 
   /**

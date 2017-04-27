@@ -19,13 +19,14 @@
 package org.apache.flink.table.api.scala.stream.utils
 
 import java.util.Collections
+import java.lang.{Boolean => JBool}
 
+import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2}
 import org.apache.flink.types.Row
 import org.junit.Assert._
 
 import scala.collection.mutable
 import org.apache.flink.streaming.api.functions.sink.RichSinkFunction
-import org.apache.flink.table.runtime.types.CRow
 
 import scala.collection.JavaConverters._
 
@@ -46,6 +47,22 @@ object StreamITCase {
     def invoke(value: Row) {
       testResults.synchronized {
         testResults += value.toString
+      }
+    }
+  }
+
+  final class StringWithChangeFlagSink extends RichSinkFunction[(Boolean, Row)]() {
+    def invoke(v: (Boolean, Row)) {
+      testResults.synchronized {
+        testResults += (if (v._1) "+" else "-") + v._2
+      }
+    }
+  }
+
+  final class JStringWithChangeFlagSink extends RichSinkFunction[JTuple2[JBool, Row]]() {
+    def invoke(v: JTuple2[JBool, Row]) {
+      testResults.synchronized {
+        testResults += (if (v.f0) "+" else "-") + v.f1
       }
     }
   }

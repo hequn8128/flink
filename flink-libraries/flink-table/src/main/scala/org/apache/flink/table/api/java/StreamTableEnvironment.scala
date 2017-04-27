@@ -18,12 +18,15 @@
 package org.apache.flink.table.api.java
 
 import org.apache.flink.api.common.typeinfo.TypeInformation
-import org.apache.flink.api.java.typeutils.TypeExtractor
+import org.apache.flink.api.java.typeutils.{TupleTypeInfo, TypeExtractor}
+import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2}
 import org.apache.flink.table.api._
 import org.apache.flink.table.functions.TableFunction
 import org.apache.flink.table.expressions.ExpressionParser
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
+
+import _root_.java.lang.{Boolean => JBool}
 
 /**
   * The [[TableEnvironment]] for a Java [[StreamExecutionEnvironment]].
@@ -145,7 +148,9 @@ class StreamTableEnvironment(
     * @return The converted [[DataStream]].
     */
   def toDataStream[T](table: Table, clazz: Class[T]): DataStream[T] = {
-    translate[T](table)(TypeExtractor.createTypeInfo(clazz))
+    val typeInfo = TypeExtractor.createTypeInfo(clazz)
+    TableEnvironment.validateType(typeInfo)
+    translate[T](table, updatesAsRetraction = false, withChangeFlag = false)(typeInfo)
   }
 
   /**
@@ -162,7 +167,40 @@ class StreamTableEnvironment(
     * @return The converted [[DataStream]].
     */
   def toDataStream[T](table: Table, typeInfo: TypeInformation[T]): DataStream[T] = {
-    translate[T](table)(typeInfo)
+    TableEnvironment.validateType(typeInfo)
+    translate[T](table, updatesAsRetraction = false, withChangeFlag = false)(typeInfo)
+  }
+
+  /**
+    * TODO
+    */
+  def toDataStreamWithChangeFlag[T](table: Table, clazz: Class[T]):
+    DataStream[JTuple2[JBool, T]] = {
+
+    val typeInfo = TypeExtractor.createTypeInfo(clazz)
+    TableEnvironment.validateType(typeInfo)
+    val resultType = new TupleTypeInfo[JTuple2[JBool, T]](Types.BOOLEAN, typeInfo)
+    translate[JTuple2[JBool, T]](
+      table,
+      updatesAsRetraction = true,
+      withChangeFlag = true)(resultType)
+  }
+
+  /**
+    * TODO
+    */
+  def toDataStreamWithChangeFlag[T](table: Table, typeInfo: TypeInformation[T]):
+    DataStream[JTuple2[JBool, T]] = {
+
+    TableEnvironment.validateType(typeInfo)
+    val resultTypeInfo = new TupleTypeInfo[JTuple2[JBool, T]](
+      Types.BOOLEAN,
+      typeInfo
+    )
+    translate[JTuple2[JBool, T]](
+      table,
+      updatesAsRetraction = true,
+      withChangeFlag = true)(resultTypeInfo)
   }
 
   /**
