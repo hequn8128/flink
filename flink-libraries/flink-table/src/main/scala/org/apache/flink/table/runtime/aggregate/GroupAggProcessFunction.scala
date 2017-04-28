@@ -17,6 +17,8 @@
  */
 package org.apache.flink.table.runtime.aggregate
 
+import java.lang.{Long => JLong}
+
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.streaming.api.functions.ProcessFunction
 import org.apache.flink.types.Row
@@ -24,6 +26,7 @@ import org.apache.flink.util.{Collector, Preconditions}
 import org.apache.flink.api.common.state.ValueStateDescriptor
 import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.api.common.state.ValueState
+import org.apache.flink.table.api.Types
 import org.apache.flink.table.functions.{Accumulator, AggregateFunction}
 import org.apache.flink.table.runtime.types.CRow
 
@@ -53,7 +56,10 @@ class GroupAggProcessFunction(
   private var newRow: CRow = _
   private var prevRow: CRow = _
   private var firstRow: Boolean = _
+  // stores the accumulators
   private var state: ValueState[Row] = _
+  // counts the number of added and retracted input records
+  private var cntState: ValueState[JLong] = _
 
   override def open(config: Configuration) {
     newRow = new CRow(new Row(groupings.length + aggregates.length), true)
@@ -61,6 +67,9 @@ class GroupAggProcessFunction(
     val stateDescriptor: ValueStateDescriptor[Row] =
       new ValueStateDescriptor[Row]("GroupAggregateState", aggregationStateType)
     state = getRuntimeContext.getState(stateDescriptor)
+    val inputCntDescriptor: ValueStateDescriptor[JLong] =
+      new ValueStateDescriptor[JLong]("GroupAggregateInputCounter", Types.LONG)
+    cntState = getRuntimeContext.getState(inputCntDescriptor)
   }
 
   override def processElement(
@@ -71,6 +80,7 @@ class GroupAggProcessFunction(
     var i = 0
 
     var accumulators = state.value()
+    var inputCnt = cntState.value()
 
     if (null == accumulators) {
       firstRow = true
@@ -80,6 +90,7 @@ class GroupAggProcessFunction(
         accumulators.setField(i, aggregates(i).createAccumulator())
         i += 1
       }
+      inputCnt = 0L
     } else {
       firstRow = false
     }
@@ -95,6 +106,7 @@ class GroupAggProcessFunction(
     // Set previous aggregate result to the prevRow
     // Set current aggregate result to the newRow
     if (input.change) {
+      inputCnt += 1
       // accumulate input
       i = 0
       while (i < aggregates.length) {
@@ -106,6 +118,7 @@ class GroupAggProcessFunction(
         i += 1
       }
     } else {
+      inputCnt -= 1
       // retract input
       i = 0
       while (i < aggregates.length) {
@@ -118,19 +131,33 @@ class GroupAggProcessFunction(
       }
     }
 
-    state.update(accumulators)
+    if (inputCnt > 0) {
+      // we aggregated at least on record for this key
 
-    // if previousRow is not null, do retraction process
-    if (generateRetraction && !firstRow) {
-      if (prevRow.row.equals(newRow.row)) {
-        // ignore same newRow
-        return
-      } else {
-        // retract previous row
-        out.collect(prevRow)
+      // update the state
+      state.update(accumulators)
+      cntState.update(inputCnt)
+
+      // if previousRow is not null, do retraction process
+      if (generateRetraction && !firstRow) {
+        if (prevRow.row.equals(newRow.row)) {
+          // ignore same newRow
+          return
+        } else {
+          // retract previous result
+          out.collect(prevRow)
+        }
       }
-    }
+      // emit the new result
+      out.collect(newRow)
 
-    out.collect(newRow)
+    } else {
+      // we retracted the last record for this key
+      // sent out a delete message
+      out.collect(prevRow)
+      // and clear all state
+      state.clear()
+      cntState.clear()
+    }
   }
 }

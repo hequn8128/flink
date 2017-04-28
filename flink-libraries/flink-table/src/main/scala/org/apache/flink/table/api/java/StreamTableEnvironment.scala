@@ -25,8 +25,13 @@ import org.apache.flink.table.functions.TableFunction
 import org.apache.flink.table.expressions.ExpressionParser
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
-
 import _root_.java.lang.{Boolean => JBool}
+
+import org.apache.calcite.rel.`type`.RelDataType
+import org.apache.flink.api.common.functions.MapFunction
+import org.apache.flink.table.runtime.CRowInputJavaTupleOutputMapRunner
+import org.apache.flink.table.runtime.types.{CRow, CRowTypeInfo}
+import org.apache.flink.types.Row
 
 /**
   * The [[TableEnvironment]] for a Java [[StreamExecutionEnvironment]].
@@ -135,7 +140,10 @@ class StreamTableEnvironment(
   }
 
   /**
-    * Converts the given [[Table]] into a [[DataStream]] of a specified type.
+    * Converts the given [[Table]] into an append [[DataStream]] of a specified type.
+    *
+    * The [[Table]] must only have insert (append) changes. If the [[Table]] is also modified
+    * by update or delete changes, the conversion will fail.
     *
     * The fields of the [[Table]] are mapped to [[DataStream]] fields as follows:
     * - [[org.apache.flink.types.Row]] and [[org.apache.flink.api.java.tuple.Tuple]]
@@ -154,7 +162,10 @@ class StreamTableEnvironment(
   }
 
   /**
-    * Converts the given [[Table]] into a [[DataStream]] of a specified type.
+    * Converts the given [[Table]] into an append [[DataStream]] of a specified type.
+    *
+    * The [[Table]] must only have insert (append) changes. If the [[Table]] is also modified
+    * by update or delete changes, the conversion will fail.
     *
     * The fields of the [[Table]] are mapped to [[DataStream]] fields as follows:
     * - [[org.apache.flink.types.Row]] and [[org.apache.flink.api.java.tuple.Tuple]]
@@ -172,9 +183,23 @@ class StreamTableEnvironment(
   }
 
   /**
-    * TODO
+    * Converts the given [[Table]] into a [[DataStream]] of add and retract messages.
+    * The message will be encoded as [[JTuple2]]. The first field is a [[JBool]] flag,
+    * the second field holds the record of the specified type [[T]].
+    *
+    * A true [[JBool]] flag indicates an add message, a false flag indicates a retract message.
+    *
+    * The fields of the [[Table]] are mapped to the requested type as follows:
+    * - [[org.apache.flink.types.Row]] and [[org.apache.flink.api.java.tuple.Tuple]]
+    * types: Fields are mapped by position, field types must match.
+    * - POJO [[DataStream]] types: Fields are mapped by field name, field types must match.
+    *
+    * @param table The [[Table]] to convert.
+    * @param clazz The class of the requested record type.
+    * @tparam T The type of the requested record type.
+    * @return The converted [[DataStream]].
     */
-  def toDataStreamWithChangeFlag[T](table: Table, clazz: Class[T]):
+  def toRetractStream[T](table: Table, clazz: Class[T]):
     DataStream[JTuple2[JBool, T]] = {
 
     val typeInfo = TypeExtractor.createTypeInfo(clazz)
@@ -187,9 +212,23 @@ class StreamTableEnvironment(
   }
 
   /**
-    * TODO
+    * Converts the given [[Table]] into a [[DataStream]] of add and retract messages.
+    * The message will be encoded as [[JTuple2]]. The first field is a [[JBool]] flag,
+    * the second field holds the record of the specified type [[T]].
+    *
+    * A true [[JBool]] flag indicates an add message, a false flag indicates a retract message.
+    *
+    * The fields of the [[Table]] are mapped to the requested type as follows:
+    * - [[org.apache.flink.types.Row]] and [[org.apache.flink.api.java.tuple.Tuple]]
+    * types: Fields are mapped by position, field types must match.
+    * - POJO [[DataStream]] types: Fields are mapped by field name, field types must match.
+    *
+    * @param table The [[Table]] to convert.
+    * @param typeInfo The [[TypeInformation]] of the requested record type.
+    * @tparam T The type of the requested record type.
+    * @return The converted [[DataStream]].
     */
-  def toDataStreamWithChangeFlag[T](table: Table, typeInfo: TypeInformation[T]):
+  def toRetractStream[T](table: Table, typeInfo: TypeInformation[T]):
     DataStream[JTuple2[JBool, T]] = {
 
     TableEnvironment.validateType(typeInfo)
@@ -217,5 +256,54 @@ class StreamTableEnvironment(
       .asInstanceOf[TypeInformation[T]]
 
     registerTableFunctionInternal[T](name, tf)
+  }
+
+  /**
+    * Creates a converter that maps the internal CRow type to Flink Java Tuple2 with change flag.
+    *
+    * @param physicalTypeInfo the input of the sink
+    * @param logicalRowType the logical type with correct field names (esp. for POJO field mapping)
+    * @param requestedTypeInfo the output type of the sink
+    * @param functionName name of the map function. Must not be unique but has to be a
+    *                     valid Java class identifier.
+    */
+  override protected def getConversionMapperWithChanges[OUT](
+      physicalTypeInfo: TypeInformation[CRow],
+      logicalRowType: RelDataType,
+      requestedTypeInfo: TypeInformation[OUT],
+      functionName: String):
+    MapFunction[CRow, OUT] = {
+
+    requestedTypeInfo match {
+      // Java tuple
+      case t: TupleTypeInfo[_]
+        if t.getTypeClass == classOf[JTuple2[_, _]] && t.getTypeAt(0) == Types.BOOLEAN =>
+
+        val reqType = t.getTypeAt(1).asInstanceOf[TypeInformation[Any]]
+        if (reqType.getTypeClass == classOf[Row]) {
+          // Requested type is Row. Just rewrap CRow in Tuple2
+          new MapFunction[CRow, JTuple2[JBool, Row]] {
+            val outT = new JTuple2(true.asInstanceOf[JBool], null.asInstanceOf[Row])
+            override def map(cRow: CRow): JTuple2[JBool, Row] = {
+              outT.f0 = cRow.change
+              outT.f1 = cRow.row
+              outT
+            }
+          }.asInstanceOf[MapFunction[CRow, OUT]]
+        } else {
+          // Use a map function to convert Row into requested type and wrap result in Tuple2
+          val converterFunction = generateRowConverterFunction(
+            physicalTypeInfo.asInstanceOf[CRowTypeInfo].rowType,
+            logicalRowType,
+            reqType,
+            functionName
+          )
+
+          new CRowInputJavaTupleOutputMapRunner[OUT](
+            converterFunction.name,
+            converterFunction.code,
+            requestedTypeInfo)
+        }
+    }
   }
 }

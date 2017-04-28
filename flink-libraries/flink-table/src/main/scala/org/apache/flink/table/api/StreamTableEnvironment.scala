@@ -23,25 +23,25 @@ import _root_.java.lang.{Boolean => JBool}
 
 import org.apache.calcite.plan.RelOptUtil
 import org.apache.calcite.plan.hep.HepMatchOrder
-import org.apache.calcite.rel.RelNode
+import org.apache.calcite.rel.{RelNode, RelVisitor}
 import org.apache.calcite.rel.`type`.RelDataType
+import org.apache.calcite.rex.{RexCall, RexInputRef, RexNode}
+import org.apache.calcite.sql.SqlKind
 import org.apache.calcite.sql2rel.RelDecorrelator
 import org.apache.calcite.tools.{RuleSet, RuleSets}
 import org.apache.flink.api.common.functions.MapFunction
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2}
-import org.apache.flink.api.java.typeutils.TupleTypeInfo
-import org.apache.flink.api.scala.typeutils.CaseClassTypeInfo
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.table.explain.PlanJsonParser
-import org.apache.flink.table.expressions.Expression
-import org.apache.flink.table.plan.nodes.datastream.{DataStreamConvention, DataStreamRel, UpdateAsRetractionTrait}
+import org.apache.flink.table.expressions.{Expression, WindowEnd}
+import org.apache.flink.table.plan.nodes.datastream._
 import org.apache.flink.table.plan.rules.FlinkRuleSets
 import org.apache.flink.table.plan.schema.{DataStreamTable, TableSourceTable}
-import org.apache.flink.table.runtime.{CRowInputMapRunner, CRowInputJavaTupleOutputMapRunner, CRowInputScalaTupleOutputMapRunner}
+import org.apache.flink.table.runtime.CRowInputMapRunner
 import org.apache.flink.table.runtime.types.{CRow, CRowTypeInfo}
-import org.apache.flink.table.sinks.{StreamTableSink, TableSink}
+import org.apache.flink.table.sinks.{AppendStreamTableSink, RetractStreamTableSink, TableSink, UpsertStreamTableSink}
 import org.apache.flink.table.sources.{StreamTableSource, TableSource}
 import org.apache.flink.types.Row
 
@@ -163,13 +163,48 @@ abstract class StreamTableEnvironment(
   override private[flink] def writeToSink[T](table: Table, sink: TableSink[T]): Unit = {
 
     sink match {
-      case streamSink: StreamTableSink[T] =>
+
+      case retractSink: RetractStreamTableSink[T] =>
+        // retraction sink can always be used
+        val outputType = sink.getOutputType.asInstanceOf[TypeInformation[JTuple2[JBool, T]]]
+        // translate the Table into a DataStream and provide the type that the TableSink expects.
+        val result: DataStream[JTuple2[JBool, T]] =
+          translate(table, updatesAsRetraction = true, withChangeFlag = true)(outputType)
+        // Give the DataStream to the TableSink to emit it.
+        retractSink.emitDataStream(result)
+
+      case appendSink: AppendStreamTableSink[T] =>
+        // optimize plan
+        val optimizedPlan = optimize(table.getRelNode, updatesAsRetraction = false)
+        // verify table is an insert-only (append-only) table
+        if (!isAppendOnly(optimizedPlan)) {
+          throw new TableException(
+            "AppendStreamTableSink requires that Table has only insert changes.")
+        }
         val outputType = sink.getOutputType
         // translate the Table into a DataStream and provide the type that the TableSink expects.
         val result: DataStream[T] =
-          translate(table, updatesAsRetraction = false, withChangeFlag = false)(outputType)
+          translate(optimizedPlan, table.getRelNode.getRowType, withChangeFlag = false)(outputType)
         // Give the DataStream to the TableSink to emit it.
-        streamSink.emitDataStream(result)
+        appendSink.emitDataStream(result)
+
+      case upsertSink: UpsertStreamTableSink[T] =>
+        // optimize plan
+        val optimizedPlan = optimize(table.getRelNode, updatesAsRetraction = false)
+        // extract unique keys
+        val tableKeys: Option[Array[String]] = getUniqueKeys(optimizedPlan)
+        // check if we have keys and forward to upsert table sink
+        tableKeys match {
+          case Some(keys) => upsertSink.setKeyFields(keys)
+          case None => throw new TableException(
+            "UpsertStreamTableSink requires that Table has unique keys.")
+        }
+        val outputType = sink.getOutputType.asInstanceOf[TypeInformation[JTuple2[JBool, T]]]
+        // translate the Table into a DataStream and provide the type that the TableSink expects.
+        val result: DataStream[JTuple2[JBool, T]] =
+          translate(optimizedPlan, table.getRelNode.getRowType, withChangeFlag = true)(outputType)
+        // Give the DataStream to the TableSink to emit it.
+        upsertSink.emitDataStream(result)
       case _ =>
         throw new TableException("StreamTableSink required to emit streaming Table")
     }
@@ -213,6 +248,21 @@ abstract class StreamTableEnvironment(
     }
   }
 
+  /** Validates that the plan produces only append changes. */
+  protected def isAppendOnly(plan: RelNode): Boolean = {
+    val appendOnlyValidator = new AppendOnlyValidator
+    appendOnlyValidator.go(plan)
+
+    appendOnlyValidator.isAppendOnly
+  }
+
+  /** Extracts the unique keys of the table produced by the plan. */
+  protected def getUniqueKeys(plan: RelNode): Option[Array[String]] = {
+    val keyExtractor = new UniqueKeyExtractor
+    keyExtractor.go(plan)
+    keyExtractor.keys
+  }
+
   /**
     * Creates a final converter that maps the internal CRow type to Tuple2 with change flag.
     *
@@ -222,75 +272,12 @@ abstract class StreamTableEnvironment(
     * @param functionName name of the map function. Must not be unique but has to be a
     *                     valid Java class identifier.
     */
-  protected def getConversionMapperWithChanges[IN, OUT](
-      physicalTypeInfo: TypeInformation[IN],
+  protected def getConversionMapperWithChanges[OUT](
+      physicalTypeInfo: TypeInformation[CRow],
       logicalRowType: RelDataType,
       requestedTypeInfo: TypeInformation[OUT],
       functionName: String):
-    MapFunction[IN, OUT] = {
-
-    val converterMapper: MapFunction[_, _] = requestedTypeInfo match {
-      // Java tuple
-      case t: TupleTypeInfo[_]
-        if t.getTypeClass == classOf[JTuple2[_, _]] && t.getTypeAt(0) == Types.BOOLEAN =>
-
-        val reqType = t.getTypeAt(1).asInstanceOf[TypeInformation[Any]]
-        if (reqType.getTypeClass == classOf[Row]) {
-          // Requested type is Row. Just rewrap CRow in Tuple2
-          new MapFunction[CRow, JTuple2[JBool, Row]] {
-            val outT = new JTuple2(true.asInstanceOf[JBool], null.asInstanceOf[Row])
-            override def map(cRow: CRow): JTuple2[JBool, Row] = {
-              outT.f0 = cRow.change
-              outT.f1 = cRow.row
-              outT
-            }
-          }.asInstanceOf[MapFunction[IN, OUT]]
-        } else {
-          // Use a map function to convert Row into requested type and wrap result in Tuple2
-          val converterFunction = generateRowConverterFunction(
-            physicalTypeInfo.asInstanceOf[CRowTypeInfo].rowType,
-            logicalRowType,
-            reqType,
-            functionName
-          )
-
-          new CRowInputJavaTupleOutputMapRunner[OUT](
-            converterFunction.name,
-            converterFunction.code,
-            requestedTypeInfo)
-        }
-
-      // Scala tuple
-      case t: CaseClassTypeInfo[_]
-        if t.getTypeClass == classOf[(_, _)] && t.getTypeAt(0) == Types.BOOLEAN =>
-
-        val reqType = t.getTypeAt(1).asInstanceOf[TypeInformation[Any]]
-        if (reqType.getTypeClass == classOf[Row]) {
-          // Requested type is Row. Just rewrap CRow in Tuple2
-          new MapFunction[CRow, (Boolean, Row)] {
-            override def map(cRow: CRow): (Boolean, Row) = {
-              (cRow.change, cRow.row)
-            }
-          }
-        } else {
-          // Use a map function to convert Row into requested type and wrap result in Tuple2
-          val converterFunction = generateRowConverterFunction(
-            physicalTypeInfo.asInstanceOf[CRowTypeInfo].rowType,
-            logicalRowType,
-            reqType,
-            functionName
-          )
-
-          new CRowInputScalaTupleOutputMapRunner[OUT](
-            converterFunction.name,
-            converterFunction.code,
-            requestedTypeInfo)
-
-        }
-    }
-
-    converterMapper.asInstanceOf[MapFunction[IN, OUT]]
-  }
+    MapFunction[CRow, OUT]
 
   /**
     * Registers a [[DataStream]] as a table under a given name in the [[TableEnvironment]]'s
@@ -375,7 +362,7 @@ abstract class StreamTableEnvironment(
     * Generates the optimized [[RelNode]] tree from the original relational node tree.
     *
     * @param relNode The root node of the relational expression tree.
-    * @param updatesAsRetraction True, indicates that the sink requested change flags.
+    * @param updatesAsRetraction True if the sink requests updates as retraction messages.
     * @return The optimized [[RelNode]] tree
     */
   private[flink] def optimize(relNode: RelNode, updatesAsRetraction: Boolean): RelNode = {
@@ -428,7 +415,8 @@ abstract class StreamTableEnvironment(
     * Table API calls and / or SQL queries and generating corresponding [[DataStream]] operators.
     *
     * @param table The root node of the relational expression tree.
-    * @param withChangeFlag True, indicates that the sink requested change flags.
+    * @param updatesAsRetraction Set to true to encode updates as retraction messages.
+    * @param withChangeFlag Set to true to emit records with change flags.
     * @param tpe The [[TypeInformation]] of the resulting [[DataStream]].
     * @tparam A The type of the resulting [[DataStream]].
     * @return The [[DataStream]] that corresponds to the translated [[Table]].
@@ -446,7 +434,7 @@ abstract class StreamTableEnvironment(
     * @param logicalPlan The root node of the relational expression tree.
     * @param logicalType The row type of the result. Since the logicalPlan can lose the
     *                    field naming during optimization we pass the row type separately.
-    * @param withChangeFlag True, indicates that the sink requested change flags.
+    * @param withChangeFlag Set to true to emit records with change flags.
     * @param tpe         The [[TypeInformation]] of the resulting [[DataStream]].
     * @tparam A The type of the resulting [[DataStream]].
     * @return The [[DataStream]] that corresponds to the translated [[Table]].
@@ -456,6 +444,13 @@ abstract class StreamTableEnvironment(
       logicalType: RelDataType,
       withChangeFlag: Boolean)
       (implicit tpe: TypeInformation[A]): DataStream[A] = {
+
+    // if no change flags are requested, verify table is an insert-only (append-only) table.
+    if (!withChangeFlag && !isAppendOnly(logicalPlan)) {
+      throw new TableException(
+        "Table is not an append-only table. " +
+          "Output needs to handle update and delete changes.")
+    }
 
     // get CRow plan
     val plan: DataStream[CRow] = translateToCRow(logicalPlan)
@@ -467,11 +462,14 @@ abstract class StreamTableEnvironment(
       getConversionMapper(plan.getType, logicalType, tpe, "DataStreamSinkConversion")
     }
 
+    val dopOfPrevious = plan.getParallelism
+
     conversion match {
       case mapFunction: MapFunction[CRow, A] =>
         plan.map(mapFunction)
           .returns(tpe)
           .name(s"to: ${tpe.getTypeClass.getSimpleName}")
+          .setParallelism(dopOfPrevious)
     }
   }
 
@@ -479,7 +477,7 @@ abstract class StreamTableEnvironment(
     * Translates a logical [[RelNode]] plan into a [[DataStream]] of type [[CRow]].
     *
     * @param logicalPlan The logical plan to translate.
-    * @return
+    * @return The [[DataStream]] of type [[CRow]].
     */
   protected def translateToCRow(
     logicalPlan: RelNode): DataStream[CRow] = {
@@ -522,4 +520,89 @@ abstract class StreamTableEnvironment(
         s"$sqlPlan"
   }
 
+  private class AppendOnlyValidator extends RelVisitor {
+
+    var isAppendOnly = true
+
+    override def visit(node: RelNode, ordinal: Int, parent: RelNode): Unit = {
+      node match {
+        case s: DataStreamRel if s.producesUpdates =>
+          isAppendOnly = false
+        case _ =>
+          super.visit(node, ordinal, parent)
+      }
+    }
+  }
+
+  /** Identifies unique key fields in the output of a RelNode. */
+  private class UniqueKeyExtractor extends RelVisitor {
+
+    var keys: Option[Array[String]] = None
+
+    override def visit(node: RelNode, ordinal: Int, parent: RelNode): Unit = {
+      node match {
+        case c: DataStreamCalc =>
+          super.visit(node, ordinal, parent)
+          // check if input has keys
+          if (keys.isDefined) {
+            // track keys forward
+            val inNames = c.getInput.getRowType.getFieldNames
+            val inOutNames = c.getProgram.getNamedProjects.asScala
+              .map(p => {
+                c.getProgram.expandLocalRef(p.left) match {
+                  case i: RexInputRef => (i.getIndex, p.right)
+                  case a: RexCall if a.getKind.equals(SqlKind.AS) =>
+                    a.getOperands.get(0) match {
+                      case ref: RexInputRef =>
+                        (ref.getIndex, p.right)
+                      case _ =>
+                        (-1, p.right)
+                    }
+                  case _: RexNode => (-1, p.right)
+                }
+              })
+              // filter all non-forwarded fields
+              .filter(_._1 >= 0)
+              // resolve names of input fields
+              .map(io => (inNames.get(io._1), io._2))
+
+            // filter by input keys
+            val outKeys = inOutNames.filter(io => keys.get.contains(io._1)).map(_._2)
+            if (outKeys.nonEmpty && outKeys.length == keys.get.length) {
+              // either all keys are preserved or the table doesn't have unique keys anymore.
+              keys = Some(outKeys.toArray)
+            } else {
+              keys = None
+            }
+          }
+        case _: DataStreamOverAggregate =>
+          super.visit(node, ordinal, parent)
+          // keys are always forwarded by Over aggregate
+        case a: DataStreamGroupAggregate =>
+          // get grouping keys
+          val groupKeys = a.getRowType.getFieldNames.asScala.take(a.getGroupings.length)
+          if (groupKeys.nonEmpty) {
+            keys = Some(groupKeys.toArray)
+          }
+        case w: DataStreamGroupWindowAggregate =>
+          // get grouping keys
+          val groupKeys =
+            w.getRowType.getFieldNames.asScala.take(w.getGroupings.length).toArray
+          // get window end time
+          val windowEndKey = w.getWindowProperties
+            .filter(_.property.child == WindowEnd)
+            .map(_.name)
+          // combine both to key
+          if (groupKeys.nonEmpty || windowEndKey.nonEmpty) {
+            keys = Some(groupKeys ++ windowEndKey)
+          }
+        case _: DataStreamRel =>
+          // anything else does not forward keys, so we can stop
+          keys = None
+      }
+    }
+
+  }
+
 }
+

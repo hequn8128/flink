@@ -766,7 +766,7 @@ class Table(
     *
     * A batch [[Table]] can only be written to a
     * [[org.apache.flink.table.sinks.BatchTableSink]], a streaming [[Table]] requires a
-    * [[org.apache.flink.table.sinks.StreamTableSink]].
+    * [[org.apache.flink.table.sinks.AppendStreamTableSink]].
     *
     * @param sink The [[TableSink]] to which the [[Table]] is written.
     * @tparam T The data type that the [[TableSink]] expects.

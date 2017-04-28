@@ -24,16 +24,13 @@ import org.apache.calcite.rel.core.Calc
 import org.apache.calcite.rel.metadata.RelMetadataQuery
 import org.apache.calcite.rel.{RelNode, RelWriter}
 import org.apache.calcite.rex.RexProgram
-import org.apache.flink.api.common.functions.{FlatMapFunction, RichFlatMapFunction}
-import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.table.api.StreamTableEnvironment
 import org.apache.flink.table.calcite.FlinkTypeFactory
-import org.apache.flink.table.codegen.{CodeGenerator, GeneratedFunction}
+import org.apache.flink.table.codegen.CodeGenerator
 import org.apache.flink.table.plan.nodes.CommonCalc
 import org.apache.flink.table.runtime.CRowFlatMapRunner
 import org.apache.flink.table.runtime.types.{CRow, CRowTypeInfo}
-import org.apache.flink.types.Row
 
 /**
   * Flink RelNode which matches along with FlatMapOperator.
@@ -96,11 +93,17 @@ class DataStreamCalc(
       calcProgram,
       config)
 
+    val inputParallelism = inputDataStream.getParallelism
+
     val mapFunc = new CRowFlatMapRunner(
       genFunction.name,
       genFunction.code,
       CRowTypeInfo(outputRowType))
 
-    inputDataStream.flatMap(mapFunc).name(calcOpName(calcProgram, getExpressionString))
+    inputDataStream
+      .flatMap(mapFunc)
+      .name(calcOpName(calcProgram, getExpressionString))
+      // keep parallelism to ensure order of accumulate and retract messages
+      .setParallelism(inputParallelism)
   }
 }

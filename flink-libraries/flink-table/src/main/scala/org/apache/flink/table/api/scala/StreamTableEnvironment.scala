@@ -17,13 +17,19 @@
  */
 package org.apache.flink.table.api.scala
 
+import org.apache.calcite.rel.`type`.RelDataType
+import org.apache.flink.api.common.functions.MapFunction
 import org.apache.flink.api.scala._
 import org.apache.flink.api.common.typeinfo.TypeInformation
-import org.apache.flink.table.api.{TableEnvironment, Table, TableConfig}
+import org.apache.flink.api.scala.typeutils.CaseClassTypeInfo
+import org.apache.flink.table.api.{Table, TableConfig, TableEnvironment, Types}
 import org.apache.flink.table.functions.TableFunction
 import org.apache.flink.table.expressions.Expression
 import org.apache.flink.streaming.api.scala.{DataStream, StreamExecutionEnvironment}
 import org.apache.flink.streaming.api.scala.asScalaStream
+import org.apache.flink.table.runtime.CRowInputScalaTupleOutputMapRunner
+import org.apache.flink.table.runtime.types.{CRow, CRowTypeInfo}
+import org.apache.flink.types.Row
 
 /**
   * The [[TableEnvironment]] for a Scala [[StreamExecutionEnvironment]].
@@ -128,11 +134,14 @@ class StreamTableEnvironment(
   }
 
   /**
-    * Converts the given [[Table]] into a [[DataStream]] of a specified type.
+    * Converts the given [[Table]] into an append [[DataStream]] of a specified type.
+    *
+    * The [[Table]] must only have insert (append) changes. If the [[Table]] is also modified
+    * by update or delete changes, the conversion will fail.
     *
     * The fields of the [[Table]] are mapped to [[DataStream]] fields as follows:
-    * - [[org.apache.flink.types.Row]] and [[org.apache.flink.api.java.tuple.Tuple]]
-    * types: Fields are mapped by position, field types must match.
+    * - [[org.apache.flink.types.Row]] and Scala Tuple types: Fields are mapped by position, field
+    * types must match.
     * - POJO [[DataStream]] types: Fields are mapped by field name, field types must match.
     *
     * @param table The [[Table]] to convert.
@@ -144,10 +153,18 @@ class StreamTableEnvironment(
     asScalaStream(translate(table, updatesAsRetraction = false, withChangeFlag = false)(returnType))
   }
 
-  /**
-    * TODO
-    */
-  def toDataStreamWithChangeFlag[T: TypeInformation](table: Table): DataStream[(Boolean, T)] = {
+/**
+  * Converts the given [[Table]] into a [[DataStream]] of add and retract messages.
+  * The message will be encoded as [[Tuple2]]. The first field is a [[Boolean]] flag,
+  * the second field holds the record of the specified type [[T]].
+  *
+  * A true [[Boolean]] flag indicates an add message, a false flag indicates a retract message.
+  *
+  * @param table The [[Table]] to convert.
+  * @tparam T The type of the requested data type.
+  * @return The converted [[DataStream]].
+  */
+  def toRetractStream[T: TypeInformation](table: Table): DataStream[(Boolean, T)] = {
     val returnType = createTypeInformation[(Boolean, T)]
     asScalaStream(translate(table, updatesAsRetraction = true, withChangeFlag = true)(returnType))
   }
@@ -161,5 +178,53 @@ class StreamTableEnvironment(
     */
   def registerFunction[T: TypeInformation](name: String, tf: TableFunction[T]): Unit = {
     registerTableFunctionInternal(name, tf)
+  }
+
+  /**
+    * Creates a converter that maps the internal CRow type to Scala Tuple2 with change flag.
+    *
+    * @param physicalTypeInfo the input of the sink
+    * @param logicalRowType the logical type with correct field names (esp. for POJO field mapping)
+    * @param requestedTypeInfo the output type of the sink.
+    * @param functionName name of the map function. Must not be unique but has to be a
+    *                     valid Java class identifier.
+    */
+  override protected def getConversionMapperWithChanges[OUT](
+      physicalTypeInfo: TypeInformation[CRow],
+      logicalRowType: RelDataType,
+      requestedTypeInfo: TypeInformation[OUT],
+      functionName: String):
+    MapFunction[CRow, OUT] = {
+
+    requestedTypeInfo match {
+
+      // Scala tuple
+      case t: CaseClassTypeInfo[_]
+        if t.getTypeClass == classOf[(_, _)] && t.getTypeAt(0) == Types.BOOLEAN =>
+
+        val reqType = t.getTypeAt(1).asInstanceOf[TypeInformation[Any]]
+        if (reqType.getTypeClass == classOf[Row]) {
+          // Requested type is Row. Just rewrap CRow in Tuple2
+          new MapFunction[CRow, (Boolean, Row)] {
+            override def map(cRow: CRow): (Boolean, Row) = {
+              (cRow.change, cRow.row)
+            }
+          }.asInstanceOf[MapFunction[CRow, OUT]]
+        } else {
+          // Use a map function to convert Row into requested type and wrap result in Tuple2
+          val converterFunction = generateRowConverterFunction(
+            physicalTypeInfo.asInstanceOf[CRowTypeInfo].rowType,
+            logicalRowType,
+            reqType,
+            functionName
+          )
+
+          new CRowInputScalaTupleOutputMapRunner[OUT](
+            converterFunction.name,
+            converterFunction.code,
+            requestedTypeInfo)
+
+        }
+    }
   }
 }
