@@ -125,7 +125,13 @@ class DataStreamCorrelate(
       collector.code,
       CRowTypeInfo(flatMap.returnType))
 
-    inputDS.flatMap(mapFunc).name(correlateOpName(rexCall, sqlFunction, relRowType))
+    val inputParallelism = inputDS.getParallelism
+
+    inputDS
+      .flatMap(mapFunc)
+      // preserve input parallelism to ensure that acc and retract messages remain in order
+      .setParallelism(inputParallelism)
+      .name(correlateOpName(rexCall, sqlFunction, relRowType))
   }
 
 }
