@@ -219,10 +219,11 @@ class StreamTableEnvironment(
             functionName
           )
 
-          new CRowInputScalaTupleOutputMapRunner[OUT](
+          new CRowInputScalaTupleOutputMapRunner(
             converterFunction.name,
             converterFunction.code,
-            requestedTypeInfo)
+            requestedTypeInfo.asInstanceOf[TypeInformation[(Boolean, Any)]])
+            .asInstanceOf[MapFunction[CRow, OUT]]
 
         }
     }

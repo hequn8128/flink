@@ -164,16 +164,17 @@ abstract class StreamTableEnvironment(
 
     sink match {
 
-      case retractSink: RetractStreamTableSink[T] =>
+      case retractSink: RetractStreamTableSink[_] =>
         // retraction sink can always be used
-        val outputType = sink.getOutputType.asInstanceOf[TypeInformation[JTuple2[JBool, T]]]
+        val outputType = sink.getOutputType
         // translate the Table into a DataStream and provide the type that the TableSink expects.
-        val result: DataStream[JTuple2[JBool, T]] =
+        val result: DataStream[T] =
           translate(table, updatesAsRetraction = true, withChangeFlag = true)(outputType)
         // Give the DataStream to the TableSink to emit it.
-        retractSink.emitDataStream(result)
+        retractSink.asInstanceOf[RetractStreamTableSink[Any]]
+          .emitDataStream(result.asInstanceOf[DataStream[JTuple2[JBool, Any]]])
 
-      case appendSink: AppendStreamTableSink[T] =>
+      case appendSink: AppendStreamTableSink[_] =>
         // optimize plan
         val optimizedPlan = optimize(table.getRelNode, updatesAsRetraction = false)
         // verify table is an insert-only (append-only) table
@@ -186,9 +187,9 @@ abstract class StreamTableEnvironment(
         val result: DataStream[T] =
           translate(optimizedPlan, table.getRelNode.getRowType, withChangeFlag = false)(outputType)
         // Give the DataStream to the TableSink to emit it.
-        appendSink.emitDataStream(result)
+        appendSink.asInstanceOf[AppendStreamTableSink[T]].emitDataStream(result)
 
-      case upsertSink: UpsertStreamTableSink[T] =>
+      case upsertSink: UpsertStreamTableSink[_] =>
         // optimize plan
         val optimizedPlan = optimize(table.getRelNode, updatesAsRetraction = false)
         // extract unique keys
@@ -199,12 +200,13 @@ abstract class StreamTableEnvironment(
           case None => throw new TableException(
             "UpsertStreamTableSink requires that Table has unique keys.")
         }
-        val outputType = sink.getOutputType.asInstanceOf[TypeInformation[JTuple2[JBool, T]]]
+        val outputType = sink.getOutputType
         // translate the Table into a DataStream and provide the type that the TableSink expects.
-        val result: DataStream[JTuple2[JBool, T]] =
+        val result: DataStream[T] =
           translate(optimizedPlan, table.getRelNode.getRowType, withChangeFlag = true)(outputType)
         // Give the DataStream to the TableSink to emit it.
-        upsertSink.emitDataStream(result)
+        upsertSink.asInstanceOf[UpsertStreamTableSink[Any]]
+          .emitDataStream(result.asInstanceOf[DataStream[JTuple2[JBool, Any]]])
       case _ =>
         throw new TableException("StreamTableSink required to emit streaming Table")
     }

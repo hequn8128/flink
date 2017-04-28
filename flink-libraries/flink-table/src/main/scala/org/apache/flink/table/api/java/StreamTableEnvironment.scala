@@ -299,10 +299,11 @@ class StreamTableEnvironment(
             functionName
           )
 
-          new CRowInputJavaTupleOutputMapRunner[OUT](
+          new CRowInputJavaTupleOutputMapRunner(
             converterFunction.name,
             converterFunction.code,
-            requestedTypeInfo)
+            requestedTypeInfo.asInstanceOf[TypeInformation[JTuple2[JBool, Any]]])
+            .asInstanceOf[MapFunction[CRow, OUT]]
         }
     }
   }
