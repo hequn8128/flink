@@ -556,7 +556,7 @@ abstract class TableEnvironment(val config: TableConfig) {
     TableEnvironment.validateType(inputType)
 
     val indexedNames: Array[(Int, String)] = inputType match {
-      case a: AtomicType[A] =>
+      case a: AtomicType[_] =>
         if (exprs.length != 1) {
           throw new TableException("Table of atomic type can only have a single field.")
         }
