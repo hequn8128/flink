@@ -45,10 +45,10 @@ import org.apache.flink.table.api.{Table, Types}
 trait UpsertStreamTableSink[T] extends TableSink[JTuple2[JBool, T]] {
 
   /**
-    * Sets the keys of the [[Table]].
+    * Configures the keys of the [[Table]] to write.
     * The method is called after [[TableSink.configure()]].
     */
-  def setKeyFields(keys: Array[String]): Unit
+  def configureKeyFields(keys: Array[String]): Unit
 
   /** Returns the requested record type */
   def getRecordType: TypeInformation[T]

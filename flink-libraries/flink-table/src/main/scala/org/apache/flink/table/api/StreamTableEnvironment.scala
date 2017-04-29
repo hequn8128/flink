@@ -196,7 +196,7 @@ abstract class StreamTableEnvironment(
         val tableKeys: Option[Array[String]] = getUniqueKeys(optimizedPlan)
         // check if we have keys and forward to upsert table sink
         tableKeys match {
-          case Some(keys) => upsertSink.setKeyFields(keys)
+          case Some(keys) => upsertSink.configureKeyFields(keys)
           case None => throw new TableException(
             "UpsertStreamTableSink requires that Table has unique keys.")
         }
