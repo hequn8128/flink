@@ -22,21 +22,18 @@ import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall, RelTraitSet}
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.convert.ConverterRule
 import org.apache.flink.table.api.TableConfig
-import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.plan.nodes.FlinkConventions
-import org.apache.flink.table.plan.nodes.datastream.DataStreamWindowJoin
+import org.apache.flink.table.plan.nodes.datastream.DataStreamJoin
 import org.apache.flink.table.plan.nodes.logical.FlinkLogicalJoin
 import org.apache.flink.table.plan.schema.RowSchema
 import org.apache.flink.table.runtime.join.WindowJoinUtil
 
-import scala.collection.JavaConverters._
-
-class DataStreamWindowJoinRule
+class DataStreamJoinRule
   extends ConverterRule(
     classOf[FlinkLogicalJoin],
     FlinkConventions.LOGICAL,
     FlinkConventions.DATASTREAM,
-    "DataStreamWindowJoinRule") {
+    "DataStreamJoinRule") {
 
   override def matches(call: RelOptRuleCall): Boolean = {
     val join: FlinkLogicalJoin = call.rel(0).asInstanceOf[FlinkLogicalJoin]
@@ -53,25 +50,11 @@ class DataStreamWindowJoinRule
     val remainingPredsAccessTime = remainingPreds.isDefined &&
       WindowJoinUtil.accessesTimeAttribute(remainingPreds.get, join.getRowType)
 
-    if (windowBounds.isDefined) {
-      if (windowBounds.get.isEventTime) {
-        // we cannot handle event-time window joins yet
-        false
-      } else {
-        // Check that no event-time attributes are in the input.
-        // The proc-time join implementation does ensure that record timestamp are correctly set.
-        // It is always the timestamp of the later arriving record.
-        // We rely on projection pushdown to remove unused attributes before the join.
-        val rowTimeAttrInOutput = join.getRowType.getFieldList.asScala
-          .exists(f => FlinkTypeFactory.isRowtimeIndicatorType(f.getType))
-
-        !remainingPredsAccessTime && !rowTimeAttrInOutput
-      }
+    if (!windowBounds.isDefined && !remainingPredsAccessTime) {
+      true
     } else {
-      // the given join does not have valid window bounds. We cannot translate it.
       false
     }
-
   }
 
   override def convert(rel: RelNode): RelNode = {
@@ -84,32 +67,21 @@ class DataStreamWindowJoinRule
     val leftRowSchema = new RowSchema(convLeft.getRowType)
     val rightRowSchema = new RowSchema(convRight.getRowType)
 
-    val (windowBounds, remainCondition) =
-      WindowJoinUtil.extractWindowBoundsFromPredicate(
-        joinInfo.getRemaining(join.getCluster.getRexBuilder),
-        leftRowSchema.logicalArity,
-        join.getRowType,
-        join.getCluster.getRexBuilder,
-        TableConfig.DEFAULT)
-
-    new DataStreamWindowJoin(
+    new DataStreamJoin(
       rel.getCluster,
       traitSet,
       convLeft,
       convRight,
       join.getCondition,
+      joinInfo,
       join.getJoinType,
       leftRowSchema,
       rightRowSchema,
       new RowSchema(rel.getRowType),
-      windowBounds.get.isEventTime,
-      windowBounds.get.leftLowerBound,
-      windowBounds.get.leftUpperBound,
-      remainCondition,
       description)
   }
 }
 
-object DataStreamWindowJoinRule {
-  val INSTANCE: RelOptRule = new DataStreamWindowJoinRule
+object DataStreamJoinRule {
+  val INSTANCE: RelOptRule = new DataStreamJoinRule
 }
