@@ -41,7 +41,8 @@ class CorrelateTest extends TableTestBase {
         "DataSetCorrelate",
         batchTableNode(0),
         term("invocation", "func1($cor0.c)"),
-        term("function", func1.getClass.getCanonicalName),
+        term("correlate", s"table(${func1.getClass.getSimpleName}($$cor0.c))"),
+        term("select", "a,b,c,f0"),
         term("rowType",
              "RecordType(INTEGER a, BIGINT b, VARCHAR(65536) c, VARCHAR(65536) f0)"),
         term("joinType", "INNER")
@@ -61,7 +62,8 @@ class CorrelateTest extends TableTestBase {
         "DataSetCorrelate",
         batchTableNode(0),
         term("invocation", "func1($cor0.c, '$')"),
-        term("function", func1.getClass.getCanonicalName),
+        term("correlate", s"table(${func1.getClass.getSimpleName}($$cor0.c,'$$'))"),
+        term("select", "a,b,c,f0"),
         term("rowType",
              "RecordType(INTEGER a, BIGINT b, VARCHAR(65536) c, VARCHAR(65536) f0)"),
         term("joinType", "INNER")
@@ -87,7 +89,8 @@ class CorrelateTest extends TableTestBase {
         "DataSetCorrelate",
         batchTableNode(0),
         term("invocation", "func1($cor0.c)"),
-        term("function", func1.getClass.getCanonicalName),
+        term("correlate", s"table(${func1.getClass.getSimpleName}($$cor0.c))"),
+        term("select", "a,b,c,f0"),
         term("rowType",
              "RecordType(INTEGER a, BIGINT b, VARCHAR(65536) c, VARCHAR(65536) f0)"),
         term("joinType", "LEFT")
@@ -113,7 +116,8 @@ class CorrelateTest extends TableTestBase {
         "DataSetCorrelate",
         batchTableNode(0),
         term("invocation", "func2($cor0.c)"),
-        term("function", func2.getClass.getCanonicalName),
+        term("correlate", s"table(${func2.getClass.getSimpleName}($$cor0.c))"),
+        term("select", "a,b,c,f0,f1"),
         term("rowType",
              "RecordType(INTEGER a, BIGINT b, VARCHAR(65536) c, " +
                "VARCHAR(65536) f0, INTEGER f1)"),
@@ -140,7 +144,8 @@ class CorrelateTest extends TableTestBase {
         "DataSetCorrelate",
         batchTableNode(0),
         term("invocation", "hierarchy($cor0.c)"),
-        term("function", function.getClass.getCanonicalName),
+        term("correlate", s"table(${function.getClass.getSimpleName}($$cor0.c))"),
+        term("select", "a,b,c,f0,f1,f2"),
         term("rowType",
              "RecordType(INTEGER a, BIGINT b, VARCHAR(65536) c," +
                " VARCHAR(65536) f0, BOOLEAN f1, INTEGER f2)"),
@@ -167,7 +172,8 @@ class CorrelateTest extends TableTestBase {
         "DataSetCorrelate",
         batchTableNode(0),
         term("invocation", "pojo($cor0.c)"),
-        term("function", function.getClass.getCanonicalName),
+        term("correlate", s"table(${function.getClass.getSimpleName}($$cor0.c))"),
+        term("select", "a,b,c,age,name"),
         term("rowType",
              "RecordType(INTEGER a, BIGINT b, VARCHAR(65536) c," +
                " INTEGER age, VARCHAR(65536) name)"),
@@ -195,7 +201,8 @@ class CorrelateTest extends TableTestBase {
         "DataSetCorrelate",
         batchTableNode(0),
         term("invocation", "func2($cor0.c)"),
-        term("function", func2.getClass.getCanonicalName),
+        term("correlate", s"table(${func2.getClass.getSimpleName}($$cor0.c))"),
+        term("select", "a,b,c,f0,f1"),
         term("rowType",
              "RecordType(INTEGER a, BIGINT b, VARCHAR(65536) c, " +
                "VARCHAR(65536) f0, INTEGER f1)"),
@@ -224,7 +231,8 @@ class CorrelateTest extends TableTestBase {
         "DataSetCorrelate",
         batchTableNode(0),
         term("invocation", "func1(SUBSTRING($cor0.c, 2))"),
-        term("function", func1.getClass.getCanonicalName),
+        term("correlate", s"table(${func1.getClass.getSimpleName}(SUBSTRING($$cor0.c, 2)))"),
+        term("select", "a,b,c,f0"),
         term("rowType",
              "RecordType(INTEGER a, BIGINT b, VARCHAR(65536) c, VARCHAR(65536) f0)"),
         term("joinType", "INNER")

@@ -78,8 +78,6 @@ import org.apache.flink.util.Collector
   */
 abstract class TableFunction[T] extends UserDefinedFunction {
 
-  override def toString: String = getClass.getCanonicalName
-
   // ----------------------------------------------------------------------------------------------
 
   /**
