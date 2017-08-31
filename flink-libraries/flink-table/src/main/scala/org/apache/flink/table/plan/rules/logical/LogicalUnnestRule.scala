@@ -84,6 +84,7 @@ class LogicalUnnestRule(
           // create table function
           val explodeTableFunc = UserDefinedFunctionUtils.createTableSqlFunctions(
             "explode",
+            "explode",
             ExplodeFunctionUtil.explodeTableFuncFromType(arrayType.typeInfo),
             FlinkTypeFactory.toTypeInfo(arrayType.getComponentType),
             cluster.getTypeFactory.asInstanceOf[FlinkTypeFactory]).head

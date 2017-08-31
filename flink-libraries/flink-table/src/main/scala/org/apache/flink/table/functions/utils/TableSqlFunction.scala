@@ -38,6 +38,7 @@ import java.util
   */
 class TableSqlFunction(
     name: String,
+    displayName: String,
     udtf: TableFunction[_],
     rowTypeInfo: TypeInformation[_],
     returnTypeInference: SqlReturnTypeInference,
@@ -71,7 +72,7 @@ class TableSqlFunction(
 
   override def isDeterministic: Boolean = udtf.isDeterministic
 
-  override def toString: String = udtf.toString
+  override def toString: String = displayName
 }
 
 object TableSqlFunction {
@@ -88,6 +89,7 @@ object TableSqlFunction {
     */
   def apply(
     name: String,
+    displayName: String,
     udtf: TableFunction[_],
     rowTypeInfo: TypeInformation[_],
     typeFactory: FlinkTypeFactory,
@@ -112,6 +114,7 @@ object TableSqlFunction {
 
     new TableSqlFunction(
       name,
+      displayName,
       udtf,
       rowTypeInfo,
       ReturnTypes.CURSOR,
