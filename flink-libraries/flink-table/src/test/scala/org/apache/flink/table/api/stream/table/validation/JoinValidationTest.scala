@@ -64,7 +64,7 @@ class JoinValidationTest extends TableTestBase {
       // must fail. No equality join predicate
       .where('d === 'f)
       .select('c, 'g)
-      .toDataSet[Row]
+      .toRetractStream[Row]
   }
 
   @Test(expected = classOf[TableException])
@@ -73,7 +73,7 @@ class JoinValidationTest extends TableTestBase {
       // must fail. No equality join predicate
       .where('a < 'd)
       .select('c, 'g)
-      .toDataSet[Row]
+      .toRetractStream[Row]
   }
 
   @Test(expected = classOf[ValidationException])
