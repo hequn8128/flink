@@ -269,7 +269,7 @@ object UserDefinedFunctionUtils {
     */
   def createTableSqlFunctions(
       name: String,
-      disPlayName: String,
+      displayName: String,
       tableFunction: TableFunction[_],
       resultType: TypeInformation[_],
       typeFactory: FlinkTypeFactory)
@@ -279,7 +279,7 @@ object UserDefinedFunctionUtils {
 
     evalMethods.map { method =>
       val function = new FlinkTableFunctionImpl(resultType, fieldIndexes, fieldNames, method)
-      TableSqlFunction(name, disPlayName, tableFunction, resultType, typeFactory, function)
+      TableSqlFunction(name, displayName, tableFunction, resultType, typeFactory, function)
     }
   }
 
