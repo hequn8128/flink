@@ -159,7 +159,7 @@ class UpdatingPlanCheckerTest {
       .where('leftpk === 'righta)
       .select('rightpk, 'lefta, 'righta)
 
-    util.verifyTableUniqueKey(resultTable, Seq("rightpk", "righta"))
+    util.verifyTableUniqueKey(resultTable, Seq("righta"))
   }
 
   @Test
