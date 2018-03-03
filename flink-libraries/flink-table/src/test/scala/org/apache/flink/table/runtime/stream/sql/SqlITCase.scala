@@ -240,6 +240,40 @@ class SqlITCase extends StreamingWithStateTestBase {
     assertEquals(expected.sorted, StreamITCase.testResults.sorted)
   }
 
+  /** test select star **/
+  @Test
+  def testCodeGenTooLong(): Unit = {
+    val data = List(
+      (1000L, "1", "Hello"),
+      (2000L, "2", "Hello"),
+      (3000L, null.asInstanceOf[String], "Hello"),
+      (4000L, "4", "Hello"),
+      (5000L, null.asInstanceOf[String], "Hello"),
+      (6000L, "6", "Hello"),
+      (7000L, "7", "Hello World"),
+      (8000L, "8", "Hello World"),
+      (20000L, "20", "Hello World"))
+
+    val env = StreamExecutionEnvironment.getExecutionEnvironment
+    val tEnv = TableEnvironment.getTableEnvironment(env)
+    StreamITCase.clear
+
+    val sqlQuery = "SELECT a, b, " +
+      "concat_ws('1', MD5(concat('11', '111', COALESCE(LOWER(UPPER(TRIM(concat(b, c, '1')))), ''))), MD5(concat('11', '111', COALESCE(LOWER(UPPER(TRIM(concat(b, c, '1')))), ''))), MD5(concat('11', '111', COALESCE(LOWER(UPPER(TRIM(concat(b, c, '1')))), ''))), MD5(concat('11', '111', COALESCE(LOWER(UPPER(TRIM(concat(b, c, '1')))), ''))), MD5(concat('11', '111', COALESCE(LOWER(UPPER(TRIM(concat(b, c, '1')))), ''))), MD5(concat('11', '111', COALESCE(LOWER(UPPER(TRIM(concat(b, c, '1')))), ''))), MD5(concat('11', '111', COALESCE(LOWER(UPPER(TRIM(concat(b, c, '1')))), ''))), MD5(concat('11', '111', COALESCE(LOWER(UPPER(TRIM(concat(b, c, '1')))), ''))), MD5(concat('11', '111', COALESCE(LOWER(UPPER(TRIM(concat(b, c, '1')))), ''))), MD5(concat('11', '111', COALESCE(LOWER(UPPER(TRIM(concat(b, c, '1')))), ''))), MD5(concat('11', '111', COALESCE(LOWER(UPPER(TRIM(concat(b, c, '1')))), ''))), MD5(concat('11', '111', COALESCE(LOWER(UPPER(TRIM(concat(b, c, '1')))), ''))), MD5(concat('11', '111', COALESCE(LOWER(UPPER(TRIM(concat(b, c, '1')))), ''))), MD5(concat('11', '111', COALESCE(LOWER(UPPER(TRIM(concat(b, c, '1')))), ''))), MD5(concat('11', '111', COALESCE(LOWER(UPPER(TRIM(concat(b, c, '1')))), ''))), MD5(concat('11', '111', COALESCE(LOWER(UPPER(TRIM(concat(b, c, '1')))), ''))), MD5(concat('11', '111', COALESCE(LOWER(UPPER(TRIM(concat(b, c, '1')))), ''))), MD5(concat('11', '111', COALESCE(LOWER(UPPER(TRIM(concat(b, c, '1')))), ''))), MD5(concat('11', '111', COALESCE(LOWER(UPPER(TRIM(concat(b, c, '1')))), ''))), MD5(concat('11', '111', COALESCE(LOWER(UPPER(TRIM(concat(b, c, '1')))), ''))), MD5(concat('11', '111', COALESCE(LOWER(UPPER(TRIM(concat(b, c, '1')))), ''))), MD5(concat('11', '111', COALESCE(LOWER(UPPER(TRIM(concat(b, c, '1')))), ''))))  " +
+      "FROM (SELECT a, concat_ws('1', MD5(concat('11', '111', COALESCE(LOWER(UPPER(TRIM(concat(b, c, '1')))), '')))) as b, concat_ws('1', MD5(concat('11', '111', COALESCE(LOWER(UPPER(TRIM(concat(b, c, '1')))), '')))) as c FROM MyTable) "
+    //      "MyTable"
+
+    val t = env.fromCollection(data).toTable(tEnv).as('a, 'b, 'c)
+    tEnv.registerTable("MyTable", t)
+
+    val result = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
+    result.addSink(new StreamITCase.StringSink[Row])
+    env.execute()
+
+    val expected = List("(1,1),one", "(2,2),two", "(3,3),three")
+    assertEquals(expected.sorted, StreamITCase.testResults.sorted)
+  }
+
   /** test selection **/
   @Test
   def testSelectExpressionFromTable(): Unit = {
