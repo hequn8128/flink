@@ -171,7 +171,6 @@ abstract class NonWindowJoin(
     }
   }
 
-
   def getNewExpiredTime(curProcessTime: Long, oldExpiredTime: Long): Long = {
     if (stateCleaningEnabled && curProcessTime + minRetentionTime > oldExpiredTime) {
       curProcessTime + maxRetentionTime
@@ -181,7 +180,7 @@ abstract class NonWindowJoin(
   }
 
   /**
-    * Removes records which are expired from the state. Registers a new timer if the state still
+    * Removes records which are expired from the state. Register a new timer if the state still
     * holds records after the clean-up.
     */
   def expireOutTimeRow(
@@ -217,7 +216,6 @@ abstract class NonWindowJoin(
     }
   }
 
-
   /**
     * Puts or Retract an element from the input stream into state and search the other state to
     * output records meet the condition. Records will be expired in state if state retention time
@@ -232,12 +230,21 @@ abstract class NonWindowJoin(
       otherSideState: MapState[Row, JTuple2[Long, Long]],
       isLeft: Boolean): Unit
 
-
+  /**
+    * Update current side state. Put row and it's number and expired time into row state. Also,
+    * regist a timer if state retention time has been specified.
+    *
+    * @param value            The input CRow
+    * @param ctx              The ctx to register timer or get current time
+    * @param timerState       The state to record last timer
+    * @param currentSideState The state to hold current side stream element
+    * @return The row number and expired time for current input row
+    */
   def updateCurrentSide(
       value: CRow,
       ctx: CoProcessFunction[CRow, CRow, CRow]#Context,
       timerState: ValueState[Long],
-      currentSideState: MapState[Row, JTuple2[Long, Long]]): (Long, JTuple2[Long, Long])  = {
+      currentSideState: MapState[Row, JTuple2[Long, Long]]): (Long, JTuple2[Long, Long]) = {
 
     val inputRow = value.row
     val curProcessTime = ctx.timerService.currentProcessingTime
@@ -249,6 +256,7 @@ abstract class NonWindowJoin(
     }
 
     cntAndExpiredTime.f1 = getNewExpiredTime(curProcessTime, cntAndExpiredTime.f1)
+    // update timer if necessary
     if (stateCleaningEnabled && timerState.value() == 0) {
       timerState.update(cntAndExpiredTime.f1)
       ctx.timerService().registerProcessingTimeTimer(cntAndExpiredTime.f1)

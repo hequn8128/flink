@@ -28,16 +28,17 @@ import org.apache.flink.types.Row
 import org.apache.flink.util.Collector
 
 /**
-  * Connect data for left stream and right stream. Only use for OuterJoin with NonEquiPredicates.
-  * An MapState of type [Row, Long] is added to record how many rows from the right table can be
-  * matched for each left row. Left join without NonEquiPredicates doesn't need it because
-  * left rows can always join right rows as long as join keys are same.
+  * Connect data for left stream and right stream. Only use for left or right join with non-equal
+  * predicates. An MapState of type [Row, Long] is used to record how many matched rows for the
+  * specified row. Left and right join without non-equal predicates doesn't need it because rows
+  * from one side can always join rows from the other side as long as join keys are same.
   *
   * @param leftType        the input type of left stream
   * @param rightType       the input type of right stream
   * @param resultType      the output type of join
   * @param genJoinFuncName the function code of other non-equi condition
   * @param genJoinFuncCode the function name of other non-equi condition
+  * @param isLeftJoin      the type of join, whether it is the type of left join
   * @param queryConfig     the configuration for the query to generate
   */
 class NonWindowLeftRightJoinWithNonEquiPredicates(
@@ -92,24 +93,19 @@ class NonWindowLeftRightJoinWithNonEquiPredicates(
     // join other side data
     if (recordFromLeft == isLeftJoin) {
       val joinCnt =
-        normalJoin(inputRow, recordFromLeft, otherSideState, curProcessTime)
-      // update matched cnt only when left row cnt is changed from 0 to 1. Each time encountered a
-      // new record from right, leftJoinCnt will also be updated.
+        preservedJoin(inputRow, recordFromLeft, otherSideState, curProcessTime)
+      // init matched cnt only when row cnt is changed from 0 to 1. Each time encountered a
+      // new record from the other side, joinCnt will also be updated.
       if (cntAndExpiredTime.f0 == 1 && value.change) {
         joinCntState(joinCntIdx).put(inputRow, joinCnt)
       }
     } else {
-      retractJoinWithNonEquiPreds(
-        value,
-        recordFromLeft,
-        otherSideState,
-        joinCntIdx,
-        curProcessTime)
+      retractJoinWithNonEquiPreds(value, recordFromLeft, otherSideState, joinCntIdx, curProcessTime)
     }
   }
 
   /**
-    * Removes records which are expired from state. Registers a new timer if the state still
+    * Removes records which are expired from state. Register a new timer if the state still
     * holds records after the clean-up. Also, clear joinCnt map state when clear rowMapState.
     */
   override def expireOutTimeRow(

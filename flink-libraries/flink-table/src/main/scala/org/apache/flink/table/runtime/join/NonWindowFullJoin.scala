@@ -28,14 +28,14 @@ import org.apache.flink.types.Row
 import org.apache.flink.util.Collector
 
 /**
-  * Connect data for left stream and right stream. Only use for left or right join without
-  * NonEquiPredicates.
+  * Connect data for left stream and right stream. Only use for full outer join without non-equal
+  * predicates.
   *
   * @param leftType        the input type of left stream
   * @param rightType       the input type of right stream
   * @param resultType      the output type of join
-  * @param genJoinFuncName the function code of other non-equi condition
-  * @param genJoinFuncCode the function name of other non-equi condition
+  * @param genJoinFuncName the function code without any non-equi condition
+  * @param genJoinFuncCode the function name without any non-equi condition
   * @param queryConfig     the configuration for the query to generate
   */
 class NonWindowFullJoin(
@@ -61,8 +61,9 @@ class NonWindowFullJoin(
 
   /**
     * Puts or Retract an element from the input stream into state and search the other state to
-    * output records meet the condition. The result is NULL from the right side, if there is no
-    * match. Records will be expired in state if state retention time has been specified.
+    * output records meet the condition. The input row will be preserved and appended with null, if
+    * there is no match. Records will be expired in state if state retention time has been
+    * specified.
     */
   override def processElement(
       value: CRow,
@@ -83,9 +84,10 @@ class NonWindowFullJoin(
 
     retractJoin(value, recordFromLeft, currentSideState, otherSideState, curProcessTime)
 
+    // preserved current input if there is no matched rows from the other side.
     if (cRowWrapper.getEmitCnt() == 0) {
       cRowWrapper.setTimes(1)
-      collectWithDefaultValue(inputRow, recordFromLeft, cRowWrapper)
+      collectAppendNull(inputRow, recordFromLeft, cRowWrapper)
     }
   }
 }

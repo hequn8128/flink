@@ -29,14 +29,14 @@ import org.apache.flink.util.Collector
 
 /**
   * Connect data for left stream and right stream. Only use for left or right join without
-  * NonEquiPredicates.
+  * non-equal predicates.
   *
   * @param leftType        the input type of left stream
   * @param rightType       the input type of right stream
   * @param resultType      the output type of join
-  * @param genJoinFuncName the function code of other non-equi condition
-  * @param genJoinFuncCode the function name of other non-equi condition
-  * @param isLeftJoin      the type of join
+  * @param genJoinFuncName the function code without any non-equi condition
+  * @param genJoinFuncCode the function name without any non-equi condition
+  * @param isLeftJoin      the type of join, whether it is the type of left join
   * @param queryConfig     the configuration for the query to generate
   */
 class NonWindowLeftRightJoin(
@@ -64,8 +64,9 @@ class NonWindowLeftRightJoin(
 
   /**
     * Puts or Retract an element from the input stream into state and search the other state to
-    * output records meet the condition. The result is NULL from the right side, if there is no
-    * match. Records will be expired in state if state retention time has been specified.
+    * output records meet the condition. The input row will be preserved and appended with null, if
+    * there is no match. Records will be expired in state if state retention time has been
+    * specified.
     */
   override def processElement(
       value: CRow,
@@ -86,7 +87,7 @@ class NonWindowLeftRightJoin(
 
     // join other side data
     if (recordFromLeft == isLeftJoin) {
-      normalJoin(inputRow, recordFromLeft, otherSideState, curProcessTime)
+      preservedJoin(inputRow, recordFromLeft, otherSideState, curProcessTime)
     } else {
       retractJoin(value, recordFromLeft, currentSideState, otherSideState, curProcessTime)
     }
