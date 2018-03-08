@@ -30,7 +30,7 @@ import org.apache.flink.table.codegen.FunctionCodeGenerator
 import org.apache.flink.table.plan.nodes.CommonJoin
 import org.apache.flink.table.plan.schema.RowSchema
 import org.apache.flink.table.runtime.CRowKeySelector
-import org.apache.flink.table.runtime.join.{NonWindowInnerJoin, NonWindowLeftJoin, NonWindowLeftJoinWithNonEquiPredicates}
+import org.apache.flink.table.runtime.join._
 import org.apache.flink.table.runtime.types.{CRow, CRowTypeInfo}
 import org.apache.flink.types.Row
 
@@ -139,16 +139,11 @@ class DataStreamJoin(
     val rightDataStream =
       right.asInstanceOf[DataStreamRel].translateToPlan(tableEnv, queryConfig)
 
-    val (connectOperator, nullCheck) = joinType match {
-      case JoinRelType.INNER | JoinRelType.LEFT => (leftDataStream.connect(rightDataStream), false)
-      case _ =>
-        throw TableException(s"Unsupported join type '$joinType'. Currently only " +
-          s"non-window inner joins with at least one equality predicate are supported")
-    }
+    val connectOperator = leftDataStream.connect(rightDataStream)
 
     val generator = new FunctionCodeGenerator(
       config,
-      nullCheck,
+      false,
       leftSchema.typeInfo,
       Some(rightSchema.typeInfo))
     val conversion = generator.generateConverterResultExpression(
@@ -188,16 +183,34 @@ class DataStreamJoin(
           genFunction.name,
           genFunction.code,
           queryConfig)
-      case JoinRelType.LEFT if joinInfo.isEqui =>
-        new NonWindowLeftJoin(
+      case JoinRelType.LEFT | JoinRelType.RIGHT if joinInfo.isEqui =>
+        new NonWindowLeftRightJoin(
+          leftSchema.typeInfo,
+          rightSchema.typeInfo,
+          CRowTypeInfo(returnType),
+          genFunction.name,
+          genFunction.code,
+          joinType == JoinRelType.LEFT,
+          queryConfig)
+      case JoinRelType.LEFT | JoinRelType.RIGHT =>
+        new NonWindowLeftRightJoinWithNonEquiPredicates(
+          leftSchema.typeInfo,
+          rightSchema.typeInfo,
+          CRowTypeInfo(returnType),
+          genFunction.name,
+          genFunction.code,
+          joinType == JoinRelType.LEFT,
+          queryConfig)
+      case JoinRelType.FULL if joinInfo.isEqui =>
+        new NonWindowFullJoin(
           leftSchema.typeInfo,
           rightSchema.typeInfo,
           CRowTypeInfo(returnType),
           genFunction.name,
           genFunction.code,
           queryConfig)
-      case JoinRelType.LEFT =>
-        new NonWindowLeftJoinWithNonEquiPredicates(
+      case JoinRelType.FULL =>
+        new NonWindowFullJoinWithNonEquiPredicates(
           leftSchema.typeInfo,
           rightSchema.typeInfo,
           CRowTypeInfo(returnType),

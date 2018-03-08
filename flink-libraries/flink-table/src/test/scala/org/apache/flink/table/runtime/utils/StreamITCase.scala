@@ -62,6 +62,7 @@ object StreamITCase {
   final class RetractingSink() extends RichSinkFunction[(Boolean, Row)] {
     def invoke(v: (Boolean, Row)) {
       retractedResults.synchronized {
+//        println("output: " + v)
         val value = v._2.toString
         if (v._1) {
           retractedResults += value
