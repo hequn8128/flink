@@ -28,39 +28,41 @@ import org.apache.flink.types.Row
 import org.apache.flink.util.Collector
 
 /**
-  * Connect data for left stream and right stream. Only use for innerJoin.
+  * Connect data for left stream and right stream. Only use for left or right join without
+  * NonEquiPredicates.
   *
-  * @param leftType          the input type of left stream
-  * @param rightType         the input type of right stream
-  * @param resultType        the output type of join
-  * @param genJoinFuncName   the function code of other non-equi condition
-  * @param genJoinFuncCode   the function name of other non-equi condition
-  * @param queryConfig       the configuration for the query to generate
+  * @param leftType        the input type of left stream
+  * @param rightType       the input type of right stream
+  * @param resultType      the output type of join
+  * @param genJoinFuncName the function code of other non-equi condition
+  * @param genJoinFuncCode the function name of other non-equi condition
+  * @param queryConfig     the configuration for the query to generate
   */
-class NonWindowInnerJoin(
+class NonWindowFullJoin(
     leftType: TypeInformation[Row],
     rightType: TypeInformation[Row],
     resultType: TypeInformation[CRow],
     genJoinFuncName: String,
     genJoinFuncCode: String,
     queryConfig: StreamQueryConfig)
-  extends NonWindowJoin(
+  extends NonWindowLeftRightJoin(
     leftType,
     rightType,
     resultType,
     genJoinFuncName,
     genJoinFuncCode,
+    false,
     queryConfig) {
 
   override def open(parameters: Configuration): Unit = {
     super.open(parameters)
-    LOG.debug("Instantiating NonWindowInnerJoin.")
+    LOG.debug(s"Instantiating NonWindowFullJoin")
   }
 
   /**
     * Puts or Retract an element from the input stream into state and search the other state to
-    * output records meet the condition. Records will be expired in state if state retention time
-    * has been specified.
+    * output records meet the condition. The result is NULL from the right side, if there is no
+    * match. Records will be expired in state if state retention time has been specified.
     */
   override def processElement(
       value: CRow,
@@ -69,30 +71,21 @@ class NonWindowInnerJoin(
       timerState: ValueState[Long],
       currentSideState: MapState[Row, JTuple2[Long, Long]],
       otherSideState: MapState[Row, JTuple2[Long, Long]],
-      isLeft: Boolean): Unit = {
+      recordFromLeft: Boolean): Unit = {
 
     val inputRow = value.row
     val (curProcessTime, _) = updateCurrentSide(value, ctx, timerState, currentSideState)
 
+    cRowWrapper.reset()
     cRowWrapper.setCollector(out)
     cRowWrapper.setChange(value.change)
-    val otherSideIterator = otherSideState.iterator()
-    // join other side data
-    while (otherSideIterator.hasNext) {
-      val otherSideEntry = otherSideIterator.next()
-      val otherSideRow = otherSideEntry.getKey
-      val otherSideCntAndExpiredTime = otherSideEntry.getValue
-      // join
-      cRowWrapper.setTimes(otherSideCntAndExpiredTime.f0)
-      if (isLeft) {
-        joinFunction.join(inputRow, otherSideRow, cRowWrapper)
-      } else {
-        joinFunction.join(otherSideRow, inputRow, cRowWrapper)
-      }
-      // clear expired data. Note: clear after join to keep closer to the original semantics
-      if (stateCleaningEnabled && curProcessTime >= otherSideCntAndExpiredTime.f1) {
-        otherSideIterator.remove()
-      }
+    cRowWrapper.setEmitCnt(0)
+
+    retractJoin(value, recordFromLeft, currentSideState, otherSideState, curProcessTime)
+
+    if (cRowWrapper.getEmitCnt() == 0) {
+      cRowWrapper.setTimes(1)
+      collectWithDefaultValue(inputRow, recordFromLeft, cRowWrapper)
     }
   }
 }

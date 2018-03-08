@@ -82,7 +82,7 @@ abstract class NonWindowJoin(
       getRuntimeContext.getUserCodeClassLoader,
       genJoinFuncName,
       genJoinFuncCode)
-    LOG.debug("Instantiating JoinFunction.")
+
     joinFunction = clazz.newInstance()
 
     // initialize left and right state, the first element of tuple2 indicates how many rows of
@@ -102,6 +102,7 @@ abstract class NonWindowJoin(
     rightTimer = getRuntimeContext.getState(valueStateDescriptor2)
 
     cRowWrapper = new CRowWrappingMultiOutputCollector()
+    LOG.debug("Instantiating NonWindowJoin.")
   }
 
   /**
@@ -150,51 +151,28 @@ abstract class NonWindowJoin(
       out: Collector[CRow]): Unit = {
 
     if (stateCleaningEnabled && leftTimer.value == timestamp) {
-      expireOutTimeRowForLeft(
+      expireOutTimeRow(
         timestamp,
         leftState,
         leftTimer,
+        true,
         ctx
       )
     }
 
     if (stateCleaningEnabled && rightTimer.value == timestamp) {
-      expireOutTimeRowForRight(
+      expireOutTimeRow(
         timestamp,
         rightState,
         rightTimer,
+        false,
         ctx
       )
     }
   }
 
-  /**
-    * Removes records which are expired from left state.
-    */
-  def expireOutTimeRowForLeft(curTime: Long,
-      rowMapState: MapState[Row, JTuple2[Long, Long]],
-      timerState: ValueState[Long],
-      ctx: CoProcessFunction[CRow, CRow, CRow]#OnTimerContext): Unit = {
 
-    expireOutTimeRow(curTime, rowMapState, timerState, ctx)
-  }
-
-  /**
-    * Removes records which are expired from right state.
-    */
-  def expireOutTimeRowForRight(curTime: Long,
-      rowMapState: MapState[Row, JTuple2[Long, Long]],
-      timerState: ValueState[Long],
-      ctx: CoProcessFunction[CRow, CRow, CRow]#OnTimerContext): Unit = {
-
-    expireOutTimeRow(curTime, rowMapState, timerState, ctx)
-  }
-
-
-  def getNewExpiredTime(
-      curProcessTime: Long,
-      oldExpiredTime: Long): Long = {
-
+  def getNewExpiredTime(curProcessTime: Long, oldExpiredTime: Long): Long = {
     if (stateCleaningEnabled && curProcessTime + minRetentionTime > oldExpiredTime) {
       curProcessTime + maxRetentionTime
     } else {
@@ -210,6 +188,7 @@ abstract class NonWindowJoin(
       curTime: Long,
       rowMapState: MapState[Row, JTuple2[Long, Long]],
       timerState: ValueState[Long],
+      isLeft: Boolean,
       ctx: CoProcessFunction[CRow, CRow, CRow]#OnTimerContext): Unit = {
 
     val rowMapIter = rowMapState.iterator()
@@ -238,22 +217,6 @@ abstract class NonWindowJoin(
     }
   }
 
-  /**
-    * Connect left row and null right row, then collect. The result is NULL from the right side,
-    * if there is no match.
-    *
-    * @param leftRow    The row from left side.
-    * @param defaultRow The result row used for output, right side fields will all be null.
-    * @param out        The collector for returning result values.
-    */
-  def collectWithNullRight(leftRow: Row, defaultRow: Row, out: Collector[Row]): Unit = {
-    var i = 0;
-    while (i < leftRow.getArity) {
-      defaultRow.setField(i, leftRow.getField(i))
-      i += 1
-    }
-    out.collect(defaultRow)
-  }
 
   /**
     * Puts or Retract an element from the input stream into state and search the other state to
@@ -268,4 +231,42 @@ abstract class NonWindowJoin(
       currentSideState: MapState[Row, JTuple2[Long, Long]],
       otherSideState: MapState[Row, JTuple2[Long, Long]],
       isLeft: Boolean): Unit
+
+
+  def updateCurrentSide(
+      value: CRow,
+      ctx: CoProcessFunction[CRow, CRow, CRow]#Context,
+      timerState: ValueState[Long],
+      currentSideState: MapState[Row, JTuple2[Long, Long]]): (Long, JTuple2[Long, Long])  = {
+
+    val inputRow = value.row
+    val curProcessTime = ctx.timerService.currentProcessingTime
+    val oldCntAndExpiredTime = currentSideState.get(inputRow)
+    val cntAndExpiredTime = if (null == oldCntAndExpiredTime) {
+      JTuple2.of(0L, -1L)
+    } else {
+      oldCntAndExpiredTime
+    }
+
+    cntAndExpiredTime.f1 = getNewExpiredTime(curProcessTime, cntAndExpiredTime.f1)
+    if (stateCleaningEnabled && timerState.value() == 0) {
+      timerState.update(cntAndExpiredTime.f1)
+      ctx.timerService().registerProcessingTimeTimer(cntAndExpiredTime.f1)
+    }
+
+    // update current side stream state
+    if (!value.change) {
+      cntAndExpiredTime.f0 = cntAndExpiredTime.f0 - 1
+      if (cntAndExpiredTime.f0 <= 0) {
+        currentSideState.remove(inputRow)
+      } else {
+        currentSideState.put(inputRow, cntAndExpiredTime)
+      }
+    } else {
+      cntAndExpiredTime.f0 = cntAndExpiredTime.f0 + 1
+      currentSideState.put(inputRow, cntAndExpiredTime)
+    }
+
+    (curProcessTime, cntAndExpiredTime)
+  }
 }
