@@ -58,36 +58,28 @@ abstract class NonWindowOuterJoin(
   protected var leftResultRow: Row = _
   // result row, all fields from left will be null. Used for output when there is no matched rows.
   protected var rightResultRow: Row = _
-  // how many matched rows from the right table for each left row. Index 0 is used for left
-  // stream, index 1 is used for right stream.
-  protected var joinCntState: Array[MapState[Row, Long]] = _
 
   override def open(parameters: Configuration): Unit = {
     super.open(parameters)
-
     leftResultRow = new Row(resultType.getArity)
     rightResultRow = new Row(resultType.getArity)
-
-    joinCntState = new Array[MapState[Row, Long]](2)
-    val leftJoinCntStateDescriptor = new MapStateDescriptor[Row, Long](
-      "leftJoinCnt", leftType, Types.LONG.asInstanceOf[TypeInformation[Long]])
-    joinCntState(0) = getRuntimeContext.getMapState(leftJoinCntStateDescriptor)
-    val rightJoinCntStateDescriptor = new MapStateDescriptor[Row, Long](
-      "rightJoinCnt", rightType, Types.LONG.asInstanceOf[TypeInformation[Long]])
-    joinCntState(1) = getRuntimeContext.getMapState(rightJoinCntStateDescriptor)
-
     LOG.debug(s"Instantiating NonWindowOuterJoin")
   }
 
   /**
     * Join current row with other side rows. Preserve current row if there are no matched rows
-    * from other side.
+    * from other side. The RowWrapper has been reset before we call preservedJoin and we also
+    * assume that the current change of cRowWrapper is equal to value.change.
+    *
+    * @param inputRow         the input row
+    * @param inputRowFromLeft the flag indicat whether input row is from left
+    * @param otherSideState   the other side state
+    * @return the number of matched rows
     */
   def preservedJoin(
       inputRow: Row,
       inputRowFromLeft: Boolean,
-      otherSideState: MapState[Row, JTuple2[Long, Long]],
-      curProcessTime: Long): Long = {
+      otherSideState: MapState[Row, JTuple2[Long, Long]]): Long = {
 
     val otherSideIterator = otherSideState.iterator()
     while (otherSideIterator.hasNext) {
@@ -113,19 +105,21 @@ abstract class NonWindowOuterJoin(
 
   /**
     * Join current row with other side rows. Retract previous output row if matched condition
-    * changed, i.e, matched condition is changed from matched to unmatched or vice versa.
+    * changed, i.e, matched condition is changed from matched to unmatched or vice versa. The
+    * RowWrapper has been reset before we call retractJoin and we also assume that the current
+    * change of cRowWrapper is equal to value.change.
     */
   def retractJoin(
       value: CRow,
       inputRowFromLeft: Boolean,
       currentSideState: MapState[Row, JTuple2[Long, Long]],
-      otherSideState: MapState[Row, JTuple2[Long, Long]],
-      curProcessTime: Long): Unit = {
+      otherSideState: MapState[Row, JTuple2[Long, Long]]): Unit = {
 
     val inputRow = value.row
     val otherSideIterator = otherSideState.iterator()
-    // number of record in current side, here we only check whether number equals to 0 or 1.
-    val recordNum: Long = recordNumInState(currentSideState)
+    // approximate number of record in current side. We only check whether number equals to 0, 1
+    // or bigger
+    val recordNum: Long = approxiRecordNumInState(currentSideState)
 
     while (otherSideIterator.hasNext) {
       val otherSideEntry = otherSideIterator.next()
@@ -146,63 +140,8 @@ abstract class NonWindowOuterJoin(
       if (!value.change && recordNum == 0) {
         cRowWrapper.setChange(true)
         collectAppendNull(otherSideRow, !inputRowFromLeft, cRowWrapper)
-        cRowWrapper.setChange(false)
       }
       // clear expired data. Note: clear after join to keep closer to the original semantics
-      if (stateCleaningEnabled && curProcessTime >= otherSideCntAndExpiredTime.f1) {
-        otherSideIterator.remove()
-      }
-    }
-  }
-
-  /**
-    * Join current row with other side rows when contains non-equal predicates. Retract previous
-    * output row if matched condition changed, i.e, matched condition is changed from matched to
-    * unmatched or vice versa.
-    */
-  def retractJoinWithNonEquiPreds(
-      value: CRow,
-      inputRowFromLeft: Boolean,
-      otherSideState: MapState[Row, JTuple2[Long, Long]],
-      joinCntIdx: Int,
-      curProcessTime: Long): Unit = {
-
-    val inputRow = value.row
-    val otherSideIterator = otherSideState.iterator()
-    while (otherSideIterator.hasNext) {
-      val otherSideEntry = otherSideIterator.next()
-      val otherSideRow = otherSideEntry.getKey
-      val otherSideCntAndExpiredTime = otherSideEntry.getValue
-
-      cRowWrapper.setLazyOutput(true)
-      cRowWrapper.setRow(null)
-      callJoinFunction(inputRow, inputRowFromLeft, otherSideRow, cRowWrapper)
-      cRowWrapper.setLazyOutput(false)
-      if (cRowWrapper.getRow() != null) {
-        cRowWrapper.setTimes(otherSideCntAndExpiredTime.f0)
-        val joinCnt = joinCntState(1 - joinCntIdx).get(otherSideRow)
-        if (value.change) {
-          joinCntState(1 - joinCntIdx).put(otherSideRow, joinCnt + 1L)
-          if (joinCnt == 0) {
-            // retract previous non matched result row
-            cRowWrapper.setChange(false)
-            collectAppendNull(otherSideRow, !inputRowFromLeft, cRowWrapper)
-            cRowWrapper.setChange(true)
-          }
-          // do normal join
-          callJoinFunction(inputRow, inputRowFromLeft, otherSideRow, cRowWrapper)
-        } else {
-          joinCntState(1 - joinCntIdx).put(otherSideRow, joinCnt - 1L)
-          // do normal join
-          callJoinFunction(inputRow, inputRowFromLeft, otherSideRow, cRowWrapper)
-          if (joinCnt == 1) {
-            // output non matched result row
-            cRowWrapper.setChange(true)
-            collectAppendNull(otherSideRow, !inputRowFromLeft, cRowWrapper)
-            cRowWrapper.setChange(false)
-          }
-        }
-      }
       if (stateCleaningEnabled && curProcessTime >= otherSideCntAndExpiredTime.f1) {
         otherSideIterator.remove()
       }
@@ -221,7 +160,7 @@ abstract class NonWindowOuterJoin(
       joinCntState: Array[MapState[Row, Long]],
       ctx: CoProcessFunction[CRow, CRow, CRow]#OnTimerContext): Unit = {
 
-    val joinCntIdx = getJoinCntIndex(isLeft)
+    val currentJoinCntState = getJoinCntState(joinCntState, isLeft)
     val rowMapIter = rowMapState.iterator()
     var validTimestamp: Boolean = false
 
@@ -230,7 +169,7 @@ abstract class NonWindowOuterJoin(
       val recordExpiredTime = mapEntry.getValue.f1
       if (recordExpiredTime <= curTime) {
         rowMapIter.remove()
-        joinCntState(joinCntIdx).remove(mapEntry.getKey)
+        currentJoinCntState.remove(mapEntry.getKey)
       } else {
         // we found a timestamp that is still valid
         validTimestamp = true
@@ -246,16 +185,16 @@ abstract class NonWindowOuterJoin(
       timerState.clear()
       rowMapState.clear()
       if (isLeft == isLeftJoin) {
-        joinCntState(joinCntIdx).clear()
+        currentJoinCntState.clear()
       }
     }
   }
 
   /**
-    * Return number of records in corresponding state. Only return 0, 1, 2 because only these
-    * numbers matter.
+    * Return approximate number of records in corresponding state. Only check if record number is
+    * 0, 1 or bigger.
     */
-  def recordNumInState(currentSideState: MapState[Row, JTuple2[Long, Long]]): Long = {
+  def approxiRecordNumInState(currentSideState: MapState[Row, JTuple2[Long, Long]]): Long = {
     var recordNum = 0L
     val it = currentSideState.iterator()
     while(it.hasNext && recordNum < 2) {
@@ -290,14 +229,20 @@ abstract class NonWindowOuterJoin(
   }
 
   /**
-    * Get joinCnt state index according to input row side. Return 0 if the input row from left or
-    * return 1 if from right.
+    * Get left or right join cnt state.
+    *
+    * @param joinCntState    the join cnt state array, index 0 is left join cnt state, index 1
+    *                        is right
+    * @param getLeftCntState the flag whether get the left join cnt state
+    * @return the corresponding join cnt state
     */
-  def getJoinCntIndex(isInputFromLeft: Boolean): Int = {
-    if (isInputFromLeft) {
-      0
+  def getJoinCntState(
+      joinCntState: Array[MapState[Row, Long]],
+      getLeftCntState: Boolean): MapState[Row, Long] = {
+    if (getLeftCntState) {
+      joinCntState(0)
     } else {
-      1
+      joinCntState(1)
     }
   }
 }
