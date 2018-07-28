@@ -20,7 +20,10 @@ package org.apache.flink.table.catalog
 
 import java.util.{Collection => JCollection, Collections => JCollections, LinkedHashSet => JLinkedHashSet, Set => JSet}
 
+import com.google.common.collect.ImmutableSet
+import jdk.nashorn.internal.ir.annotations.Immutable
 import org.apache.calcite.linq4j.tree.Expression
+import org.apache.calcite.rel.`type`.RelProtoDataType
 import org.apache.calcite.schema._
 import org.apache.flink.table.api.{CatalogNotExistException, TableEnvironment, TableNotExistException}
 import org.apache.flink.table.util.Logging
@@ -106,6 +109,10 @@ class ExternalCatalogSchema(
   def registerSubSchemas(plusOfThis: SchemaPlus) {
     catalog.listSubCatalogs().asScala.foreach(db => plusOfThis.add(db, getSubSchema(db)))
   }
+
+  override def getType(s: String): RelProtoDataType = null
+
+  override def getTypeNames: JSet[String] = ImmutableSet.of()
 }
 
 object ExternalCatalogSchema {
