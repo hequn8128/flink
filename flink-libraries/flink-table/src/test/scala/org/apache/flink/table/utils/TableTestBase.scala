@@ -260,7 +260,7 @@ case class StreamTableTestUtil() extends TableTestUtil {
     val jDs = mock(classOf[JDataStream[T]])
     when(jDs.getType).thenReturn(typeInfo)
 
-    val t = javaTableEnv.fromDataStream(jDs, fields)
+    val t = javaTableEnv.fromAppendStream(jDs, fields)
     javaTableEnv.registerTable(name, t)
     t
   }

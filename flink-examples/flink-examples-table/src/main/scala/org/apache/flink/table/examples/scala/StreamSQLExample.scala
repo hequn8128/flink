@@ -54,8 +54,8 @@ object StreamSQLExample {
       Order(4L, "beer", 1)))
 
     // register the DataStreams under the name "OrderA" and "OrderB"
-    tEnv.registerDataStream("OrderA", orderA, 'user, 'product, 'amount)
-    tEnv.registerDataStream("OrderB", orderB, 'user, 'product, 'amount)
+    tEnv.registerAppendStream("OrderA", orderA, 'user, 'product, 'amount)
+    tEnv.registerAppendStream("OrderB", orderB, 'user, 'product, 'amount)
 
     // union the two tables
     val result = tEnv.sqlQuery(

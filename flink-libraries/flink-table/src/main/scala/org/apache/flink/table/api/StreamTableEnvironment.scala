@@ -505,19 +505,19 @@ abstract class StreamTableEnvironment(
   }
 
   /**
-    * Registers a [[DataStream]] as a table under a given name in the [[TableEnvironment]]'s
+    * Registers an append [[DataStream]] as a table under a given name in the [[TableEnvironment]]'s
     * catalog.
     *
     * @param name The name under which the table is registered in the catalog.
     * @param dataStream The [[DataStream]] to register as table in the catalog.
     * @tparam T the type of the [[DataStream]].
     */
-  protected def registerDataStreamInternal[T](
+  protected def registerAppendStreamInternal[T](
     name: String,
     dataStream: DataStream[T]): Unit = {
 
     val (fieldNames, fieldIndexes) = getFieldInfo[T](dataStream.getType)
-    val dataStreamTable = new DataStreamTable[T](
+    val dataStreamTable = new AppendStreamTable[T](
       dataStream,
       fieldIndexes,
       fieldNames
@@ -526,15 +526,15 @@ abstract class StreamTableEnvironment(
   }
 
   /**
-    * Registers a [[DataStream]] as a table under a given name with field names as specified by
-    * field expressions in the [[TableEnvironment]]'s catalog.
+    * Registers an append [[DataStream]] as a table under a given name with field names as specified
+    * by field expressions in the [[TableEnvironment]]'s catalog.
     *
     * @param name The name under which the table is registered in the catalog.
     * @param dataStream The [[DataStream]] to register as table in the catalog.
     * @param fields The field expressions to define the field names of the table.
     * @tparam T The type of the [[DataStream]].
     */
-  protected def registerDataStreamInternal[T](
+  protected def registerAppendStreamInternal[T](
       name: String,
       dataStream: DataStream[T],
       fields: Array[Expression])
@@ -559,7 +559,74 @@ abstract class StreamTableEnvironment(
     val indexesWithIndicatorFields = adjustFieldIndexes(fieldIndexes, rowtime, proctime)
     val namesWithIndicatorFields = adjustFieldNames(fieldNames, rowtime, proctime)
 
-    val dataStreamTable = new DataStreamTable[T](
+    val dataStreamTable = new AppendStreamTable[T](
+      dataStream,
+      indexesWithIndicatorFields,
+      namesWithIndicatorFields
+    )
+    registerTableInternal(name, dataStreamTable)
+  }
+
+  /**
+    * Registers an upsert [[DataStream]] as a table under a given name in the [[TableEnvironment]]'s
+    * catalog.
+    *
+    * @param name The name under which the table is registered in the catalog.
+    * @param dataStream The [[DataStream]] to register as table in the catalog.
+    * @tparam T the type of the [[DataStream]].
+    */
+  protected def registerUpsertStreamInternal[T: TypeInformation](
+      name: String,
+      dataStream: DataStream[JTuple2[JBool, T]]): Unit = {
+
+    val streamType: TypeInformation[T] =
+      dataStream.getType.asInstanceOf[TupleTypeInfo[JTuple2[JBool, T]]].getTypeAt(1)
+
+    val (fieldNames, fieldIndexes) = getFieldInfo[T](streamType)
+    val dataStreamTable = new UpsertStreamTable[T](
+      dataStream,
+      fieldIndexes,
+      fieldNames
+    )
+    registerTableInternal(name, dataStreamTable)
+  }
+
+  /**
+    * Registers an upsert [[DataStream]] as a table under a given name with field names as specified
+    * by field expressions in the [[TableEnvironment]]'s catalog.
+    *
+    * @param name The name under which the table is registered in the catalog.
+    * @param dataStream The [[DataStream]] to register as table in the catalog.
+    * @param fields The field expressions to define the field names of the table.
+    * @tparam T The type of the [[DataStream]].
+    */
+  protected def registerUpsertStreamInternal[T: TypeInformation](
+      name: String,
+      dataStream: DataStream[JTuple2[JBool, T]],
+      fields: Array[Expression])
+  : Unit = {
+
+    val streamType: TypeInformation[T] =
+      dataStream.getType.asInstanceOf[TupleTypeInfo[JTuple2[JBool, T]]].getTypeAt(1)
+
+    // get field names and types for all non-replaced fields
+    val (fieldNames, fieldIndexes) = getFieldInfo[T](streamType, fields)
+
+    // validate and extract time attributes
+    val (rowtime, proctime) = validateAndExtractTimeAttributes(streamType, fields)
+
+    // check if event-time is enabled
+    if (rowtime.isDefined && execEnv.getStreamTimeCharacteristic != TimeCharacteristic.EventTime) {
+      throw TableException(
+        s"A rowtime attribute requires an EventTime time characteristic in stream environment. " +
+          s"But is: ${execEnv.getStreamTimeCharacteristic}")
+    }
+
+    // adjust field indexes and field names
+    val indexesWithIndicatorFields = adjustFieldIndexes(fieldIndexes, rowtime, proctime)
+    val namesWithIndicatorFields = adjustFieldNames(fieldNames, rowtime, proctime)
+
+    val dataStreamTable = new UpsertStreamTable[T](
       dataStream,
       indexesWithIndicatorFields,
       namesWithIndicatorFields

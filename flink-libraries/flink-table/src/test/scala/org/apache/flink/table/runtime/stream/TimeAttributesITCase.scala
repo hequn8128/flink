@@ -258,10 +258,16 @@ class TimeAttributesITCase extends AbstractTestBase {
       .join(func('rowtime, 'proctime, 'string) as 's)
       .window(Tumble over 5.millis on 'rowtime as 'w)
       .groupBy('w)
-      .select('w.rowtime, 's.count)
+      .select('s.count as 'cc1)
 
-    val results = t.toAppendStream[Row]
-    results.addSink(new StreamITCase.StringSink[Row])
+    val t2 = table.window(Tumble over 5.millis on 'proctime as 'w2)
+      .groupBy('w2)
+      .select('int.count as 'cc2)
+
+    val t3 = t.join(t2, 'cc1 === 'cc2)
+
+    val results = t3.toAppendStream[Row]
+    results.print()
     env.execute()
 
     val expected = Seq(

@@ -143,31 +143,31 @@ class StreamTableEnvironmentTest extends TableTestBase {
   @Test
   def testProctimeAttributeParsed(): Unit = {
     val (jTEnv, ds) = prepareSchemaExpressionParser
-    jTEnv.fromDataStream(ds, "a, b, c, d, e, pt.proctime")
+    jTEnv.fromAppendStream(ds, "a, b, c, d, e, pt.proctime")
   }
 
   @Test
   def testReplacingRowtimeAttributeParsed(): Unit = {
     val (jTEnv, ds) = prepareSchemaExpressionParser
-    jTEnv.fromDataStream(ds, "a.rowtime, b, c, d, e")
+    jTEnv.fromAppendStream(ds, "a.rowtime, b, c, d, e")
   }
 
   @Test
   def testAppedingRowtimeAttributeParsed(): Unit = {
     val (jTEnv, ds) = prepareSchemaExpressionParser
-    jTEnv.fromDataStream(ds, "a, b, c, d, e, rt.rowtime")
+    jTEnv.fromAppendStream(ds, "a, b, c, d, e, rt.rowtime")
   }
 
   @Test
   def testRowtimeAndProctimeAttributeParsed1(): Unit = {
     val (jTEnv, ds) = prepareSchemaExpressionParser
-    jTEnv.fromDataStream(ds, "a, b, c, d, e, pt.proctime, rt.rowtime")
+    jTEnv.fromAppendStream(ds, "a, b, c, d, e, pt.proctime, rt.rowtime")
   }
 
   @Test
   def testRowtimeAndProctimeAttributeParsed2(): Unit = {
     val (jTEnv, ds) = prepareSchemaExpressionParser
-    jTEnv.fromDataStream(ds, "rt.rowtime, b, c, d, e, pt.proctime")
+    jTEnv.fromAppendStream(ds, "rt.rowtime, b, c, d, e, pt.proctime")
   }
 
   private def prepareSchemaExpressionParser:

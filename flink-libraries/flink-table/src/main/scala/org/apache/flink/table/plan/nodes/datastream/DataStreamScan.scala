@@ -27,7 +27,7 @@ import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.table.api.{StreamQueryConfig, StreamTableEnvironment}
 import org.apache.flink.table.expressions.Cast
 import org.apache.flink.table.plan.schema.RowSchema
-import org.apache.flink.table.plan.schema.DataStreamTable
+import org.apache.flink.table.plan.schema.AppendStreamTable
 import org.apache.flink.table.runtime.types.CRow
 import org.apache.flink.table.typeutils.TimeIndicatorTypeInfo
 
@@ -44,7 +44,7 @@ class DataStreamScan(
   extends TableScan(cluster, traitSet, table)
   with StreamScan {
 
-  val dataStreamTable: DataStreamTable[Any] = getTable.unwrap(classOf[DataStreamTable[Any]])
+  val dataStreamTable: AppendStreamTable[Any] = getTable.unwrap(classOf[AppendStreamTable[Any]])
 
   override def deriveRowType(): RelDataType = schema.relDataType
 

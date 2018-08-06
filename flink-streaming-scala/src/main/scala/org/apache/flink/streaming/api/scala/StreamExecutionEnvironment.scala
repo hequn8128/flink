@@ -22,8 +22,8 @@ import com.esotericsoftware.kryo.Serializer
 import org.apache.flink.annotation.{Internal, Public, PublicEvolving}
 import org.apache.flink.api.common.io.{FileInputFormat, FilePathFilter, InputFormat}
 import org.apache.flink.api.common.restartstrategy.RestartStrategies.RestartStrategyConfiguration
-import org.apache.flink.api.common.typeinfo.TypeInformation
-import org.apache.flink.api.java.typeutils.ResultTypeQueryable
+import org.apache.flink.api.common.typeinfo.{BasicTypeInfo, TypeInformation}
+import org.apache.flink.api.java.typeutils.{ResultTypeQueryable, TupleTypeInfo}
 import org.apache.flink.api.java.typeutils.runtime.kryo.KryoSerializer
 import org.apache.flink.api.scala.ClosureCleaner
 import org.apache.flink.configuration.Configuration
@@ -34,6 +34,8 @@ import org.apache.flink.streaming.api.functions.source._
 import org.apache.flink.streaming.api.functions.source.SourceFunction.SourceContext
 import org.apache.flink.streaming.api.{CheckpointingMode, TimeCharacteristic}
 import org.apache.flink.util.SplittableIterator
+import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2}
+import _root_.java.lang.{Boolean => JBool}
 
 import scala.collection.JavaConverters._
 import _root_.scala.language.implicitConversions
@@ -452,6 +454,26 @@ class StreamExecutionEnvironment(javaEnv: JavaEnv) {
   def fromCollection[T: TypeInformation] (data: Iterator[T]): DataStream[T] = {
     val typeInfo = implicitly[TypeInformation[T]]
     asScalaStream(javaEnv.fromCollection(data.asJava, typeInfo))
+  }
+
+  def fromCollectionWithFlag[T: TypeInformation](
+    data: Seq[JTuple2[JBool, T]]): DataStream[JTuple2[JBool, T]] = {
+
+    require(data != null, "Data must not be null.")
+    val typeInfo = implicitly[TypeInformation[T]]
+    val tupleTypeInfo =
+      new TupleTypeInfo[JTuple2[JBool, T]](BasicTypeInfo.BOOLEAN_TYPE_INFO, typeInfo)
+
+    val collection = scala.collection.JavaConversions.asJavaCollection(data)
+    asScalaStream(javaEnv.fromCollection(collection, tupleTypeInfo))
+  }
+
+  def fromCollectionWithFlag[T: TypeInformation](
+    data: Iterator[JTuple2[JBool, T]]): DataStream[JTuple2[JBool, T]] = {
+    val typeInfo = implicitly[TypeInformation[T]]
+    val tupleTypeInfo =
+      new TupleTypeInfo[JTuple2[JBool, T]](BasicTypeInfo.BOOLEAN_TYPE_INFO, typeInfo)
+    asScalaStream(javaEnv.fromCollection(data.asJava, tupleTypeInfo))
   }
 
   /**

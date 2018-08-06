@@ -23,7 +23,7 @@ import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.convert.ConverterRule
 import org.apache.flink.table.plan.nodes.FlinkConventions
 import org.apache.flink.table.plan.nodes.datastream.DataStreamScan
-import org.apache.flink.table.plan.schema.{DataStreamTable, RowSchema}
+import org.apache.flink.table.plan.schema.{AppendStreamTable, RowSchema}
 import org.apache.flink.table.plan.nodes.logical.FlinkLogicalNativeTableScan
 
 class DataStreamScanRule
@@ -36,9 +36,9 @@ class DataStreamScanRule
 
   override def matches(call: RelOptRuleCall): Boolean = {
     val scan: FlinkLogicalNativeTableScan = call.rel(0).asInstanceOf[FlinkLogicalNativeTableScan]
-    val dataSetTable = scan.getTable.unwrap(classOf[DataStreamTable[Any]])
+    val dataSetTable = scan.getTable.unwrap(classOf[AppendStreamTable[Any]])
     dataSetTable match {
-      case _: DataStreamTable[Any] =>
+      case _: AppendStreamTable[Any] =>
         true
       case _ =>
         false

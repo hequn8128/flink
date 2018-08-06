@@ -27,7 +27,7 @@ import org.apache.calcite.rel.core.TableScan
 import org.apache.calcite.rel.logical.LogicalTableScan
 import org.apache.calcite.rel.metadata.RelMetadataQuery
 import org.apache.flink.table.plan.nodes.FlinkConventions
-import org.apache.flink.table.plan.schema.{DataSetTable, DataStreamTable}
+import org.apache.flink.table.plan.schema.{DataSetTable, AppendStreamTable}
 
 class FlinkLogicalNativeTableScan (
     cluster: RelOptCluster,
@@ -56,7 +56,7 @@ class FlinkLogicalNativeTableScanConverter
   override def matches(call: RelOptRuleCall): Boolean = {
     val scan = call.rel[TableScan](0)
     val dataSetTable = scan.getTable.unwrap(classOf[DataSetTable[_]])
-    val dataStreamTable = scan.getTable.unwrap(classOf[DataStreamTable[_]])
+    val dataStreamTable = scan.getTable.unwrap(classOf[AppendStreamTable[_]])
     dataSetTable != null || dataStreamTable != null
   }
 
