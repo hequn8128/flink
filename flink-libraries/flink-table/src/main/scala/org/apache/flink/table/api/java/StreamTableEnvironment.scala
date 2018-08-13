@@ -123,47 +123,48 @@ class StreamTableEnvironment(
     scan(name)
   }
 
-//  /**
-//    * Converts the given upsert [[DataStream]] into a [[Table]].
-//    *
-//    * The field names of the [[Table]] are automatically derived from the type of the
-//    * [[DataStream]].
-//    *
-//    * @param dataStream The upsert [[DataStream]] to be converted.
-//    * @tparam T The type of the upsert [[DataStream]].
-//    * @return The converted [[Table]].
-//    */
-//  def fromUpsertStream[T](dataStream: DataStream[JTuple2[JBool, T]]): Table = {
-//
-//    val name = createUniqueTableName()
-//    registerUpsertStreamInternal(name, dataStream)
-//    scan(name)
-//  }
-//
-//  /**
-//    * Converts the given upsert [[DataStream]] into a [[Table]] with specified field names.
-//    *
-//    * Example:
-//    *
-//    * {{{
-//    *   DataStream<Tuple2<Boolean, Row>> stream = ...
-//    *   Table tab = tableEnv.fromUpsertStream(stream, "a, b")
-//    * }}}
-//    *
-//    * @param dataStream The upsert [[DataStream]] to be converted.
-//    * @param fields The field names of the resulting [[Table]].
-//    * @tparam T The type of the upsert [[DataStream]].
-//    * @return The converted [[Table]].
-//    */
-//  def fromUpsertStream[T](dataStream: DataStream[JTuple2[JBool, T]], fields: String): Table = {
-//    val exprs = ExpressionParser
-//      .parseExpressionList(fields)
-//      .toArray
-//
-//    val name = createUniqueTableName()
-//    registerUpsertStreamInternal(name, dataStream, exprs)
-//    scan(name)
-//  }
+  /**
+    * Converts the given upsert [[DataStream]] into a [[Table]].
+    *
+    * The field names of the [[Table]] are automatically derived from the type of the
+    * [[DataStream]].
+    *
+    * @param dataStream The upsert [[DataStream]] to be converted.
+    * @tparam T The type of the upsert [[DataStream]].
+    * @return The converted [[Table]].
+    */
+  def fromUpsertStream[T](dataStream: DataStream[JTuple2[JBool, T]]): Table = {
+
+    val name = createUniqueTableName()
+    registerUpsertStreamInternal(name, dataStream)
+    scan(name)
+  }
+
+  /**
+    * Converts the given upsert [[DataStream]] into a [[Table]] with specified field names.
+    *
+    * Example:
+    *
+    * {{{
+    *   DataStream<Tuple2<Boolean, Row>> stream = ...
+    *   Table tab = tableEnv.fromUpsertStream(stream, "a, b")
+    * }}}
+    *
+    * @param dataStream The upsert [[DataStream]] to be converted.
+    * @param fields The field names of the resulting [[Table]].
+    * @tparam T The type of the upsert [[DataStream]].
+    * @return The converted [[Table]].
+    */
+  def fromUpsertStream[T](dataStream: DataStream[JTuple2[JBool, T]], fields: String): Table = {
+
+    val exprs = ExpressionParser
+      .parseExpressionList(fields)
+      .toArray
+
+    val name = createUniqueTableName()
+    registerUpsertStreamInternal(name, dataStream, exprs)
+    scan(name)
+  }
 
   /**
     * Registers the given append [[DataStream]] as table in the

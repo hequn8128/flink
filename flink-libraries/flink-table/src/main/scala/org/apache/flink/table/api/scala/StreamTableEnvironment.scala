@@ -132,7 +132,7 @@ class StreamTableEnvironment(
     * @tparam T The type of the [[DataStream]].
     * @return The converted [[Table]].
     */
-  def fromUpsertStream[T: TypeInformation](dataStream: DataStream[JTuple2[JBool, T]]): Table = {
+  def fromUpsertStream[T](dataStream: DataStream[JTuple2[JBool, T]]): Table = {
 
     val name = createUniqueTableName()
     registerUpsertStreamInternal(name, dataStream.javaStream)
@@ -154,7 +154,7 @@ class StreamTableEnvironment(
     * @tparam T The type of the [[DataStream]].
     * @return The converted [[Table]].
     */
-  def fromUpsertStream[T: TypeInformation](
+  def fromUpsertStream[T](
     dataStream: DataStream[JTuple2[JBool, T]], fields: Expression*): Table = {
 
     val name = createUniqueTableName()

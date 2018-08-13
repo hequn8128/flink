@@ -23,20 +23,22 @@ import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.core.TableScan
 import org.apache.calcite.rex.RexNode
+import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2}
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.table.api.{StreamQueryConfig, StreamTableEnvironment}
 import org.apache.flink.table.expressions.Cast
-import org.apache.flink.table.plan.schema.RowSchema
-import org.apache.flink.table.plan.schema.AppendStreamTable
+import org.apache.flink.table.plan.schema.{RowSchema, UpsertStreamTable}
 import org.apache.flink.table.runtime.types.CRow
 import org.apache.flink.table.typeutils.TimeIndicatorTypeInfo
+
+import java.lang.{Boolean => JBool}
 
 /**
   * Flink RelNode which matches along with DataStreamSource.
   * It ensures that types without deterministic field order (e.g. POJOs) are not part of
   * the plan translation.
   */
-class DataStreamScan(
+class UpsertStreamScan(
     cluster: RelOptCluster,
     traitSet: RelTraitSet,
     table: RelOptTable,
@@ -44,12 +46,12 @@ class DataStreamScan(
   extends TableScan(cluster, traitSet, table)
   with StreamScan {
 
-  val dataStreamTable: AppendStreamTable[Any] = getTable.unwrap(classOf[AppendStreamTable[Any]])
+  val upsertStreamTable: UpsertStreamTable[Any] = getTable.unwrap(classOf[UpsertStreamTable[Any]])
 
   override def deriveRowType(): RelDataType = schema.relDataType
 
   override def copy(traitSet: RelTraitSet, inputs: java.util.List[RelNode]): RelNode = {
-    new DataStreamScan(
+    new UpsertStreamScan(
       cluster,
       traitSet,
       getTable,
@@ -62,8 +64,8 @@ class DataStreamScan(
       queryConfig: StreamQueryConfig): DataStream[CRow] = {
 
     val config = tableEnv.getConfig
-    val inputDataStream: DataStream[Any] = dataStreamTable.dataStream
-    val fieldIdxs = dataStreamTable.fieldIndexes
+    val inputDataStream: DataStream[JTuple2[JBool, Any]] = upsertStreamTable.dataStream
+    val fieldIdxs = upsertStreamTable.fieldIndexes
 
     // get expression to extract timestamp
     val rowtimeExpr: Option[RexNode] =
@@ -79,7 +81,7 @@ class DataStreamScan(
       }
 
     // convert DataStream
-    convertToInternalRow(schema, inputDataStream, fieldIdxs, config, rowtimeExpr)
+    convertTupleToInternalRow(schema, inputDataStream, fieldIdxs, config, rowtimeExpr)
   }
 
 }

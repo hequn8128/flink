@@ -236,6 +236,8 @@ trait ImplicitExpressionOperations {
     */
   def as(name: Symbol, extraNames: Symbol*) = Alias(expr, name.name, extraNames.map(_.name))
 
+  def key = Key(expr)
+
   def asc = Asc(expr)
   def desc = Desc(expr)
 

@@ -47,7 +47,7 @@ import org.apache.flink.table.plan.schema._
 import org.apache.flink.table.plan.util.UpdatingPlanChecker
 import org.apache.flink.table.runtime.conversion._
 import org.apache.flink.table.runtime.types.{CRow, CRowTypeInfo}
-import org.apache.flink.table.runtime.{CRowMapRunner, OutputRowtimeProcessFunction}
+import org.apache.flink.table.runtime.OutputRowtimeProcessFunction
 import org.apache.flink.table.sinks._
 import org.apache.flink.table.sources.{StreamTableSource, TableSource, TableSourceUtil}
 import org.apache.flink.table.typeutils.{TimeIndicatorTypeInfo, TypeCheckUtils}
@@ -426,7 +426,7 @@ abstract class StreamTableEnvironment(
     converterFunction match {
 
       case Some(func) =>
-        new CRowMapRunner[OUT](func.name, func.code, func.returnType)
+        new CRowToExternalTypeMapRunner[OUT](func.name, func.code, func.returnType)
 
       case _ =>
         new CRowToRowMapFunction().asInstanceOf[MapFunction[CRow, OUT]]
@@ -575,7 +575,7 @@ abstract class StreamTableEnvironment(
     * @param dataStream The [[DataStream]] to register as table in the catalog.
     * @tparam T the type of the [[DataStream]].
     */
-  protected def registerUpsertStreamInternal[T: TypeInformation](
+  protected def registerUpsertStreamInternal[T](
       name: String,
       dataStream: DataStream[JTuple2[JBool, T]]): Unit = {
 
@@ -585,6 +585,7 @@ abstract class StreamTableEnvironment(
     val (fieldNames, fieldIndexes) = getFieldInfo[T](streamType)
     val dataStreamTable = new UpsertStreamTable[T](
       dataStream,
+      Array(),
       fieldIndexes,
       fieldNames
     )
@@ -600,7 +601,7 @@ abstract class StreamTableEnvironment(
     * @param fields The field expressions to define the field names of the table.
     * @tparam T The type of the [[DataStream]].
     */
-  protected def registerUpsertStreamInternal[T: TypeInformation](
+  protected def registerUpsertStreamInternal[T](
       name: String,
       dataStream: DataStream[JTuple2[JBool, T]],
       fields: Array[Expression])
@@ -615,6 +616,9 @@ abstract class StreamTableEnvironment(
     // validate and extract time attributes
     val (rowtime, proctime) = validateAndExtractTimeAttributes(streamType, fields)
 
+    // validate and extract unique keys
+    val uniqueKeys = extractUniqueKeys(streamType, fields)
+
     // check if event-time is enabled
     if (rowtime.isDefined && execEnv.getStreamTimeCharacteristic != TimeCharacteristic.EventTime) {
       throw TableException(
@@ -628,6 +632,7 @@ abstract class StreamTableEnvironment(
 
     val dataStreamTable = new UpsertStreamTable[T](
       dataStream,
+      uniqueKeys,
       indexesWithIndicatorFields,
       namesWithIndicatorFields
     )
@@ -746,6 +751,10 @@ abstract class StreamTableEnvironment(
 
       case (Alias(UnresolvedFieldReference(_), name, _), _) => fieldNames = name :: fieldNames
 
+      case (Key(UnresolvedFieldReference(name)), _) => fieldNames = name :: fieldNames
+
+      case (Alias(Key(UnresolvedFieldReference(_)), name, _), _) => fieldNames = name :: fieldNames
+
       case (e, _) =>
         throw new TableException(s"Time attributes can only be defined on field references or " +
           s"aliases of valid field references. Rowtime attributes can replace existing fields, " +
@@ -765,6 +774,29 @@ abstract class StreamTableEnvironment(
 
     (rowtime, proctime)
   }
+
+  /**
+    * Extract unique keys from expressions.
+    * Returns the unique keys.
+    *
+    * @return unique keys
+    */
+  private def extractUniqueKeys(
+    streamType: TypeInformation[_],
+    exprs: Array[Expression])
+  : Array[String] = {
+
+    var uniqueKeys: List[String] = Nil
+    exprs.zipWithIndex.foreach {
+      case (Key(UnresolvedFieldReference(name)), _) => uniqueKeys = name :: uniqueKeys
+      case (Alias(Key(UnresolvedFieldReference(_)), name, _), _) => uniqueKeys = name :: uniqueKeys
+      case _ =>
+    }
+
+    uniqueKeys.toArray
+  }
+
+
 
   /**
     * Injects markers for time indicator fields into the field indexes.

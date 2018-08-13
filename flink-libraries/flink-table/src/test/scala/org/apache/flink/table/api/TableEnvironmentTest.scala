@@ -46,7 +46,7 @@ class TableEnvironmentTest extends TableTestBase {
 
       // case class
       util.verifySchema(
-        util.addTable[CClass]('a, 'b, 'c),
+        util.addTable[CClass]('a.key, 'b.key, 'c),
         Seq("a" -> INT, "b" -> STRING, "c" -> DOUBLE))
 
       util.verifySchema(
@@ -59,7 +59,7 @@ class TableEnvironmentTest extends TableTestBase {
 
       // row
       util.verifySchema(
-        util.addTable('a, 'b, 'c)(TEST_ROW),
+        util.addTable('a.key, 'b, 'c.key)(TEST_ROW),
         Seq("a" -> INT, "b" -> STRING, "c" -> DOUBLE))
 
       util.verifySchema(
@@ -72,7 +72,7 @@ class TableEnvironmentTest extends TableTestBase {
 
       // tuple
       util.verifySchema(
-        util.addTable[JTuple3[Int, String, Double]]('a, 'b, 'c),
+        util.addTable[JTuple3[Int, String, Double]]('a.key, 'b, 'c),
         Seq("a" -> INT, "b" -> STRING, "c" -> DOUBLE))
 
       util.verifySchema(
@@ -203,7 +203,7 @@ class TableEnvironmentTest extends TableTestBase {
         Seq("rf1" -> INT, "rf2" -> STRING, "rf3" -> DOUBLE))
 
       util.verifySchema(
-        util.addTable('rf1, 'rf2)(TEST_ROW),
+        util.addTable('rf1.key, 'rf2)(TEST_ROW),
         Seq("rf1" -> INT, "rf2" -> STRING))
 
       util.verifySchema(
@@ -220,7 +220,7 @@ class TableEnvironmentTest extends TableTestBase {
         Seq("f0" -> INT, "f1" -> STRING, "f2" -> DOUBLE))
 
       util.verifySchema(
-        util.addTable[JTuple3[Int, String, Double]]('f0, 'f1),
+        util.addTable[JTuple3[Int, String, Double]]('f0.key, 'f1),
         Seq("f0" -> INT, "f1" -> STRING))
 
       util.verifySchema(
@@ -237,7 +237,7 @@ class TableEnvironmentTest extends TableTestBase {
         Seq("pf1" -> INT, "pf2" -> STRING, "pf3" -> DOUBLE))
 
       util.verifySchema(
-        util.addTable[PojoClass]('pf1, 'pf2),
+        util.addTable[PojoClass]('pf1.key, 'pf2),
         Seq("pf1" -> INT, "pf2" -> STRING))
 
       util.verifySchema(
@@ -250,7 +250,7 @@ class TableEnvironmentTest extends TableTestBase {
 
       // generic
       util.verifySchema(
-        util.addTable[Class[_]]('mygeneric),
+        util.addTable[Class[_]]('mygeneric.key),
         Seq("mygeneric" -> new GenericTypeInfo[Class[_]](classOf[Class[_]])))
 
       util.verifySchema(
@@ -478,7 +478,7 @@ class TableEnvironmentTest extends TableTestBase {
 
       // row
       util.verifySchema(
-        util.addTable('rf1, 'rf3 as 'new, 'rf2)(TEST_ROW),
+        util.addTable('rf1, 'rf3.key as 'new, 'rf2)(TEST_ROW),
         Seq("rf1" -> INT, "new" -> DOUBLE, "rf2" -> STRING))
 
       // tuple

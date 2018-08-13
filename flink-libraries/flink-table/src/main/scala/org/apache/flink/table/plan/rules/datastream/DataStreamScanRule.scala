@@ -22,7 +22,7 @@ import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall, RelTraitSet}
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.convert.ConverterRule
 import org.apache.flink.table.plan.nodes.FlinkConventions
-import org.apache.flink.table.plan.nodes.datastream.DataStreamScan
+import org.apache.flink.table.plan.nodes.datastream.AppendStreamScan
 import org.apache.flink.table.plan.schema.{AppendStreamTable, RowSchema}
 import org.apache.flink.table.plan.nodes.logical.FlinkLogicalNativeTableScan
 
@@ -49,7 +49,7 @@ class DataStreamScanRule
     val scan: FlinkLogicalNativeTableScan = rel.asInstanceOf[FlinkLogicalNativeTableScan]
     val traitSet: RelTraitSet = rel.getTraitSet.replace(FlinkConventions.DATASTREAM)
 
-    new DataStreamScan(
+    new AppendStreamScan(
       rel.getCluster,
       traitSet,
       scan.getTable,

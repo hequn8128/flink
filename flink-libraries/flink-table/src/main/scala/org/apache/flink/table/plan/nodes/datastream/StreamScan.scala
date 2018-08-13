@@ -19,8 +19,9 @@
 package org.apache.flink.table.plan.nodes.datastream
 
 import org.apache.calcite.rex.RexNode
-import org.apache.flink.api.common.functions.{MapFunction, RichMapFunction}
+import org.apache.flink.api.common.functions.RichMapFunction
 import org.apache.flink.api.common.typeinfo.TypeInformation
+import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2}
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.functions.ProcessFunction
@@ -29,11 +30,69 @@ import org.apache.flink.table.codegen.{FunctionCodeGenerator, GeneratedFunction}
 import org.apache.flink.table.plan.nodes.CommonScan
 import org.apache.flink.table.plan.schema.RowSchema
 import org.apache.flink.types.Row
-import org.apache.flink.table.runtime.CRowOutputProcessRunner
 import org.apache.flink.table.runtime.types.{CRow, CRowTypeInfo}
 import org.apache.flink.table.typeutils.TimeIndicatorTypeInfo
+import java.lang.{Boolean => JBool}
+
+import org.apache.flink.api.java.typeutils.TupleTypeInfo
+import org.apache.flink.table.runtime.conversion.{ExternalTypeToCRowProcessRunner, JavaTupleToCRowProcessRunner}
 
 trait StreamScan extends CommonScan[CRow] with DataStreamRel {
+
+  protected def convertTupleToInternalRow(
+      schema: RowSchema,
+      input: DataStream[JTuple2[JBool, Any]],
+      fieldIdxs: Array[Int],
+      config: TableConfig,
+      rowtimeExpression: Option[RexNode]): DataStream[CRow] = {
+
+    val inputType = input.getType.asInstanceOf[TupleTypeInfo[JTuple2[JBool, Any]]].getTypeAt(1)
+    val internalType = schema.typeInfo
+    val cRowType = CRowTypeInfo(internalType)
+
+    val hasTimeIndicator = fieldIdxs.exists(f =>
+      f == TimeIndicatorTypeInfo.ROWTIME_STREAM_MARKER ||
+        f == TimeIndicatorTypeInfo.PROCTIME_STREAM_MARKER)
+
+    if (inputType == internalType && !hasTimeIndicator) {
+      // input is already of correct type. Only need to wrap it as CRow
+      input.asInstanceOf[DataStream[JTuple2[JBool, Row]]]
+        .map(new RichMapFunction[JTuple2[JBool, Row], CRow] {
+        @transient private var outCRow: CRow = null
+        override def open(parameters: Configuration): Unit = {
+          outCRow = new CRow(null, change = true)
+        }
+
+        override def map(v: JTuple2[JBool, Row]): CRow = {
+          outCRow.row = v.f1
+          outCRow.change = v.f0
+          outCRow
+        }
+      }).returns(cRowType)
+
+    } else {
+      // input needs to be converted and wrapped as CRow or time indicators need to be generated
+
+      val function = generateConversionProcessFunction(
+        config,
+        inputType.asInstanceOf[TypeInformation[Any]],
+        internalType,
+        "UpsertStreamSourceConversion",
+        schema.fieldNames,
+        fieldIdxs,
+        rowtimeExpression
+      )
+
+      val processFunc = new JavaTupleToCRowProcessRunner(
+        function.name,
+        function.code,
+        cRowType)
+
+      val opName = s"from: (${schema.fieldNames.mkString(", ")})"
+
+      input.process(processFunc).name(opName).returns(cRowType)
+    }
+  }
 
   protected def convertToInternalRow(
       schema: RowSchema,
@@ -75,13 +134,13 @@ trait StreamScan extends CommonScan[CRow] with DataStreamRel {
         config,
         inputType,
         internalType,
-        "DataStreamSourceConversion",
+        "AppendStreamSourceConversion",
         schema.fieldNames,
         fieldIdxs,
         rowtimeExpression
       )
 
-      val processFunc = new CRowOutputProcessRunner(
+      val processFunc = new ExternalTypeToCRowProcessRunner(
         function.name,
         function.code,
         cRowType)

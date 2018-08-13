@@ -18,6 +18,8 @@
 
 package org.apache.flink.table.api.stream.table.validation
 
+import org.apache.flink.api.common.typeinfo.{BasicTypeInfo, TypeInformation}
+import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.streaming.api.TimeCharacteristic
 import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
 import org.apache.flink.table.api.{TableEnvironment, TableException}
@@ -25,6 +27,7 @@ import org.apache.flink.table.api.scala._
 import org.apache.flink.table.runtime.stream.table.{TestAppendSink, TestUpsertSink}
 import org.apache.flink.table.runtime.utils.StreamTestData
 import org.apache.flink.table.utils.TableTestBase
+import org.apache.flink.types.Row
 import org.junit.Test
 
 class TableSinkValidationTest extends TableTestBase {
@@ -39,6 +42,27 @@ class TableSinkValidationTest extends TableTestBase {
     t.groupBy('text)
     .select('text, 'id.count, 'num.sum)
     .writeToSink(new TestAppendSink)
+
+    // must fail because table is not append-only
+    env.execute()
+  }
+
+  @Test(expected = classOf[TableException])
+  def testAppendSinkOnUpdatingTable2(): Unit = {
+    val env = StreamExecutionEnvironment.getExecutionEnvironment
+    val tEnv = TableEnvironment.getTableEnvironment(env)
+
+    implicit val tpe: TypeInformation[Row] = new RowTypeInfo(
+      BasicTypeInfo.INT_TYPE_INFO,
+      BasicTypeInfo.LONG_TYPE_INFO,
+      BasicTypeInfo.STRING_TYPE_INFO) // tpe is automatically
+
+    val t = tEnv.fromUpsertStream(
+      StreamTestData.getSmall3TupleDataStreamWithFlag(env), 'id, 'num, 'text)
+
+    t.groupBy('text)
+      .select('text, 'id.count, 'num.sum)
+      .writeToSink(new TestAppendSink)
 
     // must fail because table is not append-only
     env.execute()

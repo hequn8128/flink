@@ -20,6 +20,12 @@ package org.apache.flink.table.runtime.utils
 
 import org.apache.flink.api.scala._
 import org.apache.flink.streaming.api.scala.{DataStream, StreamExecutionEnvironment}
+import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2}
+import java.lang.{Boolean => JBool}
+
+import org.apache.flink.api.common.typeinfo.{BasicTypeInfo, TypeInformation}
+import org.apache.flink.api.java.typeutils.RowTypeInfo
+import org.apache.flink.types.Row
 
 import scala.collection.mutable
 
@@ -94,5 +100,20 @@ object StreamTestData {
     data.+=(((2, 2), "two"))
     data.+=(((3, 3), "three"))
     env.fromCollection(data)
+  }
+
+  def getSmall3TupleDataStreamWithFlag(env: StreamExecutionEnvironment):
+  DataStream[JTuple2[JBool, Row]] = {
+
+    implicit val tpe: TypeInformation[Row] = new RowTypeInfo(
+      BasicTypeInfo.INT_TYPE_INFO,
+      BasicTypeInfo.LONG_TYPE_INFO,
+      BasicTypeInfo.STRING_TYPE_INFO) // tpe is automatically
+//    val data = new mutable.MutableList[JTuple2[Boolean, (Int, Long, String)]]
+    val data: Seq[JTuple2[JBool, Row]] = List(
+      JTuple2.of(true, Row.of(Int.box(1), Long.box(1L), "Hi"))/*,
+      JTuple2.of(true, Row.of(2, 2L, "Hello")),
+      JTuple2.of(true, Row.of(3, 2L, "Hello world"))*/)
+    env.fromCollectionWithFlag(data)
   }
 }

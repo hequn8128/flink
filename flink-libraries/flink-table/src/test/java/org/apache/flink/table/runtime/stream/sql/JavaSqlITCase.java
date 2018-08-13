@@ -24,6 +24,7 @@ import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.tuple.Tuple3;
 import org.apache.flink.api.java.tuple.Tuple5;
 import org.apache.flink.api.java.typeutils.RowTypeInfo;
+import org.apache.flink.api.java.typeutils.TupleTypeInfo;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.api.Table;
@@ -44,42 +45,40 @@ import java.util.List;
  */
 public class JavaSqlITCase extends AbstractTestBase {
 
-//	@Test
-//	public void testFromUpsertStream() throws Exception {
-//		StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-//		StreamTableEnvironment tableEnv = TableEnvironment.getTableEnvironment(env);
-//		StreamITCase.clear();
-//
-//		List<Tuple2<Boolean, Row>> data = new ArrayList<>();
-//		data.add(Tuple2.of(true, Row.of(1, 1L, "Hi")));
-//		data.add(Tuple2.of(true, Row.of(2, 2L, "Hello")));
-//		data.add(Tuple2.of(true, Row.of(3, 2L, "Hello world")));
-//
-////		implicit val tpe: TypeInformation[Row] = new RowTypeInfo(
-////			BasicTypeInfo.STRING_TYPE_INFO,
-////			BasicTypeInfo.STRING_TYPE_INFO,
-////			BasicTypeInfo.INT_TYPE_INFO) // tpe is automatically
-//
-//		TypeInformation<Row> tpe = new RowTypeInfo(
-//			BasicTypeInfo.INT_TYPE_INFO,
-//			BasicTypeInfo.LONG_TYPE_INFO,
-//			BasicTypeInfo.STRING_TYPE_INFO
-//		);
-//
-//		DataStream<Tuple2<Boolean, Row>> ds = env.fromCollection(data);
-//
-//		Table in = tableEnv.fromUpsertStream(ds, "a,b,c");
-//		tableEnv.registerTable("MyTableRow", in);
-//
-//		String sqlQuery = "SELECT a,c FROM MyTableRow";
-//		Table result = tableEnv.sqlQuery(sqlQuery);
-//
-//		DataStream<Row> resultSet = tableEnv.toAppendStream(result, Row.class);
-//		resultSet.addSink(new StreamITCase.StringSink<Row>());
-//
-//		resultSet.print();
-//		env.execute();
-//	}
+	@Test
+	public void testFromUpsertStream() throws Exception {
+		StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+		StreamTableEnvironment tableEnv = TableEnvironment.getTableEnvironment(env);
+		StreamITCase.clear();
+
+		List<Tuple2<Boolean, Row>> data = new ArrayList<>();
+		data.add(Tuple2.of(true, Row.of(1, 1L, "Hi")));
+		data.add(Tuple2.of(true, Row.of(2, 2L, "Hello")));
+		data.add(Tuple2.of(true, Row.of(3, 2L, "Hello world")));
+
+		TypeInformation<Row> tpe = new RowTypeInfo(
+			BasicTypeInfo.INT_TYPE_INFO,
+			BasicTypeInfo.LONG_TYPE_INFO,
+			BasicTypeInfo.STRING_TYPE_INFO
+		);
+
+		TupleTypeInfo<Tuple2<Boolean, Row>> tupleType =
+			new TupleTypeInfo<>(BasicTypeInfo.BOOLEAN_TYPE_INFO, tpe);
+
+		DataStream<Tuple2<Boolean, Row>> ds = env.fromCollection(data, tupleType);
+
+		Table in = tableEnv.fromUpsertStream(ds, "a,b,c");
+		tableEnv.registerTable("MyTableRow", in);
+
+		String sqlQuery = "SELECT a,c FROM MyTableRow";
+		Table result = tableEnv.sqlQuery(sqlQuery);
+
+		DataStream<Row> resultSet = tableEnv.toAppendStream(result, Row.class);
+		resultSet.addSink(new StreamITCase.StringSink<Row>());
+
+		resultSet.print();
+		env.execute();
+	}
 
 	@Test
 	public void testRowRegisterRowWithNames() throws Exception {

@@ -20,12 +20,14 @@ package org.apache.flink.table.plan.schema
 
 import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2}
 import java.lang.{Boolean => JBool}
+
 import org.apache.flink.api.java.typeutils.TupleTypeInfo
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.table.plan.stats.FlinkStatistic
 
 class UpsertStreamTable[T](
     val dataStream: DataStream[JTuple2[JBool, T]],
+    val uniqueKeys: Array[String],
     override val fieldIndexes: Array[Int],
     override val fieldNames: Array[String],
     override val statistic: FlinkStatistic = FlinkStatistic.UNKNOWN)

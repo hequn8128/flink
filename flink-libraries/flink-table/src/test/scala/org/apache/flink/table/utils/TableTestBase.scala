@@ -20,7 +20,7 @@ package org.apache.flink.table.utils
 
 import org.apache.calcite.plan.RelOptUtil
 import org.apache.calcite.rel.RelNode
-import org.apache.flink.api.common.typeinfo.TypeInformation
+import org.apache.flink.api.common.typeinfo.{BasicTypeInfo, TypeInformation}
 import org.apache.flink.api.java.{DataSet => JDataSet, ExecutionEnvironment => JExecutionEnvironment}
 import org.apache.flink.api.scala.{DataSet, ExecutionEnvironment}
 import org.apache.flink.streaming.api.TimeCharacteristic
@@ -35,6 +35,10 @@ import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.rules.ExpectedException
 import org.mockito.Mockito.{mock, when}
+import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2}
+import _root_.java.lang.{Boolean => JBool}
+
+import org.apache.flink.api.java.typeutils.TupleTypeInfo
 
 /**
   * Test base for testing Table API / SQL plans.
@@ -255,6 +259,24 @@ case class StreamTableTestUtil() extends TableTestUtil {
     t
   }
 
+  def addKeyedTable[T: TypeInformation](
+      name: String,
+      fields: Expression*)
+  : Table = {
+
+    val ds = mock(classOf[DataStream[JTuple2[JBool, T]]])
+    val jDs = mock(classOf[JDataStream[JTuple2[JBool, T]]])
+    when(ds.javaStream).thenReturn(jDs)
+    val typeInfo: TypeInformation[T] = implicitly[TypeInformation[T]]
+    val tupleTypeInfo =
+      new TupleTypeInfo[JTuple2[JBool,T]](BasicTypeInfo.BOOLEAN_TYPE_INFO, typeInfo)
+    when(jDs.getType).thenReturn(tupleTypeInfo)
+
+    val t = tableEnv.fromUpsertStream(ds, fields: _*)
+    tableEnv.registerTable(name, t)
+    t
+  }
+
   def addJavaTable[T](typeInfo: TypeInformation[T], name: String, fields: String): Table = {
 
     val jDs = mock(classOf[JDataStream[T]])
@@ -264,6 +286,18 @@ case class StreamTableTestUtil() extends TableTestUtil {
     javaTableEnv.registerTable(name, t)
     t
   }
+
+//  def addJavaKeyedTable[T](typeInfo: TypeInformation[T], name: String, fields: String): Table = {
+//
+//    val jDs = mock(classOf[JDataStream[JTuple2[JBool, T]]])
+//    val tupleTypeInfo =
+//      new TupleTypeInfo[JTuple2[JBool,T]](BasicTypeInfo.BOOLEAN_TYPE_INFO, typeInfo)
+//    when(jDs.getType).thenReturn(tupleTypeInfo)
+//
+//    val t = javaTableEnv.fromUpsertStream(jDs, fields)
+//    javaTableEnv.registerTable(name, t)
+//    t
+//  }
 
   def addFunction[T: TypeInformation](
       name: String,

@@ -71,6 +71,10 @@ case class ResolvedFieldReference(
   }
 }
 
+case class Key(child: Expression) extends UnaryExpression {
+  override private[flink] def resultType = child.resultType
+}
+
 case class Alias(child: Expression, name: String, extraNames: Seq[String] = Seq())
     extends UnaryExpression with NamedExpression {
 

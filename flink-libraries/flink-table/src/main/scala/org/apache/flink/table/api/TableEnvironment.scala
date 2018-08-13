@@ -968,6 +968,19 @@ abstract class TableEnvironment(val config: TableConfig) {
             } else {
               referenceByName(origName, t).map((_, name))
             }
+          case (Key(UnresolvedFieldReference(name: String)), idx) =>
+            if (isRefByPos) {
+              Some((idx, name))
+            } else {
+              referenceByName(name, t).map((_, name))
+            }
+          case (Alias(Key(UnresolvedFieldReference(origName)), name: String, _), _) =>
+            if (isRefByPos) {
+              throw new TableException(
+                s"Alias '$name' is not allowed if other fields are referenced by position.")
+            } else {
+              referenceByName(origName, t).map((_, name))
+            }
           case (_: TimeAttribute, _) =>
             None
           case _ => throw new TableException(
