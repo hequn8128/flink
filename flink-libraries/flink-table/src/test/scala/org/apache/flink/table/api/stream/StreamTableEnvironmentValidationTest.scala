@@ -187,4 +187,11 @@ class StreamTableEnvironmentValidationTest extends TableTestBase {
     // aliased field has wrong type
     util.addTable[(Int, Long, String)]('_1, ('_3 as 'new).rowtime, '_2)
   }
+
+  @Test(expected = classOf[TableException])
+  def testInvalidKeyOnAppendStream(): Unit = {
+    val util = streamTestUtil()
+    // can not apply key on append stream
+    util.addTable[(Int, Long, String)]('a.key, 'b, 'c)
+  }
 }

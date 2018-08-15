@@ -23,22 +23,20 @@ import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.api.scala._
 import org.apache.flink.streaming.api.TimeCharacteristic
 import org.apache.flink.streaming.api.functions.AssignerWithPunctuatedWatermarks
-import org.apache.flink.streaming.api.scala.{DataStream, StreamExecutionEnvironment}
+import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
 import org.apache.flink.streaming.api.watermark.Watermark
 import org.apache.flink.table.api.{TableEnvironment, Types}
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.descriptors.{DescriptorProperties, Rowtime, Schema}
 import org.apache.flink.table.expressions.utils.SplitUDF
 import org.apache.flink.table.expressions.utils.Func15
-import org.apache.flink.table.runtime.stream.sql.SqlITCase.{TimestampAndWatermarkWithOffset, TimestampWithEqualWatermark}
+import org.apache.flink.table.runtime.stream.sql.SqlITCase.TimestampAndWatermarkWithOffset
 import org.apache.flink.table.runtime.utils.TimeTestUtil.EventTimeSourceFunction
 import org.apache.flink.table.runtime.utils.{JavaUserDefinedTableFunctions, StreamITCase, StreamTestData, StreamingWithStateTestBase}
 import org.apache.flink.types.Row
 import org.apache.flink.table.utils.{InMemoryTableFactory, MemoryTableSourceSinkUtil}
 import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2}
 import _root_.java.lang.{Boolean => JBool}
-
-import _root_.scala.collection.JavaConverters._
 
 import org.junit.Assert._
 import org.junit._
@@ -222,92 +220,13 @@ class SqlITCase extends StreamingWithStateTestBase {
     assertEquals(expected.sorted, StreamITCase.testResults.sorted)
   }
 
-
-  // todo hequn add RelTimeIndicatorConverter test
-
   // todo hequn add java api test
 
   // todo hequn add scala tuple input test
 
   // todo hequn add unique key extrator test
 
-  /** test upsert stream registered table **/
-  @Test
-  def testRegisterUpsertStream(): Unit = {
 
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-    env.setParallelism(1)
-    StreamITCase.clear
-
-    val sqlQuery = "SELECT aa, b, c FROM MyTableRow WHERE c < 3"
-
-    val data: Seq[JTuple2[JBool, Row]] = List(
-      JTuple2.of(true, Row.of("Hello", "Worlds", Int.box(1))),
-      JTuple2.of(true, Row.of("Hello", "Hiden", Int.box(5))),
-      JTuple2.of(true, Row.of("Hello again", "Worlds", Int.box(2))))
-
-    val types = Array[TypeInformation[_]](
-      BasicTypeInfo.STRING_TYPE_INFO,
-      BasicTypeInfo.STRING_TYPE_INFO,
-      BasicTypeInfo.INT_TYPE_INFO)
-    val names = Array("a", "b", "c")
-    implicit val tpe: TypeInformation[Row] = new RowTypeInfo(types, names) // tpe is automatically
-
-    val ds: DataStream[JTuple2[JBool, Row]] = env.fromCollectionWithFlag(data)
-      .assignTimestampsAndWatermarks(new TimestampWithEqualWatermark())
-
-    val t = tEnv.fromUpsertStream[Row](ds, 'a.key as 'aa, 'b, 'c, 'rowtime.rowtime, 'proctime.proctime)
-    tEnv.registerTable("MyTableRow", t)
-
-    val result = tEnv.sqlQuery(sqlQuery).toRetractStream[Row]
-    result.addSink(new StreamITCase.RetractingSink)
-    env.execute()
-
-    val expected = List("Hello,Hiden,5", "Hello again,Worlds,2")
-    assertEquals(expected.sorted, StreamITCase.retractedResults.sorted)
-  }
-
-  /** test upsert stream registered single row table **/
-  @Test
-  def testRegisterSingleRowTableFromUpsertStream(): Unit = {
-
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-    env.setParallelism(1)
-    StreamITCase.clear
-
-    val sqlQuery = "SELECT aa, b, c FROM MyTableRow WHERE c < 3"
-
-    val data: Seq[JTuple2[JBool, Row]] = List(
-      JTuple2.of(true, Row.of("Hello", "Worlds", Int.box(1))),
-      JTuple2.of(true, Row.of("Hello", "Hiden", Int.box(5))),
-      JTuple2.of(true, Row.of("Hello again", "Worlds", Int.box(2))))
-
-    val types = Array[TypeInformation[_]](
-      BasicTypeInfo.STRING_TYPE_INFO,
-      BasicTypeInfo.STRING_TYPE_INFO,
-      BasicTypeInfo.INT_TYPE_INFO)
-    val names = Array("a", "b", "c")
-    implicit val tpe: TypeInformation[Row] = new RowTypeInfo(types, names) // tpe is automatically
-
-    val ds: DataStream[JTuple2[JBool, Row]] = env.fromCollectionWithFlag(data)
-      .assignTimestampsAndWatermarks(new TimestampWithEqualWatermark())
-
-    val t = tEnv.fromUpsertStream[Row](ds, 'a as 'aa, 'b, 'c, 'rowtime.rowtime, 'proctime.proctime)
-    tEnv.registerTable("MyTableRow", t)
-
-    val result = tEnv.sqlQuery(sqlQuery).toRetractStream[Row]
-    result.addSink(new StreamITCase.RetractingSink)
-    env.execute()
-
-    val expected = List("Hello again,Worlds,2")
-    assertEquals(expected.sorted, StreamITCase.retractedResults.sorted)
-  }
-
-    
   /** test unbounded groupBy (without window) **/
   @Test
   def testUnboundedGroupBy(): Unit = {
@@ -316,7 +235,7 @@ class SqlITCase extends StreamingWithStateTestBase {
     val tEnv = TableEnvironment.getTableEnvironment(env)
     StreamITCase.clear
 
-    val sqlQuery = "SELECT b, COUNT(a) FROM MyTable GROUP BY b"
+    val sqlQuery = "SELECT cast(b as INTEGER) as xx, a FROM MyTable"
 
     val t = StreamTestData.get3TupleDataStream(env).toTable(tEnv).as('a, 'b, 'c)
     tEnv.registerTable("MyTable", t)

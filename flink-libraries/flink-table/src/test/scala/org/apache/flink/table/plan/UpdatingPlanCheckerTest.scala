@@ -38,12 +38,21 @@ class UpdatingPlanCheckerTest {
   }
 
   @Test
-  def testKeyedTable2(): Unit = {
+  def testMultiKeysKeyedTable(): Unit = {
     val util = new UpdatePlanCheckerUtil()
-    val table = util.addKeyedTable[(String, Int)]("MyTable", 'a.key, 'b.key)
-    val resultTable = table.select('a, 'b)
+    val table = util.addKeyedTable[(String, Int, Int)]("MyTable", 'a.key, 'b.key, 'c)
+    val resultTable = table.select('a, 'b, 'c)
 
     util.verifyTableUniqueKey(resultTable, Seq("a", "b"))
+  }
+
+  @Test
+  def testSingleRowKeyedTable(): Unit = {
+    val util = new UpdatePlanCheckerUtil()
+    val table = util.addKeyedTable[(String, Int)]("MyTable", 'a, 'b)
+    val resultTable = table.select('a, 'b)
+
+    util.verifyTableUniqueKey(resultTable, Nil)
   }
 
   @Test

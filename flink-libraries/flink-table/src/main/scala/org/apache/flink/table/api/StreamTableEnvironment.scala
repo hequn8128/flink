@@ -555,6 +555,12 @@ abstract class StreamTableEnvironment(
           s"But is: ${execEnv.getStreamTimeCharacteristic}")
     }
 
+    // Can not apply key on append stream
+    if (extractUniqueKeys(streamType, fields).nonEmpty) {
+      throw TableException(
+        s"Can not apply key on append stream, use fromUpsertStream instead.")
+    }
+
     // adjust field indexes and field names
     val indexesWithIndicatorFields = adjustFieldIndexes(fieldIndexes, rowtime, proctime)
     val namesWithIndicatorFields = adjustFieldNames(fieldNames, rowtime, proctime)
@@ -747,13 +753,13 @@ abstract class StreamTableEnvironment(
       case (ProctimeAttribute(UnresolvedFieldReference(name)), idx) =>
         extractProctime(idx, name)
 
+      case (Key(UnresolvedFieldReference(name)), _) => fieldNames = name :: fieldNames
+
+      case (Key(Alias(UnresolvedFieldReference(_), name, _)), _) => name :: fieldNames
+
       case (UnresolvedFieldReference(name), _) => fieldNames = name :: fieldNames
 
       case (Alias(UnresolvedFieldReference(_), name, _), _) => fieldNames = name :: fieldNames
-
-      case (Key(UnresolvedFieldReference(name)), _) => fieldNames = name :: fieldNames
-
-      case (Alias(Key(UnresolvedFieldReference(_)), name, _), _) => fieldNames = name :: fieldNames
 
       case (e, _) =>
         throw new TableException(s"Time attributes can only be defined on field references or " +

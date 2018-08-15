@@ -76,7 +76,14 @@ abstract class TableTestUtil {
     addTable[T](s"Table$counter", fields: _*)
   }
 
+  def addKeyedTable[T: TypeInformation](fields: Expression*): Table = {
+    counter += 1
+    addKeyedTable[T](s"Table$counter", fields: _*)
+  }
+
   def addTable[T: TypeInformation](name: String, fields: Expression*): Table
+
+  def addKeyedTable[T: TypeInformation](name: String, fields: Expression*): Table
 
   def addFunction[T: TypeInformation](name: String, function: TableFunction[T]): TableFunction[T]
 
@@ -151,7 +158,7 @@ object TableTestUtil {
   }
 
   def streamTableNode(idx: Int): String = {
-    s"DataStreamScan(table=[[_DataStreamTable_$idx]])"
+    s"AppendStreamScan(table=[[_DataStreamTable_$idx]])"
   }
 }
 
@@ -174,6 +181,10 @@ case class BatchTableTestUtil() extends TableTestUtil {
     val t = ds.toTable(tableEnv, fields: _*)
     tableEnv.registerTable(name, t)
     t
+  }
+
+  override def addKeyedTable[T: TypeInformation](name: String, fields: Expression*): Table = {
+    throw new RuntimeException("addKeyedTable has not been supported on DataSet.")
   }
 
   def addJavaTable[T](typeInfo: TypeInformation[T], name: String, fields: String): Table = {

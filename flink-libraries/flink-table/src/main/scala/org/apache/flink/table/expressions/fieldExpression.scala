@@ -72,7 +72,12 @@ case class ResolvedFieldReference(
 }
 
 case class Key(child: Expression) extends UnaryExpression {
-  override private[flink] def resultType = child.resultType
+  override private[flink] def resultType: TypeInformation[_] = child.resultType
+
+  override private[flink] def toRexNode(implicit relBuilder: RelBuilder): RexNode = {
+    ValidationFailure("Key Expression can only be used during table initialization.")
+    null
+  }
 }
 
 case class Alias(child: Expression, name: String, extraNames: Seq[String] = Seq())

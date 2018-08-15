@@ -46,41 +46,6 @@ import java.util.List;
 public class JavaSqlITCase extends AbstractTestBase {
 
 	@Test
-	public void testFromUpsertStream() throws Exception {
-		StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-		StreamTableEnvironment tableEnv = TableEnvironment.getTableEnvironment(env);
-		StreamITCase.clear();
-
-		List<Tuple2<Boolean, Row>> data = new ArrayList<>();
-		data.add(Tuple2.of(true, Row.of(1, 1L, "Hi")));
-		data.add(Tuple2.of(true, Row.of(2, 2L, "Hello")));
-		data.add(Tuple2.of(true, Row.of(3, 2L, "Hello world")));
-
-		TypeInformation<Row> tpe = new RowTypeInfo(
-			BasicTypeInfo.INT_TYPE_INFO,
-			BasicTypeInfo.LONG_TYPE_INFO,
-			BasicTypeInfo.STRING_TYPE_INFO
-		);
-
-		TupleTypeInfo<Tuple2<Boolean, Row>> tupleType =
-			new TupleTypeInfo<>(BasicTypeInfo.BOOLEAN_TYPE_INFO, tpe);
-
-		DataStream<Tuple2<Boolean, Row>> ds = env.fromCollection(data, tupleType);
-
-		Table in = tableEnv.fromUpsertStream(ds, "a,b,c");
-		tableEnv.registerTable("MyTableRow", in);
-
-		String sqlQuery = "SELECT a,c FROM MyTableRow";
-		Table result = tableEnv.sqlQuery(sqlQuery);
-
-		DataStream<Row> resultSet = tableEnv.toAppendStream(result, Row.class);
-		resultSet.addSink(new StreamITCase.StringSink<Row>());
-
-		resultSet.print();
-		env.execute();
-	}
-
-	@Test
 	public void testRowRegisterRowWithNames() throws Exception {
 		StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
 		StreamTableEnvironment tableEnv = TableEnvironment.getTableEnvironment(env);
@@ -117,6 +82,48 @@ public class JavaSqlITCase extends AbstractTestBase {
 		expected.add("3,Hello world");
 
 		StreamITCase.compareWithList(expected);
+	}
+
+	@Test
+	public void testFromUpsertStream() throws Exception {
+		StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+		StreamTableEnvironment tableEnv = TableEnvironment.getTableEnvironment(env);
+		StreamITCase.clear();
+
+		// set parallelism to 1 to make sure input data order, since it is processing time
+		env.setParallelism(1);
+		List<Tuple2<Boolean, Row>> data = new ArrayList<>();
+		data.add(Tuple2.of(true, Row.of(1, 1L, "Hi")));
+		data.add(Tuple2.of(true, Row.of(2, 2L, "Hello")));
+		data.add(Tuple2.of(false, Row.of(3, 2L, "Hello world")));
+		data.add(Tuple2.of(true, Row.of(4, 3L, "Hello Flink")));
+
+		TypeInformation<Row> tpe = new RowTypeInfo(
+			BasicTypeInfo.INT_TYPE_INFO,
+			BasicTypeInfo.LONG_TYPE_INFO,
+			BasicTypeInfo.STRING_TYPE_INFO
+		);
+
+		TupleTypeInfo<Tuple2<Boolean, Row>> tupleType =
+			new TupleTypeInfo<>(BasicTypeInfo.BOOLEAN_TYPE_INFO, tpe);
+
+		DataStream<Tuple2<Boolean, Row>> ds = env.fromCollection(data, tupleType);
+
+		Table in = tableEnv.fromUpsertStream(ds, "a,b.key,c");
+		tableEnv.registerTable("MyTableRow", in);
+
+		String sqlQuery = "SELECT a,c FROM MyTableRow";
+		Table result = tableEnv.sqlQuery(sqlQuery);
+
+		DataStream<Tuple2<Boolean, Row>> resultSet = tableEnv.toRetractStream(result, Row.class);
+		resultSet.addSink(new StreamITCase.JRetractingSink());
+		env.execute();
+
+		List<String> expected = new ArrayList<>();
+		expected.add("1,Hi" );
+		expected.add("4,Hello Flink");
+
+		StreamITCase.compareRetractWithList(expected);
 	}
 
 	@Test

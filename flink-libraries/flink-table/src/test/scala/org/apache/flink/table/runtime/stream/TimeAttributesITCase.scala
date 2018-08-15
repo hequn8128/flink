@@ -555,7 +555,7 @@ class TimeAttributesITCase extends AbstractTestBase {
     // use aliases, swap all attributes, and skip b2
     val table4 = stream.toTable(
       tEnv,
-      ExpressionParser.parseExpressionList("(b as b).rowtime, c as c, a as a"): _*)
+      ExpressionParser.parseExpressionList("b as b.rowtime, c as c, a as a"): _*)
     // no aliases, no swapping
     val table5 = stream.toTable(
       tEnv,

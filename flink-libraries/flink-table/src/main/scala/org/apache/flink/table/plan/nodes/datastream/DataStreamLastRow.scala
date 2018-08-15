@@ -56,8 +56,6 @@ class DataStreamLastRow(
       tableEnv: StreamTableEnvironment,
       queryConfig: StreamQueryConfig): DataStream[CRow] = {
 
-    val config = tableEnv.getConfig
-
     val inputDS =
       getInput.asInstanceOf[DataStreamRel].translateToPlan(tableEnv, queryConfig)
     val outRowType = CRowTypeInfo(schema.typeInfo)
