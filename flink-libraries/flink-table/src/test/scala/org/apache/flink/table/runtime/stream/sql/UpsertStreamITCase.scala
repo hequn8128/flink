@@ -18,18 +18,17 @@
 
 package org.apache.flink.table.runtime.stream.sql
 
-import org.apache.flink.api.common.typeinfo.{BasicTypeInfo, TypeInformation}
-import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.streaming.api.TimeCharacteristic
-import org.apache.flink.streaming.api.scala.{DataStream, StreamExecutionEnvironment}
+import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
 import org.apache.flink.table.api.TableEnvironment
+import org.apache.flink.api.scala._
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.runtime.stream.sql.SqlITCase.TimestampWithEqualWatermark
 import org.apache.flink.table.runtime.utils.StreamITCase
 import org.apache.flink.types.Row
-import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2}
-import _root_.java.lang.{Boolean => JBool}
-
+import org.apache.flink.streaming.api.functions.AssignerWithPunctuatedWatermarks
+import org.apache.flink.streaming.api.watermark.Watermark
+import org.apache.flink.table.runtime.stream.sql.UpsertStreamITCase.{TestPojo, TimestampWithEqualWatermark}
+import org.apache.flink.table.runtime.stream.table.{RowCollector, TestUpsertSink}
 import org.junit.Assert._
 import org.junit._
 
@@ -40,37 +39,29 @@ class UpsertStreamITCase {
   def testRegisterUpsertStream(): Unit = {
 
     val env = StreamExecutionEnvironment.getExecutionEnvironment
-    env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
     val tEnv = TableEnvironment.getTableEnvironment(env)
     // set parallelism to 1 to ensure data input order, since it is processing time
     env.setParallelism(1)
     StreamITCase.clear
 
-    val data: Seq[JTuple2[JBool, Row]] = List(
-      JTuple2.of(true, Row.of("Hello", "Worlds", Int.box(1))),
-      JTuple2.of(true, Row.of("Hello", "Hiden", Int.box(5))),
-      JTuple2.of(true, Row.of("Hello again", "Worlds", Int.box(2))),
-      JTuple2.of(true, Row.of("Hello Flink", "Flink", Int.box(4))),
-      JTuple2.of(false, Row.of("Hello again", "Worlds", Int.box(2))))
+    val data = List(
+      (true, ("Hello", "Worlds", 1)),
+      (true, ("Hello", "Hiden1", 5)),
+      (true, ("Hello", "Hiden2", 6)),
+      (true, ("Hello", "Hiden3", 7)),
+      (true, ("Hello again", "Worlds", 2)),
+      (true, ("Hello Flink", "Flink", 4)),
+      (false, ("Hello again", "Worlds", 2)))
 
-    val types = Array[TypeInformation[_]](
-      BasicTypeInfo.STRING_TYPE_INFO,
-      BasicTypeInfo.STRING_TYPE_INFO,
-      BasicTypeInfo.INT_TYPE_INFO)
-    val names = Array("a", "b", "c")
-    implicit val tpe: TypeInformation[Row] = new RowTypeInfo(types, names) // tpe is automatically
-
-    val ds: DataStream[JTuple2[JBool, Row]] = env.fromCollectionWithFlag(data)
-      .assignTimestampsAndWatermarks(new TimestampWithEqualWatermark())
-
-    val t = tEnv.fromUpsertStream[Row](ds, 'a.key, 'b, 'c)
+    val ds = env.fromCollection(data)
+    val t = tEnv.fromUpsertStream(ds, 'a.key, 'b, 'c)
     tEnv.registerTable("MyTableRow", t)
     val sqlQuery = "SELECT a, b, c FROM MyTableRow"
     val result = tEnv.sqlQuery(sqlQuery).toRetractStream[Row]
     result.addSink(new StreamITCase.RetractingSink)
     env.execute()
 
-    val expected = List("Hello,Hiden,5", "Hello Flink,Flink,4")
+    val expected = List("Hello,Hiden3,7", "Hello Flink,Flink,4")
     assertEquals(expected.sorted, StreamITCase.retractedResults.sorted)
   }
 
@@ -85,24 +76,17 @@ class UpsertStreamITCase {
     env.setParallelism(1)
     StreamITCase.clear
 
-    val sqlQuery = "SELECT aa, b, c FROM MyTableRow WHERE c < 3"
+    val sqlQuery = "SELECT a, b, c FROM MyTableRow WHERE c < 3"
 
-    val data: Seq[JTuple2[JBool, Row]] = List(
-      JTuple2.of(true, Row.of("Hello", "Worlds", Int.box(1))),
-      JTuple2.of(true, Row.of("Hello", "Hiden", Int.box(5))),
-      JTuple2.of(true, Row.of("Hello again", "Worlds", Int.box(2))))
+    val data = List(
+      (true, ("Hello", "Worlds", 1)),
+      (true, ("Hello", "Hiden", 5)),
+      (true, ("Hello again", "Worlds", 2)))
 
-    val types = Array[TypeInformation[_]](
-      BasicTypeInfo.STRING_TYPE_INFO,
-      BasicTypeInfo.STRING_TYPE_INFO,
-      BasicTypeInfo.INT_TYPE_INFO)
-    val names = Array("a", "b", "c")
-    implicit val tpe: TypeInformation[Row] = new RowTypeInfo(types, names) // tpe is automatically
-
-    val ds: DataStream[JTuple2[JBool, Row]] = env.fromCollectionWithFlag(data)
+    val ds = env.fromCollection(data)
       .assignTimestampsAndWatermarks(new TimestampWithEqualWatermark())
 
-    val t = tEnv.fromUpsertStream[Row](ds, 'a as 'aa, 'b, 'c, 'rowtime.rowtime, 'proctime.proctime)
+    val t = tEnv.fromUpsertStream(ds, 'a, 'b, 'c, 'rowtime.rowtime, 'proctime.proctime)
     tEnv.registerTable("MyTableRow", t)
 
     val result = tEnv.sqlQuery(sqlQuery).toRetractStream[Row]
@@ -113,4 +97,75 @@ class UpsertStreamITCase {
     assertEquals(expected.sorted, StreamITCase.retractedResults.sorted)
   }
 
+  @Test
+  def testPojoAndUpsertSink(): Unit = {
+    val env = StreamExecutionEnvironment.getExecutionEnvironment
+    val tEnv = TableEnvironment.getTableEnvironment(env)
+    // set parallelism to 1 to ensure data input order, since it is processing time
+    env.setParallelism(1)
+
+    val p1 = new TestPojo
+    p1.a = 12
+    p1.b = 42L
+    p1.c = "Test 1."
+
+    val p2 = new TestPojo
+    p2.a = 12
+    p2.b = 43L
+    p2.c = "Test 2."
+
+    val p3 = new TestPojo
+    p3.a = 13
+    p3.b = 44L
+    p3.c = "Test 3."
+
+    val data = List(
+      (true, p1),
+      (true, p2),
+      (true, p3)
+    )
+
+    val ds = env.fromCollection(data)
+    // use aliases, swap all attributes, and skip b2
+    val t = tEnv.fromUpsertStream(ds, 'b, 'c as 'c, ('a as 'a).key)
+    tEnv.registerTable("MyTableRow", t)
+
+    val sqlQuery = "SELECT a, b, c FROM MyTableRow"
+    tEnv.sqlQuery(sqlQuery)
+      .writeToSink(new TestUpsertSink(Array("a"), false))
+    env.execute()
+
+    val results = RowCollector.getAndClearValues
+    val upserted =RowCollector.upsertResults(results, Array(0))
+    val expected = List("12,43,Test 2.", "13,44,Test 3.")
+    assertEquals(expected.sorted, upserted.sorted)
+  }
+}
+
+
+object UpsertStreamITCase {
+
+  class TimestampWithEqualWatermark
+    extends AssignerWithPunctuatedWatermarks[(Boolean, (String, String, Int))] {
+
+    override def checkAndGetNextWatermark(
+        lastElement: (Boolean, (String, String, Int)),
+        extractedTimestamp: Long)
+    : Watermark = {
+      new Watermark(extractedTimestamp)
+    }
+
+    override def extractTimestamp(
+        element: (Boolean, (String, String, Int)),
+        previousElementTimestamp: Long): Long = {
+      element._2._3
+    }
+  }
+
+  class TestPojo() {
+    var a: Int = _
+    var b: Long = _
+    var b2: String = "skip me"
+    var c: String = _
+  }
 }

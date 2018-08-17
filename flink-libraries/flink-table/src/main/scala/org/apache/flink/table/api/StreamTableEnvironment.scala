@@ -556,7 +556,7 @@ abstract class StreamTableEnvironment(
     }
 
     // Can not apply key on append stream
-    if (extractUniqueKeys(streamType, fields).nonEmpty) {
+    if (extractUniqueKeys(fields).nonEmpty) {
       throw TableException(
         s"Can not apply key on append stream, use fromUpsertStream instead.")
     }
@@ -581,9 +581,7 @@ abstract class StreamTableEnvironment(
     * @param dataStream The [[DataStream]] to register as table in the catalog.
     * @tparam T the type of the [[DataStream]].
     */
-  protected def registerUpsertStreamInternal[T](
-      name: String,
-      dataStream: DataStream[JTuple2[JBool, T]]): Unit = {
+  protected def registerUpsertStreamInternal[T](name: String, dataStream: DataStream[T]): Unit = {
 
     val streamType: TypeInformation[T] =
       dataStream.getType.asInstanceOf[TupleTypeInfo[JTuple2[JBool, T]]].getTypeAt(1)
@@ -609,12 +607,14 @@ abstract class StreamTableEnvironment(
     */
   protected def registerUpsertStreamInternal[T](
       name: String,
-      dataStream: DataStream[JTuple2[JBool, T]],
+      dataStream: DataStream[T],
       fields: Array[Expression])
   : Unit = {
 
-    val streamType: TypeInformation[T] =
-      dataStream.getType.asInstanceOf[TupleTypeInfo[JTuple2[JBool, T]]].getTypeAt(1)
+    val streamType: TypeInformation[T] = dataStream.getType match {
+      case c: CaseClassTypeInfo[_] => c.getTypeAt(1)
+      case t: TupleTypeInfo[_] => t.getTypeAt(1)
+    }
 
     // get field names and types for all non-replaced fields
     val (fieldNames, fieldIndexes) = getFieldInfo[T](streamType, fields)
@@ -623,7 +623,7 @@ abstract class StreamTableEnvironment(
     val (rowtime, proctime) = validateAndExtractTimeAttributes(streamType, fields)
 
     // validate and extract unique keys
-    val uniqueKeys = extractUniqueKeys(streamType, fields)
+    val uniqueKeys = extractUniqueKeys(fields)
 
     // check if event-time is enabled
     if (rowtime.isDefined && execEnv.getStreamTimeCharacteristic != TimeCharacteristic.EventTime) {
@@ -787,15 +787,12 @@ abstract class StreamTableEnvironment(
     *
     * @return unique keys
     */
-  private def extractUniqueKeys(
-    streamType: TypeInformation[_],
-    exprs: Array[Expression])
-  : Array[String] = {
+  private def extractUniqueKeys(exprs: Array[Expression]): Array[String] = {
 
     var uniqueKeys: List[String] = Nil
     exprs.zipWithIndex.foreach {
       case (Key(UnresolvedFieldReference(name)), _) => uniqueKeys = name :: uniqueKeys
-      case (Alias(Key(UnresolvedFieldReference(_)), name, _), _) => uniqueKeys = name :: uniqueKeys
+      case (Key(Alias(UnresolvedFieldReference(_), name, _)), _) => uniqueKeys = name :: uniqueKeys
       case _ =>
     }
 

@@ -456,26 +456,6 @@ class StreamExecutionEnvironment(javaEnv: JavaEnv) {
     asScalaStream(javaEnv.fromCollection(data.asJava, typeInfo))
   }
 
-  def fromCollectionWithFlag[T: TypeInformation](
-    data: Seq[JTuple2[JBool, T]]): DataStream[JTuple2[JBool, T]] = {
-
-    require(data != null, "Data must not be null.")
-    val typeInfo = implicitly[TypeInformation[T]]
-    val tupleTypeInfo =
-      new TupleTypeInfo[JTuple2[JBool, T]](BasicTypeInfo.BOOLEAN_TYPE_INFO, typeInfo)
-
-    val collection = scala.collection.JavaConversions.asJavaCollection(data)
-    asScalaStream(javaEnv.fromCollection(collection, tupleTypeInfo))
-  }
-
-  def fromCollectionWithFlag[T: TypeInformation](
-    data: Iterator[JTuple2[JBool, T]]): DataStream[JTuple2[JBool, T]] = {
-    val typeInfo = implicitly[TypeInformation[T]]
-    val tupleTypeInfo =
-      new TupleTypeInfo[JTuple2[JBool, T]](BasicTypeInfo.BOOLEAN_TYPE_INFO, typeInfo)
-    asScalaStream(javaEnv.fromCollection(data.asJava, tupleTypeInfo))
-  }
-
   /**
    * Creates a DataStream from the given [[SplittableIterator]].
    */

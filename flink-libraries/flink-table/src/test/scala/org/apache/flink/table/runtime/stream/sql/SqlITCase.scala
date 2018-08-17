@@ -926,22 +926,4 @@ object SqlITCase {
       1L
     }
   }
-
-  class TimestampWithEqualWatermark
-    extends AssignerWithPunctuatedWatermarks[JTuple2[JBool, Row]] {
-
-    override def checkAndGetNextWatermark(
-        lastElement: JTuple2[JBool, Row],
-        extractedTimestamp: Long)
-    : Watermark = {
-      new Watermark(extractedTimestamp)
-    }
-
-    override def extractTimestamp(
-        element: JTuple2[JBool, Row],
-        previousElementTimestamp: Long): Long = {
-      Int.unbox(element.f1.getField(2))
-    }
-  }
-
 }

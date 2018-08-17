@@ -23,15 +23,12 @@ import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.core.TableScan
 import org.apache.calcite.rex.RexNode
-import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2}
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.table.api.{StreamQueryConfig, StreamTableEnvironment}
 import org.apache.flink.table.expressions.Cast
 import org.apache.flink.table.plan.schema.{RowSchema, UpsertStreamTable}
 import org.apache.flink.table.runtime.types.CRow
 import org.apache.flink.table.typeutils.TimeIndicatorTypeInfo
-
-import java.lang.{Boolean => JBool}
 
 /**
   * Flink RelNode which matches along with DataStreamSource.
@@ -64,7 +61,7 @@ class UpsertStreamScan(
       queryConfig: StreamQueryConfig): DataStream[CRow] = {
 
     val config = tableEnv.getConfig
-    val inputDataStream: DataStream[JTuple2[JBool, Any]] = upsertStreamTable.dataStream
+    val inputDataStream: DataStream[Any] = upsertStreamTable.dataStream
     val fieldIdxs = upsertStreamTable.fieldIndexes
 
     // get expression to extract timestamp
@@ -81,7 +78,7 @@ class UpsertStreamScan(
       }
 
     // convert DataStream
-    convertTupleToInternalRow(schema, inputDataStream, fieldIdxs, config, rowtimeExpr)
+    convertUpsertToInternalRow(schema, inputDataStream, fieldIdxs, config, rowtimeExpr)
   }
 
 }

@@ -138,6 +138,8 @@ object StreamTestData {
     env.fromCollection(data)
   }
 
+
+  // todo hequn add more test data
   def getSmall3TupleDataStreamWithFlag(env: StreamExecutionEnvironment):
   DataStream[JTuple2[JBool, Row]] = {
 
@@ -150,6 +152,6 @@ object StreamTestData {
       JTuple2.of(true, Row.of(Int.box(1), Long.box(1L), "Hi"))/*,
       JTuple2.of(true, Row.of(2, 2L, "Hello")),
       JTuple2.of(true, Row.of(3, 2L, "Hello world"))*/)
-    env.fromCollectionWithFlag(data)
+    env.fromCollection(data)
   }
 }
