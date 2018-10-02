@@ -87,6 +87,7 @@ object ExpressionParser extends JavaTokenParsers with PackratParsers {
   lazy val UNBOUNDED_RANGE: Keyword = Keyword("unbounded_range")
   lazy val ROWTIME: Keyword = Keyword("rowtime")
   lazy val PROCTIME: Keyword = Keyword("proctime")
+  lazy val KEY: Keyword = Keyword("key")
   lazy val TRUE: Keyword = Keyword("true")
   lazy val FALSE: Keyword = Keyword("false")
   lazy val PRIMITIVE_ARRAY: Keyword = Keyword("PRIMITIVE_ARRAY")
@@ -498,6 +499,13 @@ object ExpressionParser extends JavaTokenParsers with PackratParsers {
       case f ~ _ ~ _ => RowtimeAttribute(f)
     }
 
+  // key
+
+  lazy val key: PackratParser[Expression] =
+    (aliasMapping | "(" ~> aliasMapping <~ ")" | fieldReference) ~ "." ~ KEY ^^ {
+      case f ~ _ ~ _ => Key(f)
+    }
+
   // alias
 
   lazy val alias: PackratParser[Expression] = logic ~ AS ~ fieldReference ^^ {
@@ -510,7 +518,7 @@ object ExpressionParser extends JavaTokenParsers with PackratParsers {
       case e ~ _ ~ name => Alias(e, name.name)
   }
 
-  lazy val expression: PackratParser[Expression] = timeIndicator | overConstant | alias |
+  lazy val expression: PackratParser[Expression] = key | timeIndicator | overConstant | alias |
     failure("Invalid expression.")
 
   lazy val expressionList: Parser[List[Expression]] = rep1sep(expression, ",")

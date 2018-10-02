@@ -24,6 +24,8 @@ import org.apache.flink.table.expressions.Expression
 import org.apache.flink.table.functions.{AggregateFunction, TableFunction}
 import org.apache.flink.streaming.api.scala.{DataStream, StreamExecutionEnvironment}
 import org.apache.flink.streaming.api.scala.asScalaStream
+import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2}
+import _root_.java.lang.{Boolean => JBool}
 
 /**
   * The [[TableEnvironment]] for a Scala [[StreamExecutionEnvironment]].
@@ -48,7 +50,7 @@ class StreamTableEnvironment(
     config) {
 
   /**
-    * Converts the given [[DataStream]] into a [[Table]].
+    * Converts the given append [[DataStream]] into a [[Table]].
     *
     * The field names of the [[Table]] are automatically derived from the type of the
     * [[DataStream]].
@@ -57,15 +59,12 @@ class StreamTableEnvironment(
     * @tparam T The type of the [[DataStream]].
     * @return The converted [[Table]].
     */
-  def fromDataStream[T](dataStream: DataStream[T]): Table = {
-
-    val name = createUniqueTableName()
-    registerDataStreamInternal(name, dataStream.javaStream)
-    scan(name)
-  }
+  @deprecated("This method only supports conversion of append-only datastreams. In order to make " +
+    "this more explicit in the future, please use fromAppendStream() instead.")
+  def fromDataStream[T](dataStream: DataStream[T]): Table = fromAppendStream(dataStream)
 
   /**
-    * Converts the given [[DataStream]] into a [[Table]] with specified field names.
+    * Converts the given append [[DataStream]] into a [[Table]] with specified field names.
     *
     * Example:
     *
@@ -79,15 +78,99 @@ class StreamTableEnvironment(
     * @tparam T The type of the [[DataStream]].
     * @return The converted [[Table]].
     */
-  def fromDataStream[T](dataStream: DataStream[T], fields: Expression*): Table = {
+  @deprecated("This method only supports conversion of append-only datastreams. In order to make " +
+    "this more explicit in the future, please use fromAppendStream() instead.")
+  def fromDataStream[T](dataStream: DataStream[T], fields: Expression*): Table =
+    fromAppendStream(dataStream, fields: _*)
+
+  /**
+    * Converts the given append [[DataStream]] into a [[Table]].
+    *
+    * The field names of the [[Table]] are automatically derived from the type of the
+    * [[DataStream]].
+    *
+    * @param dataStream The [[DataStream]] to be converted.
+    * @tparam T The type of the [[DataStream]].
+    * @return The converted [[Table]].
+    */
+  def fromAppendStream[T](dataStream: DataStream[T]): Table = {
 
     val name = createUniqueTableName()
-    registerDataStreamInternal(name, dataStream.javaStream, fields.toArray)
+    registerAppendStreamInternal(name, dataStream.javaStream)
     scan(name)
   }
 
   /**
-    * Registers the given [[DataStream]] as table in the
+    * Converts the given append [[DataStream]] into a [[Table]] with specified field names.
+    *
+    * Example:
+    *
+    * {{{
+    *   val stream: DataStream[(String, Long)] = ...
+    *   val tab: Table = tableEnv.fromAppendStream(stream, 'a, 'b)
+    * }}}
+    *
+    * @param dataStream The [[DataStream]] to be converted.
+    * @param fields The field names of the resulting [[Table]].
+    * @tparam T The type of the [[DataStream]].
+    * @return The converted [[Table]].
+    */
+  def fromAppendStream[T](dataStream: DataStream[T], fields: Expression*): Table = {
+
+    val name = createUniqueTableName()
+    registerAppendStreamInternal(name, dataStream.javaStream, fields.toArray)
+    scan(name)
+  }
+
+  /**
+    * Converts the given upsert [[DataStream]] into a single row [[Table]].
+    *
+    * The field names of the [[Table]] are automatically derived from the type of the
+    * [[DataStream]]. Since the key has not been specified, an empty key will be used and the table
+    * will be a single row [[Table]].
+    *
+    * @param dataStream The [[DataStream]] to be converted.
+    * @tparam T The type of the [[DataStream]].
+    * @return The converted [[Table]].
+    */
+  def fromUpsertStream[T](dataStream: DataStream[JTuple2[JBool, T]]): Table = {
+
+    val name = createUniqueTableName()
+    registerUpsertStreamInternal(name, dataStream.javaStream)
+    scan(name)
+  }
+
+  /**
+    * Converts the given upsert [[DataStream]] into a [[Table]] with specified field names and keys.
+    *
+    * The message will be encoded as [[Tuple2]]. The first field is a [[Boolean]] flag, the second
+    * field holds the record of the specified type [[T]]. A true [[Boolean]] flag indicates an
+    * update message, a false flag indicates a delete message.
+    *
+    * Example:
+    *
+    * {{{
+    *   val stream: DataStream[(Boolean, Row)] = ...
+    *   val tab: Table = tableEnv.fromUpsertStream(stream, 'a.key, 'b)
+    * }}}
+    *
+    * If keys are not explicitly specified, an empty key will be used and the table will be a
+    * single row [[Table]].
+    *
+    * @param dataStream The [[DataStream]] to be converted.
+    * @param fields The field names of the resulting [[Table]].
+    * @tparam T The type of the [[DataStream]].
+    * @return The converted [[Table]].
+    */
+  def fromUpsertStream[T](dataStream: DataStream[T], fields: Expression*): Table = {
+
+    val name = createUniqueTableName()
+    registerUpsertStreamInternal(name, dataStream.javaStream, fields.toArray)
+    scan(name)
+  }
+
+  /**
+    * Registers the given append [[DataStream]] as table in the
     * [[TableEnvironment]]'s catalog.
     * Registered tables can be referenced in SQL queries.
     *
@@ -98,14 +181,13 @@ class StreamTableEnvironment(
     * @param dataStream The [[DataStream]] to register.
     * @tparam T The type of the [[DataStream]] to register.
     */
+  @Deprecated
   def registerDataStream[T](name: String, dataStream: DataStream[T]): Unit = {
-
-    checkValidTableName(name)
-    registerDataStreamInternal(name, dataStream.javaStream)
+    registerAppendStream(name, dataStream)
   }
 
   /**
-    * Registers the given [[DataStream]] as table with specified field names in the
+    * Registers the given append [[DataStream]] as table with specified field names in the
     * [[TableEnvironment]]'s catalog.
     * Registered tables can be referenced in SQL queries.
     *
@@ -121,10 +203,49 @@ class StreamTableEnvironment(
     * @param fields The field names of the registered table.
     * @tparam T The type of the [[DataStream]] to register.
     */
-  def registerDataStream[T](name: String, dataStream: DataStream[T], fields: Expression*): Unit = {
+  @Deprecated
+  def registerDataStream[T](name: String, dataStream: DataStream[T], fields: Expression*): Unit =
+    registerAppendStream(name, dataStream, fields: _*)
+
+  /**
+    * Registers the given append [[DataStream]] as table in the
+    * [[TableEnvironment]]'s catalog.
+    * Registered tables can be referenced in SQL queries.
+    *
+    * The field names of the [[Table]] are automatically derived
+    * from the type of the [[DataStream]].
+    *
+    * @param name The name under which the [[DataStream]] is registered in the catalog.
+    * @param dataStream The [[DataStream]] to register.
+    * @tparam T The type of the [[DataStream]] to register.
+    */
+  def registerAppendStream[T](name: String, dataStream: DataStream[T]): Unit = {
 
     checkValidTableName(name)
-    registerDataStreamInternal(name, dataStream.javaStream, fields.toArray)
+    registerAppendStreamInternal(name, dataStream.javaStream)
+  }
+
+  /**
+    * Registers the given append [[DataStream]] as table with specified field names in the
+    * [[TableEnvironment]]'s catalog.
+    * Registered tables can be referenced in SQL queries.
+    *
+    * Example:
+    *
+    * {{{
+    *   val set: DataStream[(String, Long)] = ...
+    *   tableEnv.registerAppendStream("myTable", set, 'a, 'b)
+    * }}}
+    *
+    * @param name The name under which the [[DataStream]] is registered in the catalog.
+    * @param dataStream The [[DataStream]] to register.
+    * @param fields The field names of the registered table.
+    * @tparam T The type of the [[DataStream]] to register.
+    */
+  def registerAppendStream[T](name: String, dataStream: DataStream[T], fields: Expression*): Unit = {
+
+    checkValidTableName(name)
+    registerAppendStreamInternal(name, dataStream.javaStream, fields.toArray)
   }
 
   /**

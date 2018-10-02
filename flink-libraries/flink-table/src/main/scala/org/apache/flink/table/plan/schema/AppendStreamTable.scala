@@ -16,26 +16,19 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.runtime
+package org.apache.flink.table.plan.schema
 
-import org.apache.flink.table.runtime.types.CRow
-import org.apache.flink.types.Row
-import org.apache.flink.util.Collector
+import org.apache.flink.streaming.api.datastream.DataStream
+import org.apache.flink.table.api.TableEnvironment
+import org.apache.flink.table.plan.stats.FlinkStatistic
 
 /**
-  * The collector is used to wrap a [[Row]] to a [[CRow]]
+  * Table that to be registed in the [[TableEnvironment]]'s catalog. The dataStream is an append
+  * stream, while [[UpsertStreamTable]] contains an upsert stream.
   */
-class CRowWrappingCollector() extends Collector[Row] {
-
-  var out: Collector[CRow] = _
-  val outCRow: CRow = new CRow()
-
-  def setChange(change: Boolean): Unit = this.outCRow.change = change
-
-  override def collect(record: Row): Unit = {
-    outCRow.row = record
-    out.collect(outCRow)
-  }
-
-  override def close(): Unit = out.close()
-}
+class AppendStreamTable[T](
+    val dataStream: DataStream[T],
+    override val fieldIndexes: Array[Int],
+    override val fieldNames: Array[String],
+    override val statistic: FlinkStatistic = FlinkStatistic.UNKNOWN)
+  extends InlineTable[T](dataStream.getType, fieldIndexes, fieldNames, statistic)
