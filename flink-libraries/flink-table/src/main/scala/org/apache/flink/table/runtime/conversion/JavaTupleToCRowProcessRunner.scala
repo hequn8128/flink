@@ -16,10 +16,12 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.runtime
+package org.apache.flink.table.runtime.conversion
 
-import org.apache.flink.api.common.functions.util.FunctionUtils
+import _root_.java.lang.{Boolean => JBool}
+
 import org.apache.flink.api.common.typeinfo.TypeInformation
+import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2}
 import org.apache.flink.api.java.typeutils.ResultTypeQueryable
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.streaming.api.functions.ProcessFunction
@@ -33,11 +35,11 @@ import org.apache.flink.util.Collector
 /**
   * ProcessRunner with [[CRow]] output.
   */
-class CRowOutputProcessRunner(
+class JavaTupleToCRowProcessRunner(
     name: String,
     code: String,
     @transient var returnType: TypeInformation[CRow])
-  extends ProcessFunction[Any, CRow]
+  extends ProcessFunction[JTuple2[JBool, Any], CRow]
   with ResultTypeQueryable[CRow]
   with Compiler[ProcessFunction[Any, Row]]
   with Logging {
@@ -50,16 +52,14 @@ class CRowOutputProcessRunner(
     val clazz = compile(getRuntimeContext.getUserCodeClassLoader, name, code)
     LOG.debug("Instantiating ProcessFunction.")
     function = clazz.newInstance()
-    FunctionUtils.setFunctionRuntimeContext(function, getRuntimeContext)
-    FunctionUtils.openFunction(function, parameters)
 
     this.cRowWrapper = new CRowWrappingCollector()
     this.cRowWrapper.setChange(true)
   }
 
   override def processElement(
-      in: Any,
-      ctx: ProcessFunction[Any, CRow]#Context,
+      in: JTuple2[JBool, Any],
+      ctx: ProcessFunction[JTuple2[JBool, Any], CRow]#Context,
       out: Collector[CRow]): Unit = {
 
     // remove timestamp from stream record
@@ -67,12 +67,9 @@ class CRowOutputProcessRunner(
     tc.eraseTimestamp()
 
     cRowWrapper.out = out
-    function.processElement(in, ctx.asInstanceOf[ProcessFunction[Any, Row]#Context], cRowWrapper)
+    cRowWrapper.setChange(in.f0)
+    function.processElement(in.f1, ctx.asInstanceOf[ProcessFunction[Any, Row]#Context], cRowWrapper)
   }
 
   override def getProducedType: TypeInformation[CRow] = returnType
-
-  override def close(): Unit = {
-    FunctionUtils.closeFunction(function)
-  }
 }

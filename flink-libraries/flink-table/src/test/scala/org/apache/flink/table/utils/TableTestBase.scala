@@ -20,12 +20,12 @@ package org.apache.flink.table.utils
 
 import org.apache.calcite.plan.RelOptUtil
 import org.apache.calcite.rel.RelNode
+import org.apache.flink.api.java.LocalEnvironment
 import org.apache.flink.api.common.typeinfo.TypeInformation
-import org.apache.flink.api.java.{LocalEnvironment, DataSet => JDataSet, ExecutionEnvironment => JExecutionEnvironment}
+import org.apache.flink.api.java.{DataSet => JDataSet}
 import org.apache.flink.api.scala.{DataSet, ExecutionEnvironment}
 import org.apache.flink.streaming.api.TimeCharacteristic
-import org.apache.flink.streaming.api.datastream.{DataStream => JDataStream}
-import org.apache.flink.streaming.api.environment.{LocalStreamEnvironment, StreamExecutionEnvironment => JStreamExecutionEnvironment}
+import org.apache.flink.streaming.api.environment.LocalStreamEnvironment
 import org.apache.flink.streaming.api.functions.source.SourceFunction
 import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
 import org.apache.flink.table.api.scala._
@@ -36,6 +36,8 @@ import org.junit.Assert.assertEquals
 import org.junit.{ComparisonFailure, Rule}
 import org.junit.rules.ExpectedException
 import org.mockito.Mockito.{mock, when}
+import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2}
+import _root_.java.lang.{Boolean => JBool}
 
 import util.control.Breaks._
 
@@ -75,7 +77,14 @@ abstract class TableTestUtil {
     addTable[T](s"Table$counter", fields: _*)
   }
 
+  def addKeyedTable[T: TypeInformation](fields: Expression*): Table = {
+    counter += 1
+    addKeyedTable[T](s"Table$counter", fields: _*)
+  }
+
   def addTable[T: TypeInformation](name: String, fields: Expression*): Table
+
+  def addKeyedTable[T: TypeInformation](name: String, fields: Expression*): Table
 
   def addFunction[T: TypeInformation](name: String, function: TableFunction[T]): TableFunction[T]
 
@@ -180,8 +189,12 @@ object TableTestUtil {
     s"DataSetScan(table=[[_DataSetTable_$idx]])"
   }
 
-  def streamTableNode(idx: Int): String = {
-    s"DataStreamScan(table=[[_DataStreamTable_$idx]])"
+  def AppendTableNode(idx: Int): String = {
+    s"AppendStreamScan(table=[[_DataStreamTable_$idx]])"
+  }
+
+  def UpsertTableNode(idx: Int): String = {
+    s"UpsertStreamScan(table=[[_DataStreamTable_$idx]])"
   }
 }
 
@@ -204,6 +217,10 @@ case class BatchTableTestUtil() extends TableTestUtil {
     val t = ds.toTable(tableEnv, fields: _*)
     tableEnv.registerTable(name, t)
     t
+  }
+
+  override def addKeyedTable[T: TypeInformation](name: String, fields: Expression*): Table = {
+    throw new RuntimeException("addKeyedTable has not been supported on DataSet.")
   }
 
   def addJavaTable[T](typeInfo: TypeInformation[T], name: String, fields: String): Table = {
@@ -287,9 +304,26 @@ case class StreamTableTestUtil() extends TableTestUtil {
     table
   }
 
+  override def addKeyedTable[T: TypeInformation](name: String, fields: Expression*): Table = {
+    val table = env.fromElements().toKeyedTable(tableEnv, fields: _*)
+    tableEnv.registerTable(name, table)
+    table
+  }
+
   def addJavaTable[T](typeInfo: TypeInformation[T], name: String, fields: String): Table = {
     val stream = javaEnv.addSource(new EmptySource[T], typeInfo)
-    val table = javaTableEnv.fromDataStream(stream, fields)
+    val table = javaTableEnv.fromAppendStream(stream, fields)
+    javaTableEnv.registerTable(name, table)
+    table
+  }
+
+  def addJavaKeyedTable[T](
+      typeInfo: TypeInformation[JTuple2[JBool, T]],
+      name: String,
+      fields: String): Table = {
+
+    val stream = javaEnv.addSource(new EmptySource[JTuple2[JBool, T]], typeInfo)
+    val table = javaTableEnv.fromUpsertStream(stream, fields)
     javaTableEnv.registerTable(name, table)
     table
   }

@@ -869,6 +869,13 @@ trait ImplicitExpressionOperations {
     */
   def proctime = ProctimeAttribute(expr)
 
+  // Key definition
+
+  /**
+    * Declares a field as the unique key attribute for source Table.
+    */
+  def key = Key(expr)
+
   // Hash functions
 
   /**

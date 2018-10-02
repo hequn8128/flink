@@ -29,6 +29,33 @@ import org.junit.Test
 class UpdatingPlanCheckerTest {
 
   @Test
+  def testKeyedTable(): Unit = {
+    val util = new UpdatePlanCheckerUtil()
+    val table = util.addKeyedTable[(Boolean, (String, Int))]("MyTable", 'a.key, 'b)
+    val resultTable = table.select('a, 'b)
+
+    util.verifyTableUniqueKey(resultTable, Seq("a"))
+  }
+
+  @Test
+  def testMultiKeysKeyedTable(): Unit = {
+    val util = new UpdatePlanCheckerUtil()
+    val table = util.addKeyedTable[(Boolean, (String, Int, Int))]("MyTable", 'a.key, 'b.key, 'c)
+    val resultTable = table.select('a, 'b, 'c)
+
+    util.verifyTableUniqueKey(resultTable, Seq("a", "b"))
+  }
+
+  @Test
+  def testSingleRowKeyedTable(): Unit = {
+    val util = new UpdatePlanCheckerUtil()
+    val table = util.addKeyedTable[(Boolean, (String, Int))]("MyTable", 'a, 'b)
+    val resultTable = table.select('a, 'b)
+
+    util.verifyTableUniqueKey(resultTable, Nil)
+  }
+
+  @Test
   def testSelect(): Unit = {
     val util = new UpdatePlanCheckerUtil()
     val table = util.addTable[(String, Int)]('a, 'b)

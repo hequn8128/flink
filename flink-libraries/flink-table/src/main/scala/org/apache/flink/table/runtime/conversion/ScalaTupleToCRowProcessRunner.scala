@@ -16,33 +16,32 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.runtime
+package org.apache.flink.table.runtime.conversion
 
-import org.apache.flink.api.common.functions.util.FunctionUtils
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.typeutils.ResultTypeQueryable
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.streaming.api.functions.ProcessFunction
+import org.apache.flink.streaming.api.operators.TimestampedCollector
 import org.apache.flink.table.codegen.Compiler
-import org.apache.flink.table.runtime.conversion.CRowWrappingCollector
 import org.apache.flink.table.runtime.types.CRow
 import org.apache.flink.table.util.Logging
 import org.apache.flink.types.Row
 import org.apache.flink.util.Collector
 
 /**
-  * ProcessRunner with [[CRow]] input and [[CRow]] output.
+  * ProcessRunner with [[CRow]] output.
   */
-class CRowProcessRunner(
+class ScalaTupleToCRowProcessRunner(
     name: String,
     code: String,
     @transient var returnType: TypeInformation[CRow])
-  extends ProcessFunction[CRow, CRow]
+  extends ProcessFunction[(Boolean, Any), CRow]
   with ResultTypeQueryable[CRow]
-  with Compiler[ProcessFunction[Row, Row]]
+  with Compiler[ProcessFunction[Any, Row]]
   with Logging {
 
-  private var function: ProcessFunction[Row, Row] = _
+  private var function: ProcessFunction[Any, Row] = _
   private var cRowWrapper: CRowWrappingCollector = _
 
   override def open(parameters: Configuration): Unit = {
@@ -50,31 +49,24 @@ class CRowProcessRunner(
     val clazz = compile(getRuntimeContext.getUserCodeClassLoader, name, code)
     LOG.debug("Instantiating ProcessFunction.")
     function = clazz.newInstance()
-    FunctionUtils.setFunctionRuntimeContext(function, getRuntimeContext)
-    FunctionUtils.openFunction(function, parameters)
 
     this.cRowWrapper = new CRowWrappingCollector()
+    this.cRowWrapper.setChange(true)
   }
 
   override def processElement(
-      in: CRow,
-      ctx: ProcessFunction[CRow, CRow]#Context,
-      out: Collector[CRow])
-    : Unit = {
+      in: (Boolean, Any),
+      ctx: ProcessFunction[(Boolean, Any), CRow]#Context,
+      out: Collector[CRow]): Unit = {
+
+    // remove timestamp from stream record
+    val tc = out.asInstanceOf[TimestampedCollector[_]]
+    tc.eraseTimestamp()
 
     cRowWrapper.out = out
-    cRowWrapper.setChange(in.change)
-    function.processElement(
-      in.row,
-      ctx.asInstanceOf[ProcessFunction[Row, Row]#Context],
-      cRowWrapper)
+    cRowWrapper.setChange(in._1)
+    function.processElement(in._2, ctx.asInstanceOf[ProcessFunction[Any, Row]#Context], cRowWrapper)
   }
 
   override def getProducedType: TypeInformation[CRow] = returnType
-
-  override def close(): Unit = {
-    FunctionUtils.closeFunction(function)
-  }
 }
-
-

@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.runtime
+package org.apache.flink.table.runtime.conversion
 
 import org.apache.flink.api.common.functions.util.FunctionUtils
 import org.apache.flink.api.common.functions.{MapFunction, RichMapFunction}
@@ -31,7 +31,7 @@ import org.apache.flink.types.Row
 /**
   * MapRunner with [[CRow]] input.
   */
-class CRowMapRunner[OUT](
+class CRowToExternalTypeMapRunner[OUT](
     name: String,
     code: String,
     @transient var returnType: TypeInformation[OUT])
