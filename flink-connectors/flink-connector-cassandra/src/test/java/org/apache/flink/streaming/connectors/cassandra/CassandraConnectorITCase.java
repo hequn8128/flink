@@ -449,7 +449,7 @@ public class CassandraConnectorITCase extends WriteAheadSinkTestBase<Tuple3<Stri
 
 		DataStreamSource<Row> source = env.fromCollection(rowCollection);
 
-		tEnv.registerDataStreamInternal("testFlinkTable", source);
+		tEnv.registerAppendStreamInternal("testFlinkTable", source);
 
 		tEnv.sql("select * from testFlinkTable").writeToSink(
 			new CassandraAppendTableSink(builder, injectTableName(INSERT_DATA_QUERY)));
