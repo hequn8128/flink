@@ -78,12 +78,12 @@ class SetOperatorsTest extends TableTestBase {
         "DataStreamCalc",
         binaryNode(
           "DataStreamJoin",
-          streamTableNode(0),
+          AppendTableNode(0),
           unaryNode(
             "DataStreamGroupAggregate",
             unaryNode(
               "DataStreamCalc",
-              streamTableNode(1),
+              AppendTableNode(1),
               term("select", "x")
             ),
             term("groupBy", "x"),
@@ -116,7 +116,7 @@ class SetOperatorsTest extends TableTestBase {
         "DataStreamCalc",
         binaryNode(
           "DataStreamJoin",
-          streamTableNode(0),
+          AppendTableNode(0),
           unaryNode(
             "DataStreamGroupAggregate",
             unaryNode(
@@ -125,7 +125,7 @@ class SetOperatorsTest extends TableTestBase {
                 "DataStreamGroupAggregate",
                 unaryNode(
                   "DataStreamCalc",
-                  streamTableNode(1),
+                  AppendTableNode(1),
                   term("select", "x", "y"),
                   term("where", "LIKE(y, '%Hanoi%')")
                 ),
@@ -170,12 +170,12 @@ class SetOperatorsTest extends TableTestBase {
             "DataStreamCalc",
             binaryNode(
               "DataStreamJoin",
-              streamTableNode(0),
+              AppendTableNode(0),
               unaryNode(
                 "DataStreamGroupAggregate",
                 unaryNode(
                   "DataStreamCalc",
-                  streamTableNode(1),
+                  AppendTableNode(1),
                   term("select", "x")
                 ),
                 term("groupBy", "x"),
@@ -191,7 +191,7 @@ class SetOperatorsTest extends TableTestBase {
             "DataStreamGroupAggregate",
             unaryNode(
               "DataStreamCalc",
-              streamTableNode(2),
+              AppendTableNode(2),
               term("select", "w")
             ),
             term("groupBy", "w"),

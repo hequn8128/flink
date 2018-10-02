@@ -16,65 +16,41 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.runtime
+package org.apache.flink.table.runtime.conversion
 
-import org.apache.flink.api.common.functions.util.FunctionUtils
+import org.apache.flink.api.common.functions.{MapFunction, RichMapFunction}
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.typeutils.ResultTypeQueryable
 import org.apache.flink.configuration.Configuration
-import org.apache.flink.streaming.api.functions.ProcessFunction
 import org.apache.flink.table.codegen.Compiler
-import org.apache.flink.table.runtime.conversion.CRowWrappingCollector
 import org.apache.flink.table.runtime.types.CRow
 import org.apache.flink.table.util.Logging
 import org.apache.flink.types.Row
-import org.apache.flink.util.Collector
 
 /**
-  * ProcessRunner with [[CRow]] input and [[CRow]] output.
+  * MapRunner with [[CRow]] input.
   */
-class CRowProcessRunner(
+class CRowToExternalTypeMapRunner[OUT](
     name: String,
     code: String,
-    @transient var returnType: TypeInformation[CRow])
-  extends ProcessFunction[CRow, CRow]
-  with ResultTypeQueryable[CRow]
-  with Compiler[ProcessFunction[Row, Row]]
+    @transient var returnType: TypeInformation[OUT])
+  extends RichMapFunction[CRow, OUT]
+  with ResultTypeQueryable[OUT]
+  with Compiler[MapFunction[Row, OUT]]
   with Logging {
 
-  private var function: ProcessFunction[Row, Row] = _
-  private var cRowWrapper: CRowWrappingCollector = _
+  private var function: MapFunction[Row, OUT] = _
 
   override def open(parameters: Configuration): Unit = {
-    LOG.debug(s"Compiling ProcessFunction: $name \n\n Code:\n$code")
+    LOG.debug(s"Compiling MapFunction: $name \n\n Code:\n$code")
     val clazz = compile(getRuntimeContext.getUserCodeClassLoader, name, code)
-    LOG.debug("Instantiating ProcessFunction.")
+    LOG.debug("Instantiating MapFunction.")
     function = clazz.newInstance()
-    FunctionUtils.setFunctionRuntimeContext(function, getRuntimeContext)
-    FunctionUtils.openFunction(function, parameters)
-
-    this.cRowWrapper = new CRowWrappingCollector()
   }
 
-  override def processElement(
-      in: CRow,
-      ctx: ProcessFunction[CRow, CRow]#Context,
-      out: Collector[CRow])
-    : Unit = {
-
-    cRowWrapper.out = out
-    cRowWrapper.setChange(in.change)
-    function.processElement(
-      in.row,
-      ctx.asInstanceOf[ProcessFunction[Row, Row]#Context],
-      cRowWrapper)
+  override def map(in: CRow): OUT = {
+    function.map(in.row)
   }
 
-  override def getProducedType: TypeInformation[CRow] = returnType
-
-  override def close(): Unit = {
-    FunctionUtils.closeFunction(function)
-  }
+  override def getProducedType: TypeInformation[OUT] = returnType
 }
-
-

@@ -229,7 +229,9 @@ object FlinkRuleSets {
     DataStreamWindowJoinRule.INSTANCE,
     DataStreamJoinRule.INSTANCE,
     DataStreamTemporalTableJoinRule.INSTANCE,
-    StreamTableSourceScanRule.INSTANCE
+    StreamTableSourceScanRule.INSTANCE,
+    DataStreamLastRowRule.INSTANCE,
+    DataStreamLastRowAfterCalcRule.INSTANCE
   )
 
   /**

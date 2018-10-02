@@ -20,9 +20,11 @@ package org.apache.flink.table.runtime.stream.sql;
 
 import org.apache.flink.api.common.typeinfo.BasicTypeInfo;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
+import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.tuple.Tuple3;
 import org.apache.flink.api.java.tuple.Tuple5;
 import org.apache.flink.api.java.typeutils.RowTypeInfo;
+import org.apache.flink.api.java.typeutils.TupleTypeInfo;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.api.Table;
@@ -64,7 +66,7 @@ public class JavaSqlITCase extends AbstractTestBase {
 
 		DataStream<Row> ds = env.fromCollection(data).returns(typeInfo);
 
-		Table in = tableEnv.fromDataStream(ds, "a,b,c");
+		Table in = tableEnv.fromAppendStream(ds, "a,b,c");
 		tableEnv.registerTable("MyTableRow", in);
 
 		String sqlQuery = "SELECT a,c FROM MyTableRow";
@@ -83,13 +85,54 @@ public class JavaSqlITCase extends AbstractTestBase {
 	}
 
 	@Test
+	public void testFromUpsertStream() throws Exception {
+		StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+		StreamTableEnvironment tableEnv = TableEnvironment.getTableEnvironment(env);
+		StreamITCase.clear();
+
+		env.setParallelism(1);
+		List<Tuple2<Boolean, Row>> data = new ArrayList<>();
+		data.add(Tuple2.of(true, Row.of(1, 1L, "Hi")));
+		data.add(Tuple2.of(true, Row.of(2, 2L, "Hello")));
+		data.add(Tuple2.of(false, Row.of(3, 2L, "Hello world")));
+		data.add(Tuple2.of(true, Row.of(4, 3L, "Hello Flink")));
+
+		TypeInformation<Row> tpe = new RowTypeInfo(
+			BasicTypeInfo.INT_TYPE_INFO,
+			BasicTypeInfo.LONG_TYPE_INFO,
+			BasicTypeInfo.STRING_TYPE_INFO
+		);
+
+		TupleTypeInfo<Tuple2<Boolean, Row>> tupleType =
+			new TupleTypeInfo<>(BasicTypeInfo.BOOLEAN_TYPE_INFO, tpe);
+
+		DataStream<Tuple2<Boolean, Row>> ds = env.fromCollection(data, tupleType);
+
+		Table in = tableEnv.fromUpsertStream(ds, "a,b.key,c");
+		tableEnv.registerTable("MyTableRow", in);
+
+		String sqlQuery = "SELECT a,c FROM MyTableRow";
+		Table result = tableEnv.sqlQuery(sqlQuery);
+
+		DataStream<Tuple2<Boolean, Row>> resultSet = tableEnv.toRetractStream(result, Row.class);
+		resultSet.addSink(new StreamITCase.JRetractingSink());
+		env.execute();
+
+		List<String> expected = new ArrayList<>();
+		expected.add("1,Hi");
+		expected.add("4,Hello Flink");
+
+		StreamITCase.compareRetractWithList(expected);
+	}
+
+	@Test
 	public void testSelect() throws Exception {
 		StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
 		StreamTableEnvironment tableEnv = TableEnvironment.getTableEnvironment(env);
 		StreamITCase.clear();
 
 		DataStream<Tuple3<Integer, Long, String>> ds = JavaStreamTestData.getSmall3TupleDataSet(env);
-		Table in = tableEnv.fromDataStream(ds, "a,b,c");
+		Table in = tableEnv.fromAppendStream(ds, "a,b,c");
 		tableEnv.registerTable("MyTable", in);
 
 		String sqlQuery = "SELECT * FROM MyTable";
@@ -114,7 +157,7 @@ public class JavaSqlITCase extends AbstractTestBase {
 		StreamITCase.clear();
 
 		DataStream<Tuple5<Integer, Long, Integer, String, Long>> ds = JavaStreamTestData.get5TupleDataStream(env);
-		tableEnv.registerDataStream("MyTable", ds, "a, b, c, d, e");
+		tableEnv.registerAppendStream("MyTable", ds, "a, b, c, d, e");
 
 		String sqlQuery = "SELECT a, b, e FROM MyTable WHERE c < 4";
 		Table result = tableEnv.sqlQuery(sqlQuery);
@@ -139,11 +182,11 @@ public class JavaSqlITCase extends AbstractTestBase {
 		StreamITCase.clear();
 
 		DataStream<Tuple3<Integer, Long, String>> ds1 = JavaStreamTestData.getSmall3TupleDataSet(env);
-		Table t1 = tableEnv.fromDataStream(ds1, "a,b,c");
+		Table t1 = tableEnv.fromAppendStream(ds1, "a,b,c");
 		tableEnv.registerTable("T1", t1);
 
 		DataStream<Tuple5<Integer, Long, Integer, String, Long>> ds2 = JavaStreamTestData.get5TupleDataStream(env);
-		tableEnv.registerDataStream("T2", ds2, "a, b, d, c, e");
+		tableEnv.registerAppendStream("T2", ds2, "a, b, d, c, e");
 
 		String sqlQuery = "SELECT * FROM T1 " +
 							"UNION ALL " +
