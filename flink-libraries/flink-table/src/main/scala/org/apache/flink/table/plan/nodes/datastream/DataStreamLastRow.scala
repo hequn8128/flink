@@ -21,16 +21,21 @@ package org.apache.flink.table.plan.nodes.datastream
 import java.util
 
 import org.apache.calcite.plan.{RelOptCluster, RelOptCost, RelOptPlanner, RelTraitSet}
+import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.metadata.RelMetadataQuery
 import org.apache.calcite.rel.{RelNode, RelWriter, SingleRel}
+import org.apache.flink.api.common.typeinfo.{SqlTimeTypeInfo, TypeInformation}
 import org.apache.flink.api.java.functions.NullByteKeySelector
 import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.streaming.api.datastream.DataStream
-import org.apache.flink.table.api.{StreamQueryConfig, StreamTableEnvironment}
+import org.apache.flink.table.api.{StreamQueryConfig, StreamTableEnvironment, TableException}
+import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.plan.rules.datastream.DataStreamRetractionRules
 import org.apache.flink.table.plan.schema.RowSchema
-import org.apache.flink.table.runtime.{CRowKeySelector, LastRowProcessFunction}
+import org.apache.flink.table.runtime.{CRowKeySelector, ProcTimeLastRow, RowTimeLastRow}
 import org.apache.flink.table.runtime.types.{CRow, CRowTypeInfo}
+
+import scala.collection.JavaConversions._
 
 /**
   * Flink RelNode for ingesting upsert stream from source.
@@ -44,6 +49,28 @@ class DataStreamLastRow(
    val indexes: Seq[Int])
   extends SingleRel(cluster, traitSet, input)
   with DataStreamRel{
+
+  override def deriveRowType(): RelDataType = {
+    // Change RowTime type to timestamp type, because unbounded Upsert can not output watermark,
+    // i.e, upsert source may output(retract) records with a timestamp smaller than current
+    // watermark. We only use rowtime to judge element order in Upsert source.
+    val fieldTypeInfos = inputSchema.fieldTypeInfos
+    val typeFactory = cluster.getTypeFactory
+    if (fieldTypeInfos.exists(FlinkTypeFactory.isRowtimeIndicatorType(_))) {
+      val typeInfos: Seq[TypeInformation[_]] = fieldTypeInfos.map(e => {
+        e match {
+          case _ if (FlinkTypeFactory.isRowtimeIndicatorType(e)) => SqlTimeTypeInfo.TIMESTAMP
+          case _ => e
+        }
+      })
+      val names = inputSchema.fieldNames
+      val rowType = typeFactory.asInstanceOf[FlinkTypeFactory].buildLogicalRowType(names, typeInfos)
+      typeFactory.builder.addAll(rowType.getFieldList).build()
+    } else {
+      // don't have to change row type if it is proctime
+      inputSchema.relDataType
+    }
+  }
 
   override def computeSelfCost(planner: RelOptPlanner, metadata: RelMetadataQuery): RelOptCost = {
     val child = this.getInput
@@ -88,11 +115,25 @@ class DataStreamLastRow(
     val outRowType = CRowTypeInfo(schema.typeInfo)
 
     val needRetraction = DataStreamRetractionRules.isAccRetract(this)
-    val result: DataStream[CRow] = if (needRetraction) {
-      val processFunction = new LastRowProcessFunction(
-        new RowTypeInfo(schema.fieldTypeInfos.toArray, schema.fieldNames.toArray),
-        queryConfig
-      )
+    val rowtimeFieldIndex = schema.fieldTypeInfos.zipWithIndex
+      .filter(e => FlinkTypeFactory.isRowtimeIndicatorType(e._1))
+      .map(_._2)
+
+    // The rowtime attribute can only be defined once in a table schema.
+    if (rowtimeFieldIndex.size > 1) {
+      throw new TableException("The number of Rowtime field should be less than 2. This is" +
+        " a bug.")
+    }
+
+    val result: DataStream[CRow] = if (needRetraction || rowtimeFieldIndex.size > 0) {
+
+      val rowTypeInfo = new RowSchema(getRowType).typeInfo.asInstanceOf[RowTypeInfo]
+      val processFunction = if (rowtimeFieldIndex.size > 0) {
+        new RowTimeLastRow(rowTypeInfo, queryConfig, rowtimeFieldIndex.head)
+      } else {
+        new ProcTimeLastRow(rowTypeInfo, queryConfig)
+      }
+
       if (indexes.nonEmpty) {
         // upsert with keys
         inputDS
@@ -114,7 +155,7 @@ class DataStreamLastRow(
           .asInstanceOf[DataStream[CRow]]
       }
     } else {
-      // forward messages if doesn't generate retraction.
+      // forward messages if doesn't generate retraction and without rowtime.
       inputDS
     }
 

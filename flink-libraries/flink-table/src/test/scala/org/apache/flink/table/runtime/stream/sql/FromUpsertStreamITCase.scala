@@ -85,7 +85,6 @@ class FromUpsertStreamITCase extends StreamingWithStateTestBase {
   def testRegisterSingleRowTableFromUpsertStream(): Unit = {
 
     val env = StreamExecutionEnvironment.getExecutionEnvironment
-    env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
     val tEnv = TableEnvironment.getTableEnvironment(env)
     env.setStateBackend(getStateBackend)
     env.setParallelism(1)
@@ -99,9 +98,8 @@ class FromUpsertStreamITCase extends StreamingWithStateTestBase {
       (true, ("Hello again", "Worlds", 2)))
 
     val ds = env.fromCollection(data)
-      .assignTimestampsAndWatermarks(new TimestampWithEqualWatermark())
 
-    val t = tEnv.fromUpsertStream(ds, 'a, 'b, 'c, 'rowtime.rowtime, 'proctime.proctime)
+    val t = tEnv.fromUpsertStream(ds, 'a, 'b, 'c, 'proctime.proctime)
     tEnv.registerTable("MyTableRow", t)
 
     val result = tEnv.sqlQuery(sqlQuery).toRetractStream[Row]
@@ -176,25 +174,58 @@ class FromUpsertStreamITCase extends StreamingWithStateTestBase {
     val expected = List("12,43,Test 2.", "13,44,Test 3.")
     assertEquals(expected.sorted, upserted.sorted)
   }
+
+  @Test
+  def testRowTimeUpsert(): Unit = {
+
+    val env = StreamExecutionEnvironment.getExecutionEnvironment
+    env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
+    val tEnv = TableEnvironment.getTableEnvironment(env)
+    env.setStateBackend(getStateBackend)
+//    env.setParallelism(1)
+    StreamITCase.clear
+
+    val sqlQuery = "SELECT a, b, c FROM MyTableRow"
+
+    val ds = StreamTestData.get3TupleUpsertStream(env)
+      .assignTimestampsAndWatermarks(new TimestampWithEqualWatermark())
+
+    val t = tEnv.fromUpsertStream(ds, 'a, 'b.key, 'c, 'rowtime.rowtime, 'proctime.proctime)
+    tEnv.registerTable("MyTableRow", t)
+
+    val result = tEnv.sqlQuery(sqlQuery).toRetractStream[Row]
+    result.print()
+    result.addSink(new StreamITCase.RetractingSink)
+    env.execute()
+
+    val expected = List("Hello again,Worlds,2")
+    assertEquals(expected.sorted, StreamITCase.retractedResults.sorted)
+  }
+
+  // add plan test for rowtime upsert without retraction
+
+  // test output rowtype for proctime and rowtime
+
+  // test throw away empty delete but update delete time.
 }
 
 
 object FromUpsertStreamITCase {
 
   class TimestampWithEqualWatermark
-    extends AssignerWithPunctuatedWatermarks[(Boolean, (String, String, Int))] {
+    extends AssignerWithPunctuatedWatermarks[(Boolean, (Int, Long, String))] {
 
     override def checkAndGetNextWatermark(
-        lastElement: (Boolean, (String, String, Int)),
+        lastElement: (Boolean, (Int, Long, String)),
         extractedTimestamp: Long)
     : Watermark = {
       new Watermark(extractedTimestamp)
     }
 
     override def extractTimestamp(
-        element: (Boolean, (String, String, Int)),
+        element: (Boolean, (Int, Long, String)),
         previousElementTimestamp: Long): Long = {
-      element._2._3
+      element._2._1
     }
   }
 

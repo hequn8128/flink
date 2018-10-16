@@ -29,12 +29,13 @@ import org.apache.flink.types.Row
 import org.apache.flink.util.Collector
 
 /**
-  * Function used to handle upsert inputs. Output a retract message if there is a new update.
+  * Function used to handle ProcTime upsert inputs. Output a retract message if there is a
+  * new update.
   *
   * @param rowTypeInfo the output row type info.
   * @param queryConfig the configuration for the query.
   */
-class LastRowProcessFunction(
+class ProcTimeLastRow(
     private val rowTypeInfo: RowTypeInfo,
     private val queryConfig: StreamQueryConfig)
   extends ProcessFunctionWithCleanupState[CRow, CRow](queryConfig)

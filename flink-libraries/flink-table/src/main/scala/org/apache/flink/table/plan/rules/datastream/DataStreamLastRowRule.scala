@@ -58,7 +58,9 @@ class DataStreamLastRowRule
       scan.getCluster, traitSet, scan.getTable, inputSchema)
     val dataStreamLastRow = new DataStreamLastRow(
       scan.getCluster, traitSet, upsertStreamScan, inputSchema, inputSchema, keyIndexes)
-    call.transformTo(dataStreamLastRow)
+    val relBuilder = call.builder()
+    relBuilder.push(dataStreamLastRow)
+    call.transformTo(relBuilder.build())
   }
 }
 
