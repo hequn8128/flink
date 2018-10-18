@@ -20,8 +20,7 @@ package org.apache.flink.table.plan.nodes.datastream
 
 import java.util
 
-import org.apache.calcite.plan.{RelOptCluster, RelOptCost, RelOptPlanner, RelTraitSet}
-import org.apache.calcite.rel.metadata.RelMetadataQuery
+import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
 import org.apache.calcite.rel.{RelNode, RelWriter, SingleRel}
 import org.apache.flink.api.java.functions.NullByteKeySelector
 import org.apache.flink.api.java.typeutils.RowTypeInfo
@@ -32,6 +31,8 @@ import org.apache.flink.table.plan.schema.RowSchema
 import org.apache.flink.table.runtime.{CRowKeySelector, LastRowProcessFunction}
 import org.apache.flink.table.runtime.types.{CRow, CRowTypeInfo}
 
+import scala.collection.JavaConversions._
+
 /**
   * Flink RelNode for ingesting upsert stream from source.
   */
@@ -41,40 +42,38 @@ class DataStreamLastRow(
    input: RelNode,
    inputSchema: RowSchema,
    schema: RowSchema,
-   val indexes: Seq[Int])
+   val keyNames: Seq[String])
   extends SingleRel(cluster, traitSet, input)
   with DataStreamRel{
 
-  override def computeSelfCost(planner: RelOptPlanner, metadata: RelMetadataQuery): RelOptCost = {
-    val child = this.getInput
-    val rowCnt = metadata.getRowCount(child)
-    // take rowCnt and fieldCnt into account, so that cost will be smaller when generate LastRow
-    // after Calc.
-    planner.getCostFactory.makeCost(rowCnt, rowCnt * child.getRowType.getFieldCount, 0)
-  }
+  lazy val keyIndexes = getRowType.getFieldNames.zipWithIndex
+    .filter(e => keyNames.contains(e._1))
+    .map(_._2).toArray
 
   override def copy(traitSet: RelTraitSet, inputs: util.List[RelNode]): RelNode = {
-    new DataStreamLastRow(cluster, traitSet, inputs.get(0), inputSchema, schema, indexes)
-  }
-
-  def getKeysString(): String = {
-    val inFields = input.getRowType.getFieldNames.toArray
-    if (indexes.nonEmpty) {
-      s"${indexes.map(inFields(_)).mkString(", ")}"
-    } else {
-      "constant"
-    }
+    new DataStreamLastRow(
+      cluster,
+      traitSet,
+      inputs.get(0),
+      inputSchema,
+      schema,
+      keyNames)
   }
 
   override def explainTerms(pw: RelWriter): RelWriter ={
     super.explainTerms(pw)
-      .item("keys", getKeysString)
+      .itemIf("keys", keyNames.mkString(", "), keyNames.size != 0)
       .item("select", input.getRowType.getFieldNames.toArray.mkString(", "))
   }
 
   override def toString: String = {
-    s"Last(Keys: (${getKeysString}), " +
-      s"select: (${input.getRowType.getFieldNames.toArray.mkString(", ")}))"
+    s"LastRow(${
+      if (keyNames.size != 0) {
+        s"keys:(${keyNames.mkString(", ")}), "
+      } else {
+        ""
+      }
+    }select:(${input.getRowType.getFieldNames.toArray.mkString(", ")}))"
   }
 
   override def producesUpdates: Boolean = true
@@ -93,11 +92,11 @@ class DataStreamLastRow(
         new RowTypeInfo(schema.fieldTypeInfos.toArray, schema.fieldNames.toArray),
         queryConfig
       )
-      if (indexes.nonEmpty) {
+      if (keyIndexes.nonEmpty) {
         // upsert with keys
         inputDS
           .keyBy(
-            new CRowKeySelector(indexes.toArray, inputSchema.projectedTypeInfo(indexes.toArray)))
+            new CRowKeySelector(keyIndexes, inputSchema.projectedTypeInfo(keyIndexes)))
           .process(processFunction)
           .returns(outRowType)
           .name("DataStreamLastRow")

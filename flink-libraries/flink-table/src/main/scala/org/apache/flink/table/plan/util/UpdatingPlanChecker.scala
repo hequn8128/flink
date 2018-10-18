@@ -186,7 +186,7 @@ object UpdatingPlanChecker {
 
         case l: DataStreamLastRow =>
           val uniqueKeyNames = l.getRowType.getFieldNames.zipWithIndex
-            .filter(e => l.indexes.contains(e._2))
+            .filter(e => l.keyIndexes.contains(e._2))
             .map(_._1)
           Some(uniqueKeyNames.map(e => (e, e)))
         case _: DataStreamRel =>

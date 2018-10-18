@@ -36,28 +36,29 @@ class FromUpsertStreamTest extends TableTestBase {
   private val streamUtil: StreamTableTestUtil = streamTestUtil()
 
   @Test
-  def testUpsertStream() = {
+  def testMaterializeTimeIndicatorAndCalcLastRowTranspose() = {
     streamUtil.addKeyedTable[(Boolean, (Int, String, Long))](
       "MyTable", 'a, 'b.key, 'c, 'proctime.proctime, 'rowtime.rowtime)
 
-    val sql = "SELECT a, b, c FROM MyTable"
+    val sql = "SELECT b as b1, c, proctime as proctime1, rowtime as rowtime1 FROM MyTable"
 
     val expected =
       unaryNode(
-        "DataStreamCalc",
+        "DataStreamLastRow",
         unaryNode(
-          "DataStreamLastRow",
+          "DataStreamCalc",
           UpsertTableNode(0),
-          term("keys", "b"),
-          term("select", "a", "b", "c", "proctime", "rowtime")
+          term("select", "b AS b1", "c", "PROCTIME(proctime) AS proctime1",
+            "CAST(rowtime) AS rowtime1")
         ),
-        term("select", "a", "b", "c")
+        term("keys", "b1"),
+        term("select", "b1", "c", "proctime1", "rowtime1")
       )
     streamUtil.verifySql(sql, expected)
   }
 
   @Test
-  def testUpsertAfterCalc() = {
+  def testCalcTransposeLastRow() = {
     streamUtil.addKeyedTable[(Boolean, (Int, String, Long))]("MyTable", 'a, 'b.key, 'c)
 
     val sql = "SELECT a, b as bb FROM MyTable"
@@ -77,6 +78,26 @@ class FromUpsertStreamTest extends TableTestBase {
   }
 
   @Test
+  def testCalcCannotTransposeLastRow() = {
+    streamUtil.addKeyedTable[(Boolean, (Int, String, Long))]("MyTable", 'a, 'b.key, 'c)
+
+    val sql = "SELECT a, c FROM MyTable"
+
+    val expected =
+      unaryNode(
+        "DataStreamCalc",
+        unaryNode(
+          "DataStreamLastRow",
+          UpsertTableNode(0),
+          term("keys", "b"),
+          term("select", "a", "b", "c")
+        ),
+        term("select", "a", "c")
+      )
+    streamUtil.verifySql(sql, expected)
+  }
+
+  @Test
   def testSingleRowUpsert() = {
     streamUtil.addKeyedTable[(Boolean, (Int, String, Long))]("MyTable", 'a, 'b, 'c)
     val sql = "SELECT a, b FROM MyTable"
@@ -89,7 +110,6 @@ class FromUpsertStreamTest extends TableTestBase {
           UpsertTableNode(0),
           term("select", "a", "b")
         ),
-        term("keys", "constant"),
         term("select", "a", "b")
       )
     streamUtil.verifySql(sql, expected)

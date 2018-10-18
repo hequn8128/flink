@@ -33,7 +33,7 @@ class SetOperatorsTest extends TableTestBase {
     val resultStr = (1 to 30).mkString(", ")
     val expected = unaryNode(
       "DataStreamCalc",
-      streamTableNode(0),
+      AppendTableNode(0),
       term("select", "a", "b", "c"),
       term("where", s"IN(b, $resultStr)")
     )
@@ -51,7 +51,7 @@ class SetOperatorsTest extends TableTestBase {
     val resultStr = (1 to 30).mkString(", ")
     val expected = unaryNode(
       "DataStreamCalc",
-      streamTableNode(0),
+      AppendTableNode(0),
       term("select", "a", "b", "c"),
       term("where", s"NOT IN(b, $resultStr)")
     )
