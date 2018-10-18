@@ -29,8 +29,8 @@ import org.apache.flink.api.common.typeinfo.SqlTimeTypeInfo
 import org.apache.flink.table.api.{TableException, ValidationException}
 import org.apache.flink.table.calcite.FlinkTypeFactory.{isRowtimeIndicatorType, _}
 import org.apache.flink.table.functions.sql.ProctimeSqlFunction
-import org.apache.flink.table.plan.logical.rel.{LogicalTemporalTableJoin, LogicalWindowAggregate}
-import org.apache.flink.table.plan.schema.TimeIndicatorRelDataType
+import org.apache.flink.table.plan.logical.rel.{LogicalLastRow, LogicalTemporalTableJoin, LogicalWindowAggregate}
+import org.apache.flink.table.plan.schema.{TimeIndicatorRelDataType, UpsertStreamTable}
 import org.apache.flink.table.validate.BasicOperatorTable
 
 import scala.collection.JavaConversions._
@@ -165,7 +165,30 @@ class RelTimeIndicatorConverter(rexBuilder: RexBuilder) extends RelShuttle {
   override def visit(exchange: LogicalExchange): RelNode =
     throw new TableException("Logical exchange in a stream environment is not supported yet.")
 
-  override def visit(scan: TableScan): RelNode = scan
+  override def visit(scan: TableScan): RelNode = {
+    val upsertStreamTable = scan.getTable.unwrap(classOf[UpsertStreamTable[_]])
+    val relTypes = scan.getRowType.getFieldList.map(_.getType)
+    val getTimeIndicatorIndexes = relTypes.zipWithIndex
+      .filter(e => FlinkTypeFactory.isTimeIndicatorType(e._1))
+      .map(_._2)
+    if (upsertStreamTable != null) {
+      val input = if (getTimeIndicatorIndexes.size > 0) {
+        // materialize time indicator
+        val rewrittenScan = scan.copy(scan.getTraitSet, scan.getInputs)
+        materializerUtils.projectAndMaterializeFields(rewrittenScan, getTimeIndicatorIndexes.toSet)
+      } else {
+        scan
+      }
+
+      LogicalLastRow.create(
+        scan.getCluster,
+        scan.getTraitSet,
+        input,
+        upsertStreamTable.uniqueKeys)
+    } else {
+      scan
+    }
+  }
 
   override def visit(scan: TableFunctionScan): RelNode =
     throw new TableException("Table function scan in a stream environment is not supported yet.")

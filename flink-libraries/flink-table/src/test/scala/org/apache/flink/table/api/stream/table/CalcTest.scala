@@ -123,7 +123,7 @@ class CalcTest extends TableTestBase {
 
     val expected = unaryNode(
       "DataStreamCalc",
-      streamTableNode(0),
+      AppendTableNode(0),
       term("select", "a", "b", "c"),
       term("where", s"AND(IN(b, ${(1 to 30).mkString(", ")}), =(c, 'xx'))")
     )
@@ -140,7 +140,7 @@ class CalcTest extends TableTestBase {
 
     val expected = unaryNode(
       "DataStreamCalc",
-      streamTableNode(0),
+      AppendTableNode(0),
       term("select", "a", "b", "c"),
       term("where", s"OR(NOT IN(b, ${(1 to 30).mkString(", ")}), <>(c, 'xx'))")
     )

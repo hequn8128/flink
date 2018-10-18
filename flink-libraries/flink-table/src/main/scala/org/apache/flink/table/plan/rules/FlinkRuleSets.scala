@@ -119,6 +119,7 @@ object FlinkRuleSets {
     // scan optimization
     PushProjectIntoTableSourceScanRule.INSTANCE,
     PushFilterIntoTableSourceScanRule.INSTANCE,
+    CalcLastRowTransposeRule.INSTANCE,
 
     // unnest rule
     LogicalUnnestRule.INSTANCE,
@@ -139,7 +140,8 @@ object FlinkRuleSets {
     FlinkLogicalTableSourceScan.CONVERTER,
     FlinkLogicalTableFunctionScan.CONVERTER,
     FlinkLogicalNativeTableScan.CONVERTER,
-    FlinkLogicalMatch.CONVERTER
+    FlinkLogicalMatch.CONVERTER,
+    FlinkLogicalLastRow.CONVERTER
   )
 
   /**
@@ -228,8 +230,7 @@ object FlinkRuleSets {
     DataStreamTemporalTableJoinRule.INSTANCE,
     StreamTableSourceScanRule.INSTANCE,
     DataStreamMatchRule.INSTANCE,
-    DataStreamLastRowRule.INSTANCE,
-    DataStreamLastRowAfterCalcRule.INSTANCE
+    DataStreamLastRowRule.INSTANCE
   )
 
   /**

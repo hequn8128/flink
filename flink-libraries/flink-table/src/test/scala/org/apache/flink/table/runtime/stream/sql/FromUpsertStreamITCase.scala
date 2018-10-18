@@ -101,7 +101,7 @@ class FromUpsertStreamITCase extends StreamingWithStateTestBase {
     val ds = env.fromCollection(data)
       .assignTimestampsAndWatermarks(new TimestampWithEqualWatermark())
 
-    val t = tEnv.fromUpsertStream(ds, 'a, 'b, 'c, 'rowtime.rowtime, 'proctime.proctime)
+    val t = tEnv.fromUpsertStream(ds, 'a, 'b, 'c, 'proctime.proctime)
     tEnv.registerTable("MyTableRow", t)
 
     val result = tEnv.sqlQuery(sqlQuery).toRetractStream[Row]
@@ -113,7 +113,7 @@ class FromUpsertStreamITCase extends StreamingWithStateTestBase {
   }
 
   @Test
-  def testUpsertAfterCalc(): Unit = {
+  def testCalcTransposeLastRow(): Unit = {
 
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     val tEnv = TableEnvironment.getTableEnvironment(env)

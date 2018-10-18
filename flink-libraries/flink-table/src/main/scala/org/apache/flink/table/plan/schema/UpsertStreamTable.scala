@@ -30,9 +30,9 @@ import org.apache.flink.table.plan.stats.FlinkStatistic
   */
 class UpsertStreamTable[T](
     val dataStream: DataStream[T],
-    val uniqueKeys: Array[String],
     override val fieldIndexes: Array[Int],
     override val fieldNames: Array[String],
+    val uniqueKeys: Array[String] = Array(),
     override val statistic: FlinkStatistic = FlinkStatistic.UNKNOWN)
   extends InlineTable[T](
     dataStream.getType match {

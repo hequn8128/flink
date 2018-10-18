@@ -18,47 +18,33 @@
 
 package org.apache.flink.table.plan.rules.datastream
 
-import org.apache.calcite.plan.RelOptRule.{any, operand}
-import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall, RelTraitSet}
+import org.apache.calcite.plan.{RelOptRule, RelTraitSet}
+import org.apache.calcite.rel.RelNode
+import org.apache.calcite.rel.convert.ConverterRule
 import org.apache.flink.table.plan.nodes.FlinkConventions
-import org.apache.flink.table.plan.nodes.datastream.{DataStreamLastRow, UpsertStreamScan}
-import org.apache.flink.table.plan.nodes.logical.FlinkLogicalNativeTableScan
-import org.apache.flink.table.plan.schema.{RowSchema, UpsertStreamTable}
-
-import scala.collection.JavaConversions._
+import org.apache.flink.table.plan.nodes.datastream.DataStreamLastRow
+import org.apache.flink.table.plan.nodes.logical.FlinkLogicalLastRow
+import org.apache.flink.table.plan.schema.RowSchema
 
 class DataStreamLastRowRule
-  extends RelOptRule(
-    operand(classOf[FlinkLogicalNativeTableScan], any()),
+  extends ConverterRule(
+    classOf[FlinkLogicalLastRow],
+    FlinkConventions.LOGICAL,
+    FlinkConventions.DATASTREAM,
     "DataStreamLastRowRule") {
 
-  override def matches(call: RelOptRuleCall): Boolean = {
-    val scan = call.rel(0).asInstanceOf[FlinkLogicalNativeTableScan]
-    val upsertStreamTable = scan.getTable.unwrap(classOf[UpsertStreamTable[Any]])
-    upsertStreamTable match {
-      case _: UpsertStreamTable[Any] =>
-        true
-      case _ =>
-        false
-    }
-  }
+  override def convert(rel: RelNode): RelNode = {
+    val lastRow = rel.asInstanceOf[FlinkLogicalLastRow]
+    val traitSet: RelTraitSet = rel.getTraitSet.replace(FlinkConventions.DATASTREAM)
+    val convInput: RelNode = RelOptRule.convert(lastRow.getInput, FlinkConventions.DATASTREAM)
 
-  override def onMatch(call: RelOptRuleCall): Unit = {
-    val scan = call.rel(0).asInstanceOf[FlinkLogicalNativeTableScan]
-    val traitSet: RelTraitSet = scan.getTraitSet.replace(FlinkConventions.DATASTREAM)
-    val inputSchema = new RowSchema(scan.getRowType)
-
-    // get unique key indexes
-    val keyNames = scan.getTable.unwrap(classOf[UpsertStreamTable[_]]).uniqueKeys
-    val keyIndexes = scan.getRowType.getFieldNames.zipWithIndex
-      .filter(e => keyNames.contains(e._1))
-      .map(_._2).toArray
-
-    val upsertStreamScan = new UpsertStreamScan(
-      scan.getCluster, traitSet, scan.getTable, inputSchema)
-    val dataStreamLastRow = new DataStreamLastRow(
-      scan.getCluster, traitSet, upsertStreamScan, inputSchema, inputSchema, keyIndexes)
-    call.transformTo(dataStreamLastRow)
+    new DataStreamLastRow(
+      lastRow.getCluster,
+      traitSet,
+      convInput,
+      new RowSchema(convInput.getRowType),
+      new RowSchema(rel.getRowType),
+      lastRow.keyNames)
   }
 }
 

@@ -589,7 +589,6 @@ abstract class StreamTableEnvironment(
     val (fieldNames, fieldIndexes) = getFieldInfo[T](streamType)
     val dataStreamTable = new UpsertStreamTable[T](
       dataStream,
-      Array(),
       fieldIndexes,
       fieldNames
     )
@@ -638,9 +637,9 @@ abstract class StreamTableEnvironment(
 
     val dataStreamTable = new UpsertStreamTable[T](
       dataStream,
-      uniqueKeys,
       indexesWithIndicatorFields,
-      namesWithIndicatorFields
+      namesWithIndicatorFields,
+      uniqueKeys
     )
     registerTableInternal(name, dataStreamTable)
   }
