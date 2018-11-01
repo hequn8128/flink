@@ -17,7 +17,7 @@
 # limitations under the License.
 ################################################################################
 
-set -o pipefail
+set -euo pipefail
 
 if [[ -z $FLINK_DIR ]]; then
     echo "FLINK_DIR needs to point to a Flink distribution directory"
@@ -235,7 +235,7 @@ function start_local_zk {
         else
             echo "[WARN] Parse error. Skipping config entry '$server'."
         fi
-    done < <(grep "^server\." "${FLINK_DIR}/conf/zoo.cfg")
+    done < `grep "^server\." "${FLINK_DIR}/conf/zoo.cfg"`
 }
 
 function start_cluster {
@@ -300,7 +300,7 @@ function start_and_wait_for_tm {
 }
 
 function check_logs_for_errors {
-  error_count=$(grep -rv "GroupCoordinatorNotAvailableException" $FLINK_DIR/log \
+  lines=$(grep -rv "GroupCoordinatorNotAvailableException" $FLINK_DIR/log \
       | grep -v "RetriableCommitFailedException" \
       | grep -v "NoAvailableBrokersException" \
       | grep -v "Async Kafka commit failed" \
@@ -315,9 +315,11 @@ function check_logs_for_errors {
       | grep -v "An exception was thrown by an exception handler" \
       | grep -v "java.lang.NoClassDefFoundError: org/apache/hadoop/yarn/exceptions/YarnException" \
       | grep -v "java.lang.NoClassDefFoundError: org/apache/hadoop/conf/Configuration" \
-      | grep -v "org.apache.flink.fs.shaded.hadoop3.org.apache.commons.beanutils.FluentPropertyBeanIntrospector  - Error when creating PropertyDescriptor for public final void org.apache.flink.fs.shaded.hadoop3.org.apache.commons.configuration2.AbstractConfiguration.setProperty(java.lang.String,java.lang.Object)! Ignoring this property." \
-      | grep -ic "error")
-  if [[ ${error_count} -gt 0 ]]; then
+      | grep -v "org.apache.flink.fs.shaded.hadoop3.org.apache.commons.beanutils.FluentPropertyBeanIntrospector  - Error when creating PropertyDescriptor for public final void org.apache.flink.fs.shaded.hadoop3.org.apache.commons.configuration2.AbstractConfiguration.setProperty(java.lang.String,java.lang.Object)! Ignoring this property.")
+
+  # the return code will be 1 if grep returns nothing. Append an error line so that we can use set -exuo pipefail
+  error_count=$(printf "${lines}\nerror"| grep -ic "error")
+  if [[ ${error_count} -gt 1 ]]; then
     echo "Found error in log files:"
     cat $FLINK_DIR/log/*
     EXIT_CODE=1
@@ -325,7 +327,7 @@ function check_logs_for_errors {
 }
 
 function check_logs_for_exceptions {
-  exception_count=$(grep -rv "GroupCoordinatorNotAvailableException" $FLINK_DIR/log \
+  lines=$(grep -rv "GroupCoordinatorNotAvailableException" $FLINK_DIR/log \
    | grep -v "RetriableCommitFailedException" \
    | grep -v "NoAvailableBrokersException" \
    | grep -v "Async Kafka commit failed" \
@@ -342,9 +344,11 @@ function check_logs_for_exceptions {
    | grep -v "java.lang.NoClassDefFoundError: org/apache/hadoop/conf/Configuration" \
    | grep -v "java.lang.Exception: Execution was suspended" \
    | grep -v "java.io.InvalidClassException: org.apache.flink.formats.avro.typeutils.AvroSerializer" \
-   | grep -v "Caused by: java.lang.Exception: JobManager is shutting down" \
-   | grep -ic "exception")
-  if [[ ${exception_count} -gt 0 ]]; then
+   | grep -v "Caused by: java.lang.Exception: JobManager is shutting down")
+
+  # the return code will be 1 if grep returns nothing. Append an error line so that we can use set -exuo pipefail
+  exception_count=$(printf "${lines}\nexception"| grep -ic "exception")
+  if [[ ${exception_count} -gt 1 ]]; then
     echo "Found exception in log files:"
     cat $FLINK_DIR/log/*
     EXIT_CODE=1
@@ -522,8 +526,12 @@ function tm_kill_all {
 # Kills all processes that match the given name.
 function kill_all {
   local pid=`jps | grep -E "${1}" | cut -d " " -f 1`
+  [ -z "$pid" ] && return 0
+
   kill ${pid} 2> /dev/null
-  wait ${pid} 2> /dev/null
+  while [[ -n `jps | grep -E "${1}" | cut -d " " -f 1` ]]; do
+    sleep 1
+  done
 }
 
 function kill_random_taskmanager {
