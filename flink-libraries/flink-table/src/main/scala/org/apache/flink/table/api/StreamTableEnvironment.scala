@@ -557,7 +557,7 @@ abstract class StreamTableEnvironment(
 
     // Can not apply key on append stream
     if (extractUniqueKeys(fields).nonEmpty) {
-      throw TableException(
+      throw new TableException(
         s"Can not apply key on append stream, use fromUpsertStream instead.")
     }
 
@@ -626,7 +626,7 @@ abstract class StreamTableEnvironment(
 
     // check if event-time is enabled
     if (rowtime.isDefined && execEnv.getStreamTimeCharacteristic != TimeCharacteristic.EventTime) {
-      throw TableException(
+      throw new TableException(
         s"A rowtime attribute requires an EventTime time characteristic in stream environment. " +
           s"But is: ${execEnv.getStreamTimeCharacteristic}")
     }
