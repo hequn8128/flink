@@ -142,6 +142,27 @@ class FromUpsertStreamITCase extends StreamingWithStateTestBase {
   }
 
   @Test
+  def testCalcTransposeLastRow(): Unit = {
+
+    val env = StreamExecutionEnvironment.getExecutionEnvironment
+    val tEnv = TableEnvironment.getTableEnvironment(env)
+    env.setStateBackend(getStateBackend)
+    env.setParallelism(1)
+    StreamITCase.clear
+
+    val ds = StreamTestData.get3TupleUpsertStream(env)
+    val t = tEnv.fromUpsertStream(ds, 'a, 'b.key, 'c)
+    tEnv.registerTable("MyTableRow", t)
+    val sqlQuery = "SELECT a, count(b) FROM (SELECT a, b, c FROM MyTableRow) GROUP BY a"
+    val result = tEnv.sqlQuery(sqlQuery).toRetractStream[Row]
+    result.addSink(new StreamITCase.RetractingSink)
+    env.execute()
+
+    val expected = List("6,1", "15,1", "21,1")
+    assertEquals(expected.sorted, StreamITCase.retractedResults.sorted)
+  }
+
+  @Test
   def testPojoAndUpsertSink(): Unit = {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     val tEnv = TableEnvironment.getTableEnvironment(env)
@@ -185,7 +206,6 @@ class FromUpsertStreamITCase extends StreamingWithStateTestBase {
     assertEquals(expected.sorted, upserted.sorted)
   }
 }
-
 
 object FromUpsertStreamITCase {
 

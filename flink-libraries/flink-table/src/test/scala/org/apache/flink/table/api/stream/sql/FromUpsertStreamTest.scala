@@ -58,6 +58,46 @@ class FromUpsertStreamTest extends TableTestBase {
   }
 
   @Test
+  def testCalcTransposeLastRow() = {
+    streamUtil.addKeyedTable[(Boolean, (Int, String, Long))]("MyTable", 'a, 'b.key, 'c)
+
+    val sql = "SELECT a, b as bb FROM MyTable"
+
+    val expected =
+      unaryNode(
+        "DataStreamLastRow",
+        unaryNode(
+          "DataStreamCalc",
+          UpsertTableNode(0),
+          term("select", "a", "b AS bb")
+        ),
+        term("keys", "bb"),
+        term("select", "a", "bb")
+      )
+    streamUtil.verifySql(sql, expected)
+  }
+
+  @Test
+  def testCalcCannotTransposeLastRow() = {
+    streamUtil.addKeyedTable[(Boolean, (Int, String, Long))]("MyTable", 'a, 'b.key, 'c)
+
+    val sql = "SELECT a, c FROM MyTable"
+
+    val expected =
+      unaryNode(
+        "DataStreamCalc",
+        unaryNode(
+          "DataStreamLastRow",
+          UpsertTableNode(0),
+          term("keys", "b"),
+          term("select", "a", "b", "c")
+        ),
+        term("select", "a", "c")
+      )
+    streamUtil.verifySql(sql, expected)
+  }
+
+  @Test
   def testSingleRowUpsert() = {
     streamUtil.addKeyedTable[(Boolean, (Int, String, Long))]("MyTable", 'a, 'b, 'c)
     val sql = "SELECT a, b FROM MyTable"
