@@ -77,8 +77,7 @@ class UpsertStreamScan(
       }
 
     // convert DataStream
-    // todo: add convertToUpdateInternalRow in the next commit
-    convertToInternalRow(schema, inputDataStream, fieldIdxs, config, rowtimeExpr)
+    convertUpsertToInternalRow(schema, inputDataStream, fieldIdxs, config, rowtimeExpr)
   }
 
 }
