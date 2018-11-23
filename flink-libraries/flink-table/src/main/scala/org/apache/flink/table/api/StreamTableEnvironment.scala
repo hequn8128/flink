@@ -517,7 +517,7 @@ abstract class StreamTableEnvironment(
     dataStream: DataStream[T]): Unit = {
 
     val (fieldNames, fieldIndexes) = getFieldInfo[T](dataStream.getType)
-    val dataStreamTable = new DataStreamTable[T](
+    val dataStreamTable = new AppendStreamTable[T](
       dataStream,
       fieldIndexes,
       fieldNames
@@ -555,14 +555,101 @@ abstract class StreamTableEnvironment(
           s"But is: ${execEnv.getStreamTimeCharacteristic}")
     }
 
+    // Can not apply key on append stream
+    if (extractUniqueKeys(fields).nonEmpty) {
+      throw new TableException(
+        s"Can not apply key on append stream, use fromUpsertStream instead.")
+    }
+
     // adjust field indexes and field names
     val indexesWithIndicatorFields = adjustFieldIndexes(fieldIndexes, rowtime, proctime)
     val namesWithIndicatorFields = adjustFieldNames(fieldNames, rowtime, proctime)
 
-    val dataStreamTable = new DataStreamTable[T](
+    val dataStreamTable = new AppendStreamTable[T](
       dataStream,
       indexesWithIndicatorFields,
       namesWithIndicatorFields
+    )
+    registerTableInternal(name, dataStreamTable)
+  }
+
+  /**
+    * Registers an upsert [[DataStream]] as a table under a given name in the [[TableEnvironment]]'s
+    * catalog.
+    *
+    * @param name The name under which the table is registered in the catalog.
+    * @param dataStream The [[DataStream]] to register as table in the catalog.
+    * @tparam T the type of the [[DataStream]].
+    */
+  protected def registerUpsertStreamInternal[T](name: String, dataStream: DataStream[T]): Unit = {
+
+    val streamType: TypeInformation[T] = dataStream.getType match {
+      case c: CaseClassTypeInfo[_]
+        if (c.getTypeClass.equals(classOf[Tuple2[_, _]])) => c.getTypeAt(1)
+      case t: TupleTypeInfo[_]
+        if (t.getTypeClass.equals(classOf[JTuple2[_, _]])) => t.getTypeAt(1)
+      case _ =>
+        throw new TableException("You can only upsert from a datastream with type of Tuple2!")
+    }
+
+    val (fieldNames, fieldIndexes) = getFieldInfo[T](streamType)
+    val dataStreamTable = new UpsertStreamTable[T](
+      dataStream,
+      fieldIndexes,
+      fieldNames
+    )
+    registerTableInternal(name, dataStreamTable)
+  }
+
+  /**
+    * Registers an upsert [[DataStream]] as a table under a given name with field names as specified
+    * by field expressions in the [[TableEnvironment]]'s catalog.
+    *
+    * @param name The name under which the table is registered in the catalog.
+    * @param dataStream The [[DataStream]] to register as table in the catalog.
+    * @param fields The field expressions to define the field names of the table.
+    * @tparam T The type of the [[DataStream]].
+    */
+  protected def registerUpsertStreamInternal[T](
+      name: String,
+      dataStream: DataStream[T],
+      fields: Array[Expression])
+  : Unit = {
+
+    val streamType: TypeInformation[T] = dataStream.getType match {
+      case c: CaseClassTypeInfo[_]
+        if (c.getTypeClass.equals(classOf[Tuple2[_, _]])) => c.getTypeAt(1)
+      case t: TupleTypeInfo[_]
+        if (t.getTypeClass.equals(classOf[JTuple2[_, _]])) => t.getTypeAt(1)
+      case _ =>
+        throw new TableException("You can only upsert from a datastream with type of Tuple2!")
+    }
+
+    // get field names and types for all non-replaced fields
+    val (fieldNames, fieldIndexes) = getFieldInfo[T](streamType, fields)
+
+    // validate and extract time attributes
+    val (rowtime, proctime) = validateAndExtractTimeAttributes(streamType, fields)
+
+    // validate and extract unique keys
+    val uniqueKeys = extractUniqueKeys(fields)
+
+    // check if event-time is enabled
+    if (rowtime.isDefined && execEnv.getStreamTimeCharacteristic != TimeCharacteristic.EventTime) {
+      throw new TableException(
+        s"A rowtime attribute requires an EventTime time characteristic in stream environment. " +
+          s"But is: ${execEnv.getStreamTimeCharacteristic}")
+    }
+
+    // adjust field indexes and field names
+    val indexesWithIndicatorFields = adjustFieldIndexes(fieldIndexes, rowtime, proctime)
+    val namesWithIndicatorFields = adjustFieldNames(fieldNames, rowtime, proctime)
+
+    val dataStreamTable = new UpsertStreamTable[T](
+      dataStream,
+      indexesWithIndicatorFields,
+      namesWithIndicatorFields,
+      uniqueKeys
     )
     registerTableInternal(name, dataStreamTable)
   }
@@ -675,6 +762,10 @@ abstract class StreamTableEnvironment(
       case (ProctimeAttribute(UnresolvedFieldReference(name)), idx) =>
         extractProctime(idx, name)
 
+      case (Key(UnresolvedFieldReference(name)), _) => fieldNames = name :: fieldNames
+
+      case (Key(Alias(UnresolvedFieldReference(_), name, _)), _) => name :: fieldNames
+
       case (UnresolvedFieldReference(name), _) => fieldNames = name :: fieldNames
 
       case (Alias(UnresolvedFieldReference(_), name, _), _) => fieldNames = name :: fieldNames
@@ -697,6 +788,24 @@ abstract class StreamTableEnvironment(
     }
 
     (rowtime, proctime)
+  }
+
+  /**
+    * Extract unique keys from expressions.
+    * Returns the unique keys.
+    *
+    * @return unique keys
+    */
+  private def extractUniqueKeys(exprs: Array[Expression]): Array[String] = {
+
+    var uniqueKeys: List[String] = Nil
+    exprs.zipWithIndex.foreach {
+      case (Key(UnresolvedFieldReference(name)), _) => uniqueKeys = name :: uniqueKeys
+      case (Key(Alias(UnresolvedFieldReference(_), name, _)), _) => uniqueKeys = name :: uniqueKeys
+      case _ =>
+    }
+
+    uniqueKeys.toArray
   }
 
   /**

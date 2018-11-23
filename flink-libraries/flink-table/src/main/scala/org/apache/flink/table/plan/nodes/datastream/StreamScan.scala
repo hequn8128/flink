@@ -19,12 +19,12 @@
 package org.apache.flink.table.plan.nodes.datastream
 
 import org.apache.calcite.rex.RexNode
-import org.apache.flink.api.common.functions.{MapFunction, RichMapFunction}
+import org.apache.flink.api.common.functions.RichMapFunction
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.functions.ProcessFunction
-import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.api.{TableConfig}
 import org.apache.flink.table.codegen.{FunctionCodeGenerator, GeneratedFunction}
 import org.apache.flink.table.plan.nodes.CommonScan
 import org.apache.flink.table.plan.schema.RowSchema
@@ -57,7 +57,7 @@ trait StreamScan extends CommonScan[CRow] with DataStreamRel {
     } else if (input.getType == internalType && !hasTimeIndicator) {
       // input is already of correct type. Only need to wrap it as CRow
       input.asInstanceOf[DataStream[Row]].map(new RichMapFunction[Row, CRow] {
-        @transient private var outCRow: CRow = null
+        @transient private var outCRow: CRow = _
         override def open(parameters: Configuration): Unit = {
           outCRow = new CRow(null, change = true)
         }
@@ -75,7 +75,7 @@ trait StreamScan extends CommonScan[CRow] with DataStreamRel {
         config,
         inputType,
         internalType,
-        "DataStreamSourceConversion",
+        "AppendStreamSourceConversion",
         schema.fieldNames,
         fieldIdxs,
         rowtimeExpression
