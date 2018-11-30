@@ -1110,8 +1110,8 @@ class GroupedFlatAggTable(
   private[flink] val tableAggCall: TableAggFunctionCall) {
 
   /**
-    * Performs a selection operation on a GroupedFlatAggTable table. Similar to an SQL SELECT statement.
-    * The field expressions can contain complex expressions.
+    * Performs a selection operation on a GroupedFlatAggTable table. Similar to an SQL SELECT
+    * statement. The field expressions can contain complex expressions.
     *
     * __Note__: * and aggregate functions are currently not supported.
     *
@@ -1151,8 +1151,8 @@ class GroupedFlatAggTable(
   }
 
   /**
-    * Performs a selection operation on a GroupedFlatAggTable table. Similar to an SQL SELECT statement.
-    * The field expressions can contain complex expressions.
+    * Performs a selection operation on a GroupedFlatAggTable table. Similar to an SQL SELECT
+    * statement. The field expressions can contain complex expressions.
     *
     * __Note__: * and aggregate functions are currently not supported.
     *
