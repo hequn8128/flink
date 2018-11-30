@@ -184,16 +184,6 @@ object UpdatingPlanChecker {
               lJoinKeys.zip(rJoinKeys)
             )
           }
-
-        case t: DataStreamTableAggregate =>
-          val call = t.namedAggregates(0).left
-          val function = call.getAggregation.asInstanceOf[TableAggSqlFunction].getFunction
-          val keyIndexes = function.getKeys
-          Some(t.getRowType.getFieldNames.zipWithIndex
-            .filter(e => keyIndexes.contains(e._2))
-            .map(e => (e._1, e._1))
-          )
-
         case _: DataStreamRel =>
           // anything else does not forward keys, so we can stop
           None

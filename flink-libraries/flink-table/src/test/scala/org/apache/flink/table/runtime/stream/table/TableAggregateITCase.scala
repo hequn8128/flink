@@ -49,9 +49,10 @@ class TableAggregateITCase extends StreamingWithStateTestBase {
     env.setParallelism(1)
     tEnv.registerTableSink(
       "upsertSink",
-      new TestUpsertSink(Array("category", "rank"), false).configure(
-        Array[String]("groupKey", "v", "rank"),
-        Array[TypeInformation[_]](Types.INT, Types.LONG, Types.INT)))
+      new TestUpsertSinkWithEnforceKeys(Array("category", "rank"), false)
+        .configure(
+          Array[String]("groupKey", "v", "rank"),
+          Array[TypeInformation[_]](Types.INT, Types.LONG, Types.INT)))
 
     val top3 = new TopN(3)
     tEnv.registerFunction("top3", top3)
@@ -81,9 +82,10 @@ class TableAggregateITCase extends StreamingWithStateTestBase {
 
     tEnv.registerTableSink(
       "upsertSink",
-      new TestUpsertSink(Array("category", "rank"), false).configure(
-        Array[String]("groupKey", "v", "rank"),
-        Array[TypeInformation[_]](Types.INT, Types.LONG, Types.INT)))
+      new TestUpsertSinkWithEnforceKeys(Array("category", "rank"), false)
+        .configure(
+          Array[String]("groupKey", "v", "rank"),
+          Array[TypeInformation[_]](Types.INT, Types.LONG, Types.INT)))
 
     val top3 = new TopN(3)
     tEnv.registerFunction("top3", top3)

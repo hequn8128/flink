@@ -17,8 +17,6 @@
  */
 package org.apache.flink.table.functions
 
-import java.util
-
 /**
   * Base class for User-Defined Table Aggregates.
   *
@@ -95,5 +93,4 @@ import java.util
   */
 abstract class TableAggregateFunction[T, ACC] extends UserDefinedAggregateFunction[T, ACC] {
 
-  def getKeys: util.ArrayList[Integer] = new util.ArrayList[Integer]()
 }

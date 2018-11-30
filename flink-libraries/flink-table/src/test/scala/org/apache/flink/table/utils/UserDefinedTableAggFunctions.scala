@@ -40,8 +40,6 @@ class TopNAccum {
   */
 class TopN(n: Int) extends TableAggregateFunction[(Int, Long, Int), TopNAccum] {
 
-  override def getKeys: Seq[Int] = Array(0, 2)
-
   override def createAccumulator(): TopNAccum = {
     val acc = new TopNAccum
     acc.data = new MapView(Types.INT, Types.LONG)
@@ -156,8 +154,6 @@ class Top3WithRetractInput extends TableAggregateFunction[(Int, Long, Int), Top3
     emitValue(acc, out, true)
   }
 
-  override def getKeys: Seq[Int] = Array(0, 2)
-
   def emitValue(
     acc: Top3Wrapper, out: RetractableCollector[(Int, Long, Int)], isRetract: Boolean): Unit = {
 
@@ -217,8 +213,6 @@ class Top3WithRetractInput extends TableAggregateFunction[(Int, Long, Int), Top3
   * Test function for plan test.
   */
 class EmptyTableAggFunc extends TableAggregateFunction[(Int, Long, Int), Top3Wrapper] {
-
-  override def getKeys: Seq[Int] = Array(0, 1)
 
   override def createAccumulator(): Top3Wrapper = new Top3Wrapper
 
