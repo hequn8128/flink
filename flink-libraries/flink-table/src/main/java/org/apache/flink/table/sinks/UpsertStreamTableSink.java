@@ -36,20 +36,20 @@ import org.apache.flink.table.api.Types;
  * delete changes. The {@link Table} must be have unique key fields (atomic or composite) or be
  * append-only.
  *
- * If the {@link Table} does not have a unique key and is not append-only, a
+ * <p>If the {@link Table} does not have a unique key and is not append-only, a
  * {@link TableException} will be thrown.
  *
- * The unique key of the table is configured by the {@code UpsertStreamTableSink#setKeyFields()}
+ * <p>The unique key of the table is configured by the {@code UpsertStreamTableSink#setKeyFields()}
  * method.
  *
- * The {@link Table} will be converted into a stream of upsert and delete messages which are
+ * <p>The {@link Table} will be converted into a stream of upsert and delete messages which are
  * encoded as {@link Tuple2}. The first field is a {@link Boolean} flag to indicate the message
  * type. The second field holds the record of the requested type T.
  *
- * A message with true {@link Boolean} field is an upsert message for the configured key.
+ * <p>A message with true {@link Boolean} field is an upsert message for the configured key.
  * A message with false flag is a delete message for the configured key.
  *
- * If the table is append-only, all messages will have a true flag and must be interpreted
+ * <p>If the table is append-only, all messages will have a true flag and must be interpreted
  * as insertions.
  *
  * @param <T> Type of records that this {@link TableSink} expects and supports.
@@ -60,7 +60,7 @@ public interface UpsertStreamTableSink<T> extends StreamTableSink<Tuple2<Boolean
 	 * Configures the unique key fields of the {@link Table} to write.
 	 * The method is called after {@code TableSink.configure()}.
 	 *
-	 * The keys array might be empty, if the table consists of a single (updated) record.
+	 * <p>The keys array might be empty, if the table consists of a single (updated) record.
 	 * If the table does not have a key and is append-only, the keys attribute is null.
 	 *
 	 * @param keys the field names of the table's keys, an empty array if the table has a single
@@ -83,7 +83,7 @@ public interface UpsertStreamTableSink<T> extends StreamTableSink<Tuple2<Boolean
 	 */
 	void setIsAppendOnly(Boolean isAppendOnly);
 
-	/** Returns the requested record type */
+	/** Returns the requested record type. */
 	TypeInformation<T> getRecordType();
 
 	/** Emits the DataStream. */
