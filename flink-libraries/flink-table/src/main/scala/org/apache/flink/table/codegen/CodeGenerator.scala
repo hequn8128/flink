@@ -296,6 +296,15 @@ abstract class CodeGenerator(
   }
 
   /**
+    * Generates an expression from the input.
+    */
+  def generateFieldAccessExprs: Seq[GeneratedExpression] = {
+    input1Mapping.map { idx =>
+      generateFieldAccess(input1, input1Term, idx)
+    }
+  }
+
+  /**
     * Generates an expression from the left input and the right table function.
     */
   def generateCorrelateAccessExprs: (Seq[GeneratedExpression], Seq[GeneratedExpression]) = {

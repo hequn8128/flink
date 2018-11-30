@@ -21,6 +21,7 @@ import org.apache.calcite.rel.{RelNode, RelVisitor}
 import org.apache.calcite.rex.{RexCall, RexInputRef, RexNode}
 import org.apache.calcite.sql.SqlKind
 import org.apache.flink.table.expressions.ProctimeAttribute
+import org.apache.flink.table.functions.utils.TableAggSqlFunction
 import org.apache.flink.table.plan.nodes.datastream._
 
 import _root_.scala.collection.JavaConversions._
@@ -183,6 +184,16 @@ object UpdatingPlanChecker {
               lJoinKeys.zip(rJoinKeys)
             )
           }
+
+        case t: DataStreamTableAggregate =>
+          val call = t.namedAggregates(0).left
+          val function = call.getAggregation.asInstanceOf[TableAggSqlFunction].getFunction
+          val keyIndexes = function.getKeys
+          Some(t.getRowType.getFieldNames.zipWithIndex
+            .filter(e => keyIndexes.contains(e._2))
+            .map(e => (e._1, e._1))
+          )
+
         case _: DataStreamRel =>
           // anything else does not forward keys, so we can stop
           None

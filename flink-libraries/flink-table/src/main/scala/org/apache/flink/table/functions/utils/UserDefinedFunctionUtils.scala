@@ -28,7 +28,7 @@ import com.google.common.primitives.Primitives
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.sql.`type`.SqlOperandTypeChecker.Consistency
 import org.apache.calcite.sql.`type`._
-import org.apache.calcite.sql.{SqlCallBinding, SqlFunction, SqlOperandCountRange, SqlOperator}
+import org.apache.calcite.sql.{SqlCallBinding, SqlFunction, SqlOperandCountRange, SqlOperator, SqlOperatorBinding}
 import org.apache.flink.api.common.functions.InvalidTypesException
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.common.typeutils.CompositeType
@@ -38,7 +38,7 @@ import org.apache.flink.table.api.{TableEnvironment, TableException, ValidationE
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.dataview._
 import org.apache.flink.table.expressions._
-import org.apache.flink.table.functions.{AggregateFunction, ScalarFunction, TableFunction, UserDefinedFunction}
+import org.apache.flink.table.functions._
 import org.apache.flink.table.plan.logical._
 import org.apache.flink.table.plan.schema.FlinkTableFunctionImpl
 import org.apache.flink.util.InstantiationUtil
@@ -99,11 +99,11 @@ object UserDefinedFunctionUtils {
     * of [[TypeInformation]]. Elements of the signature can be null (act as a wildcard).
     */
   def getAccumulateMethodSignature(
-      function: AggregateFunction[_, _],
+      function: UserDefinedAggregateFunction[_, _],
       signature: Seq[TypeInformation[_]])
   : Option[Array[Class[_]]] = {
     val accType = TypeExtractor.createTypeInfo(
-      function, classOf[AggregateFunction[_, _]], function.getClass, 1)
+      function, classOf[UserDefinedAggregateFunction[_, _]], function.getClass, 1)
     val input = (Array(accType) ++ signature).toSeq
     getUserDefinedMethod(
       function,
@@ -293,7 +293,7 @@ object UserDefinedFunctionUtils {
   def createAggregateSqlFunction(
       name: String,
       displayName: String,
-      aggFunction: AggregateFunction[_, _],
+      aggFunction: UserDefinedAggregateFunction[_, _],
       resultType: TypeInformation[_],
       accTypeInfo: TypeInformation[_],
       typeFactory: FlinkTypeFactory)
@@ -301,14 +301,25 @@ object UserDefinedFunctionUtils {
     //check if a qualified accumulate method exists before create Sql function
     checkAndExtractMethods(aggFunction, "accumulate")
 
-    AggSqlFunction(
-      name,
-      displayName,
-      aggFunction,
-      resultType,
-      accTypeInfo,
-      typeFactory,
-      aggFunction.requiresOver)
+    aggFunction match {
+      case aggFunction: AggregateFunction[_, _] =>
+        AggSqlFunction(
+          name,
+          displayName,
+          aggFunction,
+          resultType,
+          accTypeInfo,
+          typeFactory,
+          aggFunction.requiresOver)
+      case tableAggFunction: TableAggregateFunction[_, _] =>
+        TableAggSqlFunction(
+          name,
+          displayName,
+          tableAggFunction,
+          resultType,
+          accTypeInfo,
+          typeFactory)
+    }
   }
 
   /**
@@ -425,6 +436,118 @@ object UserDefinedFunctionUtils {
     }
   }
 
+  def createOperandTypeInference(
+    aggregateFunction: UserDefinedAggregateFunction[_, _],
+    typeFactory: FlinkTypeFactory)
+  : SqlOperandTypeInference = {
+    /**
+      * Operand type inference based on [[UserDefinedAggregateFunction]] given information.
+      */
+    new SqlOperandTypeInference {
+      override def inferOperandTypes(
+          callBinding: SqlCallBinding,
+          returnType: RelDataType,
+          operandTypes: Array[RelDataType]): Unit = {
+
+        val operandTypeInfo = getOperandTypeInfo(callBinding)
+
+        val foundSignature = getAccumulateMethodSignature(aggregateFunction, operandTypeInfo)
+          .getOrElse(
+            throw new ValidationException(
+              s"Given parameters of function do not match any signature. \n" +
+                s"Actual: ${signatureToString(operandTypeInfo)} \n" +
+                s"Expected: ${signaturesToString(aggregateFunction, "accumulate")}"))
+
+        val inferredTypes = getParameterTypes(aggregateFunction, foundSignature.drop(1))
+          .map(typeFactory.createTypeFromTypeInfo(_, isNullable = true))
+
+        for (i <- operandTypes.indices) {
+          if (i < inferredTypes.length - 1) {
+            operandTypes(i) = inferredTypes(i)
+          } else if (null != inferredTypes.last.getComponentType) {
+            // last argument is a collection, the array type
+            operandTypes(i) = inferredTypes.last.getComponentType
+          } else {
+            operandTypes(i) = inferredTypes.last
+          }
+        }
+      }
+    }
+  }
+
+  def createOperandTypeChecker(aggregateFunction: UserDefinedAggregateFunction[_, _])
+  : SqlOperandTypeChecker = {
+
+    val methods = checkAndExtractMethods(aggregateFunction, "accumulate")
+
+    /**
+      * Operand type checker based on [[UserDefinedAggregateFunction]] given information.
+      */
+    new SqlOperandTypeChecker {
+      override def getAllowedSignatures(op: SqlOperator, opName: String): String = {
+        s"$opName[${signaturesToString(aggregateFunction, "accumulate")}]"
+      }
+
+      override def getOperandCountRange: SqlOperandCountRange = {
+        var min = 253
+        var max = -1
+        var isVarargs = false
+        methods.foreach( m => {
+          // do not count accumulator as input
+          val inputParams = m.getParameterTypes.drop(1)
+          var len = inputParams.length
+          if (len > 0 && m.isVarArgs && inputParams(len - 1).isArray) {
+            isVarargs = true
+            len = len - 1
+          }
+          max = Math.max(len, max)
+          min = Math.min(len, min)
+        })
+        if (isVarargs) {
+          // if eval method is varargs, set max to -1 to skip length check in Calcite
+          max = -1
+        }
+
+        SqlOperandCountRanges.between(min, max)
+      }
+
+      override def checkOperandTypes(
+        callBinding: SqlCallBinding,
+        throwOnFailure: Boolean): Boolean = {
+        val operandTypeInfo = getOperandTypeInfo(callBinding)
+
+        val foundSignature = getAccumulateMethodSignature(aggregateFunction, operandTypeInfo)
+
+        if (foundSignature.isEmpty) {
+          if (throwOnFailure) {
+            throw new ValidationException(
+              s"Given parameters of function do not match any signature. \n" +
+                s"Actual: ${signatureToString(operandTypeInfo)} \n" +
+                s"Expected: ${signaturesToString(aggregateFunction, "accumulate")}")
+          } else {
+            false
+          }
+        } else {
+          true
+        }
+      }
+
+      override def isOptional(i: Int): Boolean = false
+      override def getConsistency: Consistency = Consistency.NONE
+    }
+  }
+
+  def createReturnTypeInference(
+    resultType: TypeInformation[_],
+    typeFactory: FlinkTypeFactory): SqlReturnTypeInference = {
+
+    new SqlReturnTypeInference {
+      override def inferReturnType(opBinding: SqlOperatorBinding): RelDataType = {
+        typeFactory.createTypeFromTypeInfo(resultType, isNullable = true)
+      }
+    }
+  }
+
   // ----------------------------------------------------------------------------------------------
   // Utilities for user-defined functions
   // ----------------------------------------------------------------------------------------------
@@ -441,7 +564,7 @@ object UserDefinedFunctionUtils {
     */
   def removeStateViewFieldsFromAccTypeInfo(
       index: Int,
-      aggFun: AggregateFunction[_, _],
+      aggFun: UserDefinedAggregateFunction[_, _],
       accType: TypeInformation[_],
       isStateBackedDataViews: Boolean)
     : (TypeInformation[_], Option[Seq[DataViewSpec[_]]]) = {
@@ -535,15 +658,16 @@ object UserDefinedFunctionUtils {
   }
 
   /**
-    * Tries to infer the TypeInformation of an AggregateFunction's return type.
+    * Tries to infer the TypeInformation of an UserDefinedAggregateFunction's return type.
     *
-    * @param aggregateFunction The AggregateFunction for which the return type is inferred.
+    * @param aggregateFunction The UserDefinedAggregateFunction for which the return type is
+    *                          inferred.
     * @param extractedType The implicitly inferred type of the result type.
     *
-    * @return The inferred result type of the AggregateFunction.
+    * @return The inferred result type of the UserDefinedAggregateFunction.
     */
   def getResultTypeOfAggregateFunction(
-      aggregateFunction: AggregateFunction[_, _],
+      aggregateFunction: UserDefinedAggregateFunction[_, _],
       extractedType: TypeInformation[_] = null)
     : TypeInformation[_] = {
 
@@ -567,15 +691,16 @@ object UserDefinedFunctionUtils {
   }
 
   /**
-    * Tries to infer the TypeInformation of an AggregateFunction's accumulator type.
+    * Tries to infer the TypeInformation of an UserDefinedAggregateFunction's accumulator type.
     *
-    * @param aggregateFunction The AggregateFunction for which the accumulator type is inferred.
+    * @param aggregateFunction The UserDefinedAggregateFunction for which the accumulator type
+    *                          is inferred.
     * @param extractedType The implicitly inferred type of the accumulator type.
     *
-    * @return The inferred accumulator type of the AggregateFunction.
+    * @return The inferred accumulator type of the UserDefinedAggregateFunction.
     */
   def getAccumulatorTypeOfAggregateFunction(
-    aggregateFunction: AggregateFunction[_, _],
+    aggregateFunction: UserDefinedAggregateFunction[_, _],
     extractedType: TypeInformation[_] = null)
   : TypeInformation[_] = {
 
@@ -591,7 +716,7 @@ object UserDefinedFunctionUtils {
         case ite: InvalidTypesException =>
           throw new TableException(
             "Cannot infer generic type of ${aggregateFunction.getClass}. " +
-              "You can override AggregateFunction.getAccumulatorType() to specify the type.",
+              "You can override getAccumulatorType() to specify the type.",
             ite
           )
       }
@@ -599,21 +724,21 @@ object UserDefinedFunctionUtils {
   }
 
   /**
-    * Internal method to extract a type from an AggregateFunction's type parameters.
+    * Internal method to extract a type from an UserDefinedAggregateFunction's type parameters.
     *
-    * @param aggregateFunction The AggregateFunction for which the type is extracted.
+    * @param aggregateFunction The UserDefinedAggregateFunction for which the type is extracted.
     * @param parameterTypePos The position of the type parameter for which the type is extracted.
     *
     * @return The extracted type.
     */
   @throws(classOf[InvalidTypesException])
   private def extractTypeFromAggregateFunction(
-      aggregateFunction: AggregateFunction[_, _],
+      aggregateFunction: UserDefinedAggregateFunction[_, _],
       parameterTypePos: Int): TypeInformation[_] = {
 
     TypeExtractor.createTypeInfo(
       aggregateFunction,
-      classOf[AggregateFunction[_, _]],
+      classOf[UserDefinedAggregateFunction[_, _]],
       aggregateFunction.getClass,
       parameterTypePos).asInstanceOf[TypeInformation[_]]
   }
@@ -764,6 +889,37 @@ object UserDefinedFunctionUtils {
     val functionCall: LogicalTableFunctionCall = unwrap(ExpressionParser.parseExpression(udtf))
       .as(alias).toLogicalTableFunctionCall(child = null)
     functionCall
+  }
+
+  /**
+    * Creates a [[TableAggFunctionCall]] by parsing a String expression.
+    *
+    * @param tableEnv The table environment to lookup the function.
+    * @param udtagg a String expression of a TableAggFunctionCall, such as "udtaggFunc(c)"
+    * @return A TableAggFunctionCall.
+    */
+  def createTableAggFunctionCall(
+      tableEnv: TableEnvironment,
+      udtagg: String): TableAggFunctionCall = {
+
+    var alias: Option[Seq[String]] = None
+
+    // unwrap an Expression until we get a TableAggFunctionCall
+    def unwrap(expr: Expression): TableAggFunctionCall = expr match {
+      case Alias(child, name, extraNames) =>
+        alias = Some(Seq(name) ++ extraNames)
+        unwrap(child)
+      case Call(name, args) =>
+        val function = tableEnv.functionCatalog.lookupFunction(name, args)
+        unwrap(function)
+      case c: TableAggFunctionCall => c
+      case _ =>
+        throw new TableException(
+          "flatAggregate(String) constructor only accept String that " +
+            "define table aggregate function.")
+    }
+
+    unwrap(ExpressionParser.parseExpression(udtagg))
   }
 
   def getOperandTypeInfo(callBinding: SqlCallBinding): Seq[TypeInformation[_]] = {

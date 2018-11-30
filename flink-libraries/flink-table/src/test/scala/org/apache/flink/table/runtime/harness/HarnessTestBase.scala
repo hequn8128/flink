@@ -26,6 +26,7 @@ import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.functions.KeySelector
 import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.streaming.api.operators.OneInputStreamOperator
+import org.apache.flink.streaming.api.transformations.{OneInputTransformation, StreamTransformation}
 import org.apache.flink.streaming.api.watermark.Watermark
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord
 import org.apache.flink.streaming.util.{KeyedOneInputStreamOperatorTestHarness, TestHarnessUtil}
@@ -496,6 +497,20 @@ class HarnessTestBase {
     keySelector: KeySelector[IN, KEY],
     keyType: TypeInformation[KEY]): KeyedOneInputStreamOperatorTestHarness[KEY, IN, OUT] = {
     new KeyedOneInputStreamOperatorTestHarness[KEY, IN, OUT](operator, keySelector, keyType)
+  }
+
+  def extractExpectedTransformation(
+    t: StreamTransformation[_],
+    prefixOperatorName: String): OneInputTransformation[_, _] = {
+    t match {
+      case one: OneInputTransformation[_, _] =>
+        if (one.getName.startsWith(prefixOperatorName)) {
+          one
+        } else {
+          extractExpectedTransformation(one.getInput, prefixOperatorName)
+        }
+      case _ => throw new Exception("Can not find the expected transformation")
+    }
   }
 
   def verify(expected: JQueue[Object], actual: JQueue[Object]): Unit = {
