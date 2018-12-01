@@ -16,18 +16,23 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.sinks
+// --------------------------------------------------------------
+//  THIS IS A GENERATED SOURCE FILE. DO NOT EDIT!
+//  GENERATED FROM org.apache.flink.api.java.tuple.TupleGenerator.
+// --------------------------------------------------------------
 
-import org.apache.flink.streaming.api.datastream.DataStream
+
+package org.apache.flink.table.sinks;
+
+import org.apache.flink.streaming.api.datastream.DataStream;
 
 /**
-  * Defines an external stream table and provides write access to its data.
-  *
-  * @tparam T Type of the [[DataStream]] created by this [[TableSink]].
-  */
-trait StreamTableSink[T] extends TableSink[T] {
+ * Defines an external stream table and provides write access to its data.
+ *
+ * @param <T> Type of the {@link DataStream} created by this {@link TableSink}.
+ */
+public interface StreamTableSink<T> extends TableSink<T> {
 
-  /** Emits the DataStream. */
-  def emitDataStream(dataStream: DataStream[T]): Unit
-
+	/** Emits the DataStream. */
+	void emitDataStream(DataStream<T> dataStream);
 }

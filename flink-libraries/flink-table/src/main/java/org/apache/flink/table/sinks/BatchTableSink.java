@@ -16,21 +16,22 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.sinks
+// --------------------------------------------------------------
+//  THIS IS A GENERATED SOURCE FILE. DO NOT EDIT!
+//  GENERATED FROM org.apache.flink.api.java.tuple.TupleGenerator.
+// --------------------------------------------------------------
 
-import org.apache.flink.streaming.api.datastream.DataStream
-import org.apache.flink.table.api.Table
+package org.apache.flink.table.sinks;
 
-/**
-  * Defines an external [[TableSink]] to emit streaming [[Table]] with only insert changes.
-  *
-  * If the [[Table]] is also modified by update or delete changes, a
-  * [[org.apache.flink.table.api.TableException]] will be thrown.
-  *
-  * @tparam T Type of [[DataStream]] that this [[TableSink]] expects and supports.
-  */
-trait AppendStreamTableSink[T] extends StreamTableSink[T] {
+import org.apache.flink.api.java.DataSet;
+import org.apache.flink.table.api.Table;
 
-  /** Emits the DataStream. */
-  def emitDataStream(dataStream: DataStream[T]): Unit
+/** Defines an external {@link TableSink} to emit a batch {@link Table}.
+ *
+ * @tparam T Type of {@link DataSet} that this {@link TableSink} expects and supports.
+ */
+public interface BatchTableSink<T> extends TableSink<T> {
+
+	/** Emits the DataSet. */
+	void emitDataSet(DataSet<T> dataSet);
 }
