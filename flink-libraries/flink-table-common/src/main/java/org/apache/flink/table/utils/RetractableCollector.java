@@ -16,18 +16,29 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.sinks
+package org.apache.flink.table.utils;
 
-import org.apache.flink.streaming.api.datastream.DataStream
+import org.apache.flink.annotation.Internal;
+import org.apache.flink.util.Collector;
 
 /**
-  * Defines an external stream table and provides write access to its data.
-  *
-  * @tparam T Type of the [[DataStream]] created by this [[TableSink]].
-  */
-trait StreamTableSink[T] extends TableSink[T] {
+ * Collects a record and forwards it. The collector can output retract messages with retract method.
+ * Currently, RetractableCollector is used in TableAggregateFunction.
+ */
+@Internal
+public abstract class RetractableCollector<T> implements Collector<T> {
 
-  /** Emits the DataStream. */
-  def emitDataStream(dataStream: DataStream[T]): Unit
+	/**
+	 * Collect a record.
+	 *
+	 * @param record The record to collect.
+	 */
+	public abstract void collect(T record);
 
+	/**
+	 * Retract a record.
+	 *
+	 * @param record The record to retract.
+	 */
+	public abstract void retract(T record);
 }

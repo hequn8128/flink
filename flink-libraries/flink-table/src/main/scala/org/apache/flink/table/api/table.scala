@@ -21,7 +21,7 @@ import org.apache.calcite.rel.RelNode
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.operators.join.JoinType
 import org.apache.flink.table.calcite.{FlinkRelBuilder, FlinkTypeFactory}
-import org.apache.flink.table.expressions.{Alias, Asc, Expression, ExpressionParser, Ordering, ResolvedFieldReference, UnresolvedAlias, UnresolvedFieldReference, WindowProperty}
+import org.apache.flink.table.expressions.{Alias, Asc, Expression, ExpressionParser, Ordering, ResolvedFieldReference, TableAggFunctionCall, UnresolvedAlias, UnresolvedFieldReference, WindowProperty}
 import org.apache.flink.table.functions.TemporalTableFunction
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils
 import org.apache.flink.table.plan.ProjectionTranslator._
@@ -365,6 +365,39 @@ class Table(
   def groupBy(fields: String): GroupedTable = {
     val fieldsExpr = ExpressionParser.parseExpressionList(fields)
     groupBy(fieldsExpr: _*)
+  }
+
+  /**
+    * Perform a global flatAggregate without groupBy. FlatAggregate takes a TableAggregateFunction
+    * which returns multiple rows. Use a selection after the flatAggregate.
+    *
+    * Example:
+    *
+    * {{{
+    *   val tableAggFunc: TableAggregateFunction = new MyTableAggregateFunction
+    *   tab.flatAggregate(tableAggFunc('a, 'b)).select('_1, '_2, '_3)
+    * }}}
+    */
+  def flatAggregate(tableAggCall: TableAggFunctionCall): FlatAggTable = {
+    new FlatAggTable(this, tableAggCall)
+  }
+
+  /**
+    * Perform a global flatAggregate without groupBy. FlatAggregate takes a TableAggregateFunction
+    * which returns multiple rows. Use a selection after the flatAggregate.
+    *
+    * Example:
+    *
+    * {{{
+    *   val tableAggFunc: TableAggregateFunction = new MyTableAggregateFunction
+    *   tableEnv.registerFunction("myTableAggFunc", tableAggFunc);
+    *   tab.flatAggregate("myTableAggFunc(a, b)").select("_1, _2, _3")
+    * }}}
+    */
+  def flatAggregate(tableAggCall: String): FlatAggTable = {
+    this.groupBy().flatAggregate(tableAggCall)
+    val call = UserDefinedFunctionUtils.createTableAggFunctionCall(this.tableEnv, tableAggCall)
+    new FlatAggTable(this, call)
   }
 
   /**
@@ -1028,6 +1061,119 @@ class Table(
   }
 }
 
+class FlatAggTable(
+  private[flink] val table: Table,
+  private[flink] val tableAggCall: TableAggFunctionCall) {
+
+  /**
+    * Performs a selection operation on a FlatAggTable table. Similar to an SQL SELECT statement.
+    * The field expressions can contain complex expressions.
+    *
+    * __Note__: You have to close the flatAggregate with a select statement. And the select
+    * statement does not support * and aggregate functions.
+    *
+    * Example:
+    *
+    * {{{
+    *   val tableAggFunc: TableAggregateFunction = new MyTableAggregateFunction
+    *   tab.flatAggregate(tableAggFunc('a, 'b)).select(udf('_1), '_2, '_3)
+    * }}}
+    */
+  def select(fields: Expression*): Table = {
+    new GroupedFlatAggTable(table, Nil, tableAggCall).select(fields: _*)
+  }
+
+  /**
+    * Performs a selection operation on a FlatAggTable table. Similar to an SQL SELECT statement.
+    * The field expressions can contain complex expressions.
+    *
+    * __Note__: You have to close the flatAggregate with a select statement. And the select
+    * statement does not support * and aggregate functions.
+    *
+    * Example:
+    *
+    * {{{
+    *   val tableAggFunc: TableAggregateFunction = new MyTableAggregateFunction
+    *   tableEnv.registerFunction("myTableAggFunc", tableAggFunc);
+    *   tab.flatAggregate("myTableAggFunc(a, b)").select("_1, _2, _3")
+    * }}}
+    */
+  def select(fields: String): Table = {
+    new GroupedFlatAggTable(table, Nil, tableAggCall).select(fields)
+  }
+}
+
+/**
+  * A table that has been grouped on a set of grouping keys and perform flatAggregate.
+  */
+class GroupedFlatAggTable(
+  private[flink] val table: Table,
+  private[flink] val groupKey: Seq[Expression],
+  private[flink] val tableAggCall: TableAggFunctionCall) {
+
+  /**
+    * Performs a selection operation on a GroupedFlatAggTable table. Similar to an SQL SELECT
+    * statement. The field expressions can contain complex expressions.
+    *
+    * __Note__: You have to close the flatAggregate with a select statement. And the select
+    * statement does not support * and aggregate functions.
+    *
+    * Example:
+    *
+    * {{{
+    *   val tableAggFunc: TableAggregateFunction = new MyTableAggregateFunction
+    *   tab.groupBy('key).flatAggregate(tableAggFunc('a, 'b)).select(udf('_1), '_2, '_3)
+    * }}}
+    */
+  def select(fields: Expression*): Table = {
+    val expandedFields = expandProjectList(tableAggCall.args, table.logicalPlan, table.tableEnv)
+    val projectFields = extractFieldReferences(expandedFields ++ groupKey)
+
+    val flatAggTable = new Table(table.tableEnv,
+      TableAggregate(groupKey, tableAggCall,
+        Project(projectFields, table.logicalPlan).validate(table.tableEnv)
+      ).validate(table.tableEnv))
+
+    // check no '*' in the select of flatAggregate.
+    fields.foreach {
+      case n: UnresolvedFieldReference if n.name == "*" =>
+        throw new TableException("Currently, can't use * in the select after flatAggregate.")
+      case _ => // ok
+    }
+
+    // check no aggregate functions in the select of flatAggregate.
+    val expandedFieldsOfSelect =
+      expandProjectList(fields, flatAggTable.logicalPlan, flatAggTable.tableEnv)
+    val (aggNames, _) =
+      extractAggregationsAndProperties(expandedFieldsOfSelect, flatAggTable.tableEnv)
+    if (aggNames.nonEmpty) {
+      throw new ValidationException("Currently, can't use aggregate functions in the " +
+        "select after flatAggregate.")
+    }
+    flatAggTable.select(fields: _*)
+  }
+
+  /**
+    * Performs a selection operation on a GroupedFlatAggTable table. Similar to an SQL SELECT
+    * statement. The field expressions can contain complex expressions.
+    *
+    * __Note__: You have to close the flatAggregate with a select statement. And the select
+    * statement does not support * and aggregate functions.
+    *
+    * Example:
+    *
+    * {{{
+    *   val tableAggFunc: TableAggregateFunction = new MyTableAggregateFunction
+    *   tableEnv.registerFunction("myTableAggFunc", tableAggFunc);
+    *   tab.groupBy("key").flatAggregate("myTableAggFunc(a, b)").select("_1, _2, _3")
+    * }}}
+    */
+  def select(strFields: String): Table = {
+    val fields = ExpressionParser.parseExpressionList(strFields)
+    this.select(fields: _*)
+  }
+}
+
 /**
   * A table that has been grouped on a set of grouping keys.
   */
@@ -1079,6 +1225,39 @@ class GroupedTable(
     //get the correct expression for AggFunctionCall
     val withResolvedAggFunctionCall = fieldExprs.map(replaceAggFunctionCall(_, table.tableEnv))
     select(withResolvedAggFunctionCall: _*)
+  }
+
+  /**
+    * Performs a flatAggregate operation on a grouped table. FlatAggregate takes a
+    * TableAggregateFunction which returns multiple rows. Use a selection after flatAggregate.
+    *
+    * Example:
+    *
+    * {{{
+    *   val tableAggFunc: TableAggregateFunction = new MyTableAggregateFunction
+    *   tab.groupBy('key).flatAggregate(tableAggFunc('a, 'b)).select('_1, '_2, '_3)
+    * }}}
+    */
+  def flatAggregate(tableAggCall: TableAggFunctionCall): GroupedFlatAggTable = {
+    new GroupedFlatAggTable(table, groupKey, tableAggCall)
+
+  }
+
+  /**
+    * Performs a flatAggregate operation on a grouped table. FlatAggregate takes a
+    * TableAggregateFunction which returns multiple rows. Use a selection after flatAggregate.
+    *
+    * Example:
+    *
+    * {{{
+    *   val tableAggFunc: TableAggregateFunction = new MyTableAggregateFunction
+    *   tableEnv.registerFunction("myTableAggFunc", tableAggFunc);
+    *   tab.groupBy("key").flatAggregate("myTableAggFunc(a, b)").select("_1, _2, _3")
+    * }}}
+    */
+  def flatAggregate(tableAggCall: String): GroupedFlatAggTable = {
+    val call = UserDefinedFunctionUtils.createTableAggFunctionCall(table.tableEnv, tableAggCall)
+    new GroupedFlatAggTable(table, groupKey, call)
   }
 }
 
@@ -1210,7 +1389,7 @@ class WindowGroupedTable(
   }
 
   /**
-    * Performs a selection operation on a window grouped  table. Similar to an SQL SELECT statement.
+    * Performs a selection operation on a window grouped table. Similar to an SQL SELECT statement.
     * The field expressions can contain complex expressions and aggregations.
     *
     * Example:

@@ -18,13 +18,13 @@
 package org.apache.flink.table.functions
 
 /**
-  * Base class for User-Defined Aggregates.
+  * Base class for User-Defined Table Aggregates.
   *
-  * The behavior of an [[AggregateFunction]] can be defined by implementing a series of custom
-  * methods. An [[AggregateFunction]] needs at least three methods:
+  * The behavior of an [[TableAggregateFunction]] can be defined by implementing a series of custom
+  * methods. An [[TableAggregateFunction]] needs at least three methods:
   *  - createAccumulator,
   *  - accumulate, and
-  *  - getValue.
+  *  - emitValue or emitValueWithRetract
   *
   *  There are a few other methods that can be optional to have:
   *  - retract,
@@ -32,13 +32,13 @@ package org.apache.flink.table.functions
   *  - resetAccumulator
   *
   * All these methods must be declared publicly, not static and named exactly as the names
-  * mentioned above. The methods createAccumulator and getValue are defined in the
-  * [[AggregateFunction]] functions, while other methods are explained below.
+  * mentioned above. The methods createAccumulator and emitValue(or emitValueWithRetract) are
+  * defined in the [[TableAggregateFunction]] functions, while other methods are explained below.
   *
   *
   * {{{
   * Processes the input values and update the provided accumulator instance. The method
-  * accumulate can be overloaded with different custom types and arguments. An AggregateFunction
+  * accumulate can be overloaded with different custom types and arguments. A TableAggregateFunction
   * requires at least one accumulate() method.
   *
   * @param accumulator           the accumulator which contains the current aggregated results
@@ -77,14 +77,13 @@ package org.apache.flink.table.functions
   *
   *
   * {{{
-  * Resets the accumulator for this [[AggregateFunction]]. This function must be implemented for
-  * dataset grouping aggregate.
+  * Resets the accumulator for this [[TableAggregateFunction]]. This function must be implemented
+  * for dataset grouping aggregate.
   *
   * @param accumulator  the accumulator which needs to be reset
   *
   * def resetAccumulator(accumulator: ACC): Unit
   * }}}
-  *
   *
   * @tparam T   the type of the aggregation result
   * @tparam ACC the type of the aggregation accumulator. The accumulator is used to keep the
@@ -92,24 +91,6 @@ package org.apache.flink.table.functions
   *             AggregateFunction represents its state using accumulator, thereby the state of the
   *             AggregateFunction must be put into the accumulator.
   */
-abstract class AggregateFunction[T, ACC] extends UserDefinedAggregateFunction[T, ACC] {
+abstract class TableAggregateFunction[T, ACC] extends UserDefinedAggregateFunction[T, ACC] {
 
-  /**
-    * Returns true if this AggregateFunction can only be applied in an OVER window.
-    *
-    * @return true if the AggregateFunction requires an OVER window, false otherwise.
-    */
-  def requiresOver: Boolean = false
-
-  /**
-    * Called every time when an aggregation result should be materialized.
-    * The returned value could be either an early and incomplete result
-    * (periodically emitted as data arrive) or the final result of the
-    * aggregation.
-    *
-    * @param accumulator the accumulator which contains the current
-    *                    aggregated results
-    * @return the aggregation result
-    */
-  def getValue(accumulator: ACC): T
 }

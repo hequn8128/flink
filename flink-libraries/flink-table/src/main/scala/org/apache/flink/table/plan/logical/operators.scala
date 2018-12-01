@@ -40,6 +40,7 @@ import org.apache.flink.table.plan.schema.FlinkTableFunctionImpl
 import org.apache.flink.table.validate.{ValidationFailure, ValidationSuccess}
 
 import scala.collection.JavaConverters._
+import scala.collection.JavaConversions._
 import scala.collection.mutable
 
 case class Project(
@@ -263,6 +264,57 @@ case class Aggregate(
           s"expression '$a' is invalid because it is neither" +
             " present in group by nor an aggregate function")
       case e if groupingExprs.exists(_.checkEquals(e)) => // OK
+      case e => e.children.foreach(validateAggregateExpression)
+    }
+
+    def validateGroupingExpression(expr: Expression): Unit = {
+      if (!expr.resultType.isKeyType) {
+        failValidation(
+          s"expression $expr cannot be used as a grouping expression " +
+            "because it's not a valid key type which must be hashable and comparable")
+      }
+    }
+    resolvedAggregate
+  }
+}
+
+case class TableAggregate(
+    groupingExpressions: Seq[Expression],
+    tableAggFunctionCall: TableAggFunctionCall,
+    child: LogicalNode) extends UnaryNode {
+
+  private val (generatedNames, _, fieldTypes) = getFieldInfo(tableAggFunctionCall.resultTypeInfo)
+
+  override def output: Seq[Attribute] = {
+    generatedNames.zip(fieldTypes).map {
+      case (n, t) => ResolvedFieldReference(n, t)
+    }
+  }
+
+  override protected[logical] def construct(relBuilder: RelBuilder): RelBuilder = {
+    child.construct(relBuilder)
+    val flinkRelBuilder = relBuilder.asInstanceOf[FlinkRelBuilder]
+
+    flinkRelBuilder.tableAggregate(
+      relBuilder.groupKey(groupingExpressions.map(_.toRexNode(relBuilder)).asJava),
+      Seq(tableAggFunctionCall.toAggCall(tableAggFunctionCall.toString)(relBuilder))
+    )
+  }
+
+  override def validate(tableEnv: TableEnvironment): LogicalNode = {
+    implicit val relBuilder: RelBuilder = tableEnv.getRelBuilder
+    val resolvedAggregate = super.validate(tableEnv).asInstanceOf[TableAggregate]
+    val groupingExprs = resolvedAggregate.groupingExpressions
+    val aggregateExpr = resolvedAggregate.tableAggFunctionCall
+    aggregateExpr.args.foreach(validateAggregateExpression)
+    groupingExprs.foreach(validateGroupingExpression)
+
+    def validateAggregateExpression(expr: Expression): Unit = expr match {
+      // check aggregate function
+      case aggExpr: Aggregation =>
+        failValidation(s"It's not allowed to use an aggregate " +
+          s"function: [${aggExpr.getClass}] as input of table aggregate " +
+          s"function: [${aggregateExpr.getSqlAggFunction().toString}]")
       case e => e.children.foreach(validateAggregateExpression)
     }
 
