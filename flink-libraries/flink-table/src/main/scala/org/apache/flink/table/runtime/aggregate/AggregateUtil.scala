@@ -269,7 +269,7 @@ object AggregateUtil {
       consumeRetraction: Boolean): ProcessFunction[CRow, CRow] = {
 
     val (aggFields, aggregates, isDistinctAggs, accTypes, accSpecs) =
-      transformToTableAggregateFunctions(
+      transformToAggregateFunctions(
         namedAggregates.map(_.getKey),
         inputRowType,
         consumeRetraction,
@@ -473,7 +473,6 @@ object AggregateUtil {
     val mapReturnType: RowTypeInfo =
       createRowTypeForKeysAndAggregates(
         groupings,
-        aggregates,
         accTypes,
         inputType,
         Some(Array(BasicTypeInfo.LONG_TYPE_INFO)))
@@ -589,7 +588,6 @@ object AggregateUtil {
 
     val returnType: RowTypeInfo = createRowTypeForKeysAndAggregates(
       groupings,
-      aggregates,
       accTypes,
       physicalInputRowType,
       Some(Array(BasicTypeInfo.LONG_TYPE_INFO)))
@@ -891,7 +889,6 @@ object AggregateUtil {
         val combineReturnType: RowTypeInfo =
           createRowTypeForKeysAndAggregates(
             groupings,
-            aggregates,
             accTypes,
             physicalInputRowType,
             Option(Array(BasicTypeInfo.LONG_TYPE_INFO, BasicTypeInfo.LONG_TYPE_INFO)))
@@ -977,7 +974,6 @@ object AggregateUtil {
         val combineReturnType: RowTypeInfo =
           createRowTypeForKeysAndAggregates(
             groupings,
-            aggregates,
             accTypes,
             physicalInputRowType,
             Option(Array(BasicTypeInfo.LONG_TYPE_INFO, BasicTypeInfo.LONG_TYPE_INFO)))
@@ -1285,7 +1281,7 @@ object AggregateUtil {
     * Return true if all aggregates can be partially merged. False otherwise.
     */
   private[flink] def doAllSupportPartialMerge(
-      aggregateList: Array[AggregateFunction[_ <: Any, _ <: Any]]): Boolean = {
+      aggregateList: Array[UserDefinedAggregateFunction[_ <: Any, _ <: Any]]): Boolean = {
     aggregateList.forall(ifMethodExistInFunction("merge", _))
   }
 
@@ -1356,50 +1352,6 @@ object AggregateUtil {
   }
 
   private def transformToAggregateFunctions(
-      aggregateCalls: Seq[AggregateCall],
-      aggregateInputType: RelDataType,
-      needRetraction: Boolean,
-      tableConfig: TableConfig,
-      isStateBackedDataViews: Boolean = false)
-  : (Array[Array[Int]],
-    Array[AggregateFunction[_, _]],
-    Array[Boolean],
-    Array[TypeInformation[_]],
-    Array[Seq[DataViewSpec[_]]]) = {
-
-    val ret = transformToAggregateFunctionsBase(
-      aggregateCalls,
-      aggregateInputType,
-      needRetraction,
-      tableConfig,
-      isStateBackedDataViews)
-
-    (ret._1, ret._2.map(_.asInstanceOf[AggregateFunction[_, _]]), ret._3, ret._4, ret._5)
-  }
-
-  private def transformToTableAggregateFunctions(
-      aggregateCalls: Seq[AggregateCall],
-      aggregateInputType: RelDataType,
-      needRetraction: Boolean,
-      tableConfig: TableConfig,
-      isStateBackedDataViews: Boolean = false)
-  : (Array[Array[Int]],
-    Array[TableAggregateFunction[_, _]],
-    Array[Boolean],
-    Array[TypeInformation[_]],
-    Array[Seq[DataViewSpec[_]]]) = {
-
-    val ret = transformToAggregateFunctionsBase(
-      aggregateCalls,
-      aggregateInputType,
-      needRetraction,
-      tableConfig,
-      isStateBackedDataViews)
-
-    (ret._1, ret._2.map(_.asInstanceOf[TableAggregateFunction[_, _]]), ret._3, ret._4, ret._5)
-  }
-
-  private def transformToAggregateFunctionsBase(
       aggregateCalls: Seq[AggregateCall],
       aggregateInputType: RelDataType,
       needRetraction: Boolean,
@@ -1749,7 +1701,6 @@ object AggregateUtil {
 
   private def createRowTypeForKeysAndAggregates(
       groupings: Array[Int],
-      aggregates: Array[AggregateFunction[_, _]],
       aggTypes: Array[TypeInformation[_]],
       inputType: RelDataType,
       windowKeyTypes: Option[Array[TypeInformation[_]]] = None): RowTypeInfo = {
