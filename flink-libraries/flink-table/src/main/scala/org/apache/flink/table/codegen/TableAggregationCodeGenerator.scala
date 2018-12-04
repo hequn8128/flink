@@ -22,7 +22,7 @@ import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.api.dataview._
 import org.apache.flink.table.codegen.Indenter.toISC
-import org.apache.flink.table.functions.{TableAggregateFunction, UserDefinedAggregateFunction}
+import org.apache.flink.table.functions.UserDefinedAggregateFunction
 import org.apache.flink.table.runtime.aggregate.GeneratedTableAggregations
 import org.apache.flink.table.runtime.types.CRow
 import org.apache.flink.table.utils.RetractableCollector
@@ -75,7 +75,7 @@ class TableAggregationCodeGenerator(
     physicalInputTypes: Seq[TypeInformation[_]],
     tableAggOutputTypes: TypeInformation[_],
     outputSchema: RowSchema,
-    aggregates: Array[TableAggregateFunction[_ <: Any, _ <: Any]],
+    aggregates: Array[UserDefinedAggregateFunction[_ <: Any, _ <: Any]],
     aggFields: Array[Array[Int]],
     aggMapping: Array[Int],
     isDistinctAggs: Array[Boolean],
@@ -96,7 +96,7 @@ class TableAggregationCodeGenerator(
     constants,
     name,
     physicalInputTypes,
-    aggregates.map(_.asInstanceOf[UserDefinedAggregateFunction[_, _]]),
+    aggregates,
     aggFields,
     aggMapping,
     isDistinctAggs,
