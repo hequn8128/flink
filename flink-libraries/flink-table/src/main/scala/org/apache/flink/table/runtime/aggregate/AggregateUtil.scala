@@ -43,7 +43,8 @@ import org.apache.flink.table.expressions._
 import org.apache.flink.table.functions.aggfunctions._
 import org.apache.flink.table.functions.utils.{AggSqlFunction, TableAggSqlFunction}
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils._
-import org.apache.flink.table.functions.{AggregateFunction, TableAggregateFunction, UserDefinedAggregateFunction}
+import org.apache.flink.table.functions.UserDefinedAggregateFunction
+import org.apache.flink.table.plan.nodes.dataset.DataSetTableAggregate
 import org.apache.flink.table.plan.logical._
 import org.apache.flink.table.plan.schema.RowSchema
 import org.apache.flink.table.runtime.types.{CRow, CRowTypeInfo}
@@ -269,7 +270,7 @@ object AggregateUtil {
       consumeRetraction: Boolean): ProcessFunction[CRow, CRow] = {
 
     val (aggFields, aggregates, isDistinctAggs, accTypes, accSpecs) =
-      transformToTableAggregateFunctions(
+      transformToAggregateFunctions(
         namedAggregates.map(_.getKey),
         inputRowType,
         consumeRetraction,
@@ -473,7 +474,6 @@ object AggregateUtil {
     val mapReturnType: RowTypeInfo =
       createRowTypeForKeysAndAggregates(
         groupings,
-        aggregates,
         accTypes,
         inputType,
         Some(Array(BasicTypeInfo.LONG_TYPE_INFO)))
@@ -589,7 +589,6 @@ object AggregateUtil {
 
     val returnType: RowTypeInfo = createRowTypeForKeysAndAggregates(
       groupings,
-      aggregates,
       accTypes,
       physicalInputRowType,
       Some(Array(BasicTypeInfo.LONG_TYPE_INFO)))
@@ -891,7 +890,6 @@ object AggregateUtil {
         val combineReturnType: RowTypeInfo =
           createRowTypeForKeysAndAggregates(
             groupings,
-            aggregates,
             accTypes,
             physicalInputRowType,
             Option(Array(BasicTypeInfo.LONG_TYPE_INFO, BasicTypeInfo.LONG_TYPE_INFO)))
@@ -977,7 +975,6 @@ object AggregateUtil {
         val combineReturnType: RowTypeInfo =
           createRowTypeForKeysAndAggregates(
             groupings,
-            aggregates,
             accTypes,
             physicalInputRowType,
             Option(Array(BasicTypeInfo.LONG_TYPE_INFO, BasicTypeInfo.LONG_TYPE_INFO)))
@@ -1158,6 +1155,156 @@ object AggregateUtil {
   }
 
   /**
+    * Create functions to compute a [[DataSetTableAggregate]].
+    * If all aggregation functions support pre-aggregation, a pre-aggregation function and the
+    * respective output type are generated as well.
+    */
+  private[flink] def createDataSetTableAggregateFunctions(
+      config: TableConfig,
+      nullableInput: Boolean,
+      input: TypeInformation[_ <: Any],
+      constants: Option[Seq[RexLiteral]],
+      namedAggregates: Seq[CalcitePair[AggregateCall, String]],
+      inputType: RelDataType,
+      inputFieldTypeInfo: Seq[TypeInformation[_]],
+      tableAggOutputTypes: TypeInformation[_],
+      outputSchema: RowSchema,
+      outputType: RelDataType,
+      groupings: Array[Int],
+      tableConfig: TableConfig): (
+    Option[DataSetPreTableAggFunction],
+      Option[TypeInformation[Row]],
+      Either[DataSetTableAggFunction, DataSetFinalTableAggFunction]) = {
+
+    val needRetract = false
+    val (aggInFields, aggregates, isDistinctAggs, accTypes, _) = transformToAggregateFunctions(
+      namedAggregates.map(_.getKey),
+      inputType,
+      needRetract,
+      tableConfig)
+
+    val (gkeyOutMapping, aggOutMapping) = getOutputMappings(
+      namedAggregates,
+      groupings,
+      inputType,
+      outputType
+    )
+
+    val aggOutFields = aggOutMapping.map(_._1)
+
+    if (doAllSupportPartialMerge(aggregates)) {
+
+      // compute preaggregation type
+      val preAggFieldTypes = groupings
+        .map(inputType.getFieldList.get(_).getType)
+        .map(FlinkTypeFactory.toTypeInfo) ++ accTypes
+      val preAggRowType = new RowTypeInfo(preAggFieldTypes: _*)
+
+      val generatorPre = new TableAggregationCodeGenerator(
+        config,
+        nullableInput,
+        input,
+        constants,
+        "DataSetAggregatePrepareMapHelper",
+        inputFieldTypeInfo,
+        tableAggOutputTypes,
+        outputSchema,
+        aggregates,
+        aggInFields,
+        aggregates.indices.map(_ + groupings.length).toArray,
+        isDistinctAggs,
+        isStateBackedDataViews = false,
+        partialResults = true,
+        groupings,
+        None,
+        groupings.length + aggregates.length,
+        needRetract,
+        needEmitWithRetract = false,
+        needMerge = false,
+        needReset = true,
+        None
+      )
+      val genPreAggFunction = generatorPre.generateTableAggregations
+
+      // compute mapping of forwarded grouping keys
+      val gkeyMapping: Array[Int] = if (gkeyOutMapping.nonEmpty) {
+        val gkeyOutFields = gkeyOutMapping.map(_._1)
+        val mapping = Array.fill[Int](gkeyOutFields.max + 1)(-1)
+        gkeyOutFields.zipWithIndex.foreach(m => mapping(m._1) = m._2)
+        mapping
+      } else {
+        new Array[Int](0)
+      }
+
+      val generatorFinal = new TableAggregationCodeGenerator(
+        config,
+        nullableInput,
+        input,
+        constants,
+        "DataSetTableAggregateFinalHelper",
+        inputFieldTypeInfo,
+        tableAggOutputTypes,
+        outputSchema,
+        aggregates,
+        aggInFields,
+        aggOutFields,
+        isDistinctAggs,
+        isStateBackedDataViews = false,
+        partialResults = false,
+        gkeyMapping,
+        Some(aggregates.indices.map(_ + groupings.length).toArray),
+        outputType.getFieldCount,
+        needRetract,
+        needEmitWithRetract = false,
+        needMerge = true,
+        needReset = true,
+        None
+      )
+      val genFinalAggFunction = generatorFinal.generateTableAggregations
+
+      (
+        Some(new DataSetPreTableAggFunction(genPreAggFunction)),
+        Some(preAggRowType),
+        Right(new DataSetFinalTableAggFunction(genFinalAggFunction))
+      )
+    }
+    else {
+      val generator = new TableAggregationCodeGenerator(
+        config,
+        nullableInput,
+        input,
+        constants,
+        "DataSetTableAggregateHelper",
+        inputFieldTypeInfo,
+        tableAggOutputTypes,
+        outputSchema,
+        aggregates,
+        aggInFields,
+        aggOutFields,
+        isDistinctAggs,
+        isStateBackedDataViews = false,
+        partialResults = false,
+        groupings,
+        None,
+        outputType.getFieldCount,
+        needRetract,
+        needEmitWithRetract = false,
+        needMerge = false,
+        needReset = true,
+        None
+      )
+      val genFunction = generator.generateTableAggregations
+
+      (
+        None,
+        None,
+        Left(new DataSetTableAggFunction(genFunction))
+      )
+    }
+
+  }
+
+  /**
     * Create an [[AllWindowFunction]] for non-partitioned window aggregates.
     */
   private[flink] def createAggregationAllWindowFunction(
@@ -1287,8 +1434,8 @@ object AggregateUtil {
   /**
     * Return true if all aggregates can be partially merged. False otherwise.
     */
-  private[flink] def doAllSupportPartialMerge(
-      aggregateList: Array[AggregateFunction[_ <: Any, _ <: Any]]): Boolean = {
+  private[flink] def doAllSupportPartialMerge[T <: UserDefinedAggregateFunction[_, _]](
+      aggregateList: Array[T]): Boolean = {
     aggregateList.forall(ifMethodExistInFunction("merge", _))
   }
 
@@ -1307,8 +1454,15 @@ object AggregateUtil {
     val aggNames: Seq[(String, Int)] =
       namedAggregates.zipWithIndex.map(a => (a._1.right, a._2))
 
-    val groupOutMapping: Array[(Int, Int)] =
+    val isTableAgg = namedAggregates.size == 1 &&
+      namedAggregates.get(0).left.getAggregation.isInstanceOf[TableAggSqlFunction]
+    // todo: This can be removed once FLINK-10979 is done. Currently, group keys are not passed
+    // todo: through flatAggregate.
+    val groupOutMapping: Array[(Int, Int)] = if (isTableAgg) {
+      Array()
+    } else {
       groupKeyNames.map(g => (outputType.getField(g._1, false, false).getIndex, g._2)).toArray
+    }
     val aggOutMapping: Array[(Int, Int)] =
       aggNames.map(a => (outputType.getField(a._1, false, false).getIndex, a._2)).toArray
 
@@ -1359,50 +1513,6 @@ object AggregateUtil {
   }
 
   private def transformToAggregateFunctions(
-      aggregateCalls: Seq[AggregateCall],
-      aggregateInputType: RelDataType,
-      needRetraction: Boolean,
-      tableConfig: TableConfig,
-      isStateBackedDataViews: Boolean = false)
-  : (Array[Array[Int]],
-    Array[AggregateFunction[_, _]],
-    Array[Boolean],
-    Array[TypeInformation[_]],
-    Array[Seq[DataViewSpec[_]]]) = {
-
-    val ret = transformToAggregateFunctionsBase(
-      aggregateCalls,
-      aggregateInputType,
-      needRetraction,
-      tableConfig,
-      isStateBackedDataViews)
-
-    (ret._1, ret._2.map(_.asInstanceOf[AggregateFunction[_, _]]), ret._3, ret._4, ret._5)
-  }
-
-  private def transformToTableAggregateFunctions(
-      aggregateCalls: Seq[AggregateCall],
-      aggregateInputType: RelDataType,
-      needRetraction: Boolean,
-      tableConfig: TableConfig,
-      isStateBackedDataViews: Boolean = false)
-  : (Array[Array[Int]],
-    Array[TableAggregateFunction[_, _]],
-    Array[Boolean],
-    Array[TypeInformation[_]],
-    Array[Seq[DataViewSpec[_]]]) = {
-
-    val ret = transformToAggregateFunctionsBase(
-      aggregateCalls,
-      aggregateInputType,
-      needRetraction,
-      tableConfig,
-      isStateBackedDataViews)
-
-    (ret._1, ret._2.map(_.asInstanceOf[TableAggregateFunction[_, _]]), ret._3, ret._4, ret._5)
-  }
-
-  private def transformToAggregateFunctionsBase(
       aggregateCalls: Seq[AggregateCall],
       aggregateInputType: RelDataType,
       needRetraction: Boolean,
@@ -1752,7 +1862,6 @@ object AggregateUtil {
 
   private def createRowTypeForKeysAndAggregates(
       groupings: Array[Int],
-      aggregates: Array[AggregateFunction[_, _]],
       aggTypes: Array[TypeInformation[_]],
       inputType: RelDataType,
       windowKeyTypes: Option[Array[TypeInformation[_]]] = None): RowTypeInfo = {

@@ -22,7 +22,7 @@ import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.api.dataview._
 import org.apache.flink.table.codegen.Indenter.toISC
-import org.apache.flink.table.functions.{TableAggregateFunction, UserDefinedAggregateFunction}
+import org.apache.flink.table.functions.UserDefinedAggregateFunction
 import org.apache.flink.table.runtime.aggregate.GeneratedTableAggregations
 import org.apache.flink.table.runtime.types.CRow
 import org.apache.flink.table.utils.RetractableCollector
@@ -75,7 +75,7 @@ class TableAggregationCodeGenerator(
     physicalInputTypes: Seq[TypeInformation[_]],
     tableAggOutputTypes: TypeInformation[_],
     outputSchema: RowSchema,
-    aggregates: Array[TableAggregateFunction[_ <: Any, _ <: Any]],
+    aggregates: Array[UserDefinedAggregateFunction[_ <: Any, _ <: Any]],
     aggFields: Array[Array[Int]],
     aggMapping: Array[Int],
     isDistinctAggs: Array[Boolean],
@@ -96,7 +96,7 @@ class TableAggregationCodeGenerator(
     constants,
     name,
     physicalInputTypes,
-    aggregates.map(_.asInstanceOf[UserDefinedAggregateFunction[_, _]]),
+    aggregates,
     aggFields,
     aggMapping,
     isDistinctAggs,
@@ -117,7 +117,7 @@ class TableAggregationCodeGenerator(
       j"""
          |  public final void emit(
          |    $ROW accs,
-         |    $COLLECTOR<$CROW> collector) throws Exception """.stripMargin
+         |    $RETRACTABLE_COLLECTOR<$ROW> collector) throws Exception """.stripMargin
 
     val emitMethodName = if (needEmitWithRetract) "emitValueWithRetract" else "emitValue"
     val emit: String = {
@@ -164,33 +164,42 @@ class TableAggregationCodeGenerator(
     conversion.code
   }
 
+  override def genSetAggregationResults: String = {
+
+    val sig: String =
+      j"""
+         |  public final void setAggregationResults(
+         |    org.apache.flink.types.Row accs,
+         |    org.apache.flink.types.Row output) throws Exception """.stripMargin
+
+    val setAggs: String = {
+      for (i <- aggs.indices) yield
+
+        if (partialResults) {
+          j"""
+             |    output.setField(
+             |      ${aggMapping(i)},
+             |      (${accTypes(i)}) accs.getField($i));""".stripMargin
+        } else {
+          // we don't need set aggregate results for final agg function, i.e, use emit.
+            j"""
+               |
+              """.stripMargin
+
+        }
+    }.mkString("\n")
+
+    j"""
+       |$sig {
+       |$setAggs
+       |  }""".stripMargin
+  }
+
   /**
     * Generates a [[org.apache.flink.table.runtime.aggregate.GeneratedAggregations]] that can be
     * passed to a Java compiler.
     *
-    * @param name                   Class name of the function.
-    *                               Does not need to be unique but has to be a valid Java class
-    *                               identifier.
-    * @param physicalInputTypes     Physical input row types
-    * @param aggregates             All aggregate functions
-    * @param aggFields              Indexes of the input fields for all aggregate functions
-    * @param aggMapping             The mapping of aggregates to output fields
-    * @param isDistinctAggs         The flag array indicating whether it is distinct aggregate.
-    * @param isStateBackedDataViews a flag to indicate if distinct filter uses state backend.
-    * @param partialResults         A flag defining whether final or partial results (accumulators)
-    *                               are set
-    *                               to the output row.
-    * @param fwdMapping             The mapping of input fields to output fields
-    * @param mergeMapping           An optional mapping to specify the accumulators to merge. If
-    *                               not set, we
-    *                               assume that both rows have the accumulators at the same
-    *                               position.
-    * @param outputArity            The number of fields in the output row.
-    * @param needRetract            a flag to indicate if the aggregate needs the retract method
-    * @param needMerge              a flag to indicate if the aggregate needs the merge method
-    * @param needReset              a flag to indicate if the aggregate needs the resetAccumulator
-    *                               method
-    * @param accConfig              Data view specification for accumulators
+    * @param isBatch Whether generate class for batch.
     * @return A GeneratedAggregationsFunction
     */
   def generateTableAggregations: GeneratedTableAggregationsFunction = {
@@ -201,10 +210,15 @@ class TableAggregationCodeGenerator(
       genRetract,
       genCreateAccumulators,
       genMergeAccumulatorsPair,
-      genEmit).mkString("\n")
+      genResetAccumulator,
+      genEmit,
+      genSetForwardedFields,
+      genSetAggregationResults,
+      genCreateOutputRow).mkString("\n")
 
-    val generatedAggregationsClass = classOf[GeneratedTableAggregations].getCanonicalName
     val aggOutputTypeName = tableAggOutputTypes.getTypeClass.getCanonicalName
+    val generatedAggregationsClass = classOf[GeneratedTableAggregations].getCanonicalName
+
     val funcCode =
       j"""
          |public final class $funcName extends $generatedAggregationsClass {
@@ -235,8 +249,7 @@ class TableAggregationCodeGenerator(
          |
          |  public class $CONVERT_COLLECTOR_CLASS_TERM extends $RETRACTABLE_COLLECTOR {
          |
-         |      public $COLLECTOR<$CROW> $COLLECTOR_VARIABLE_TERM;
-         |      public $CROW $CONVERTER_CROW_RESULT_TERM = new $CROW();
+         |      public $RETRACTABLE_COLLECTOR<$ROW> $COLLECTOR_VARIABLE_TERM;
          |      public final $ROW $CONVERTER_ROW_RESULT_TERM = new $ROW($outputArity);
          |
          |      public void convertToRow(Object record) throws Exception {
@@ -247,17 +260,13 @@ class TableAggregationCodeGenerator(
          |      @Override
          |      public void collect(Object record) throws Exception {
          |          convertToRow(record);
-         |          $CONVERTER_CROW_RESULT_TERM.row_$$eq($CONVERTER_ROW_RESULT_TERM);
-         |          $CONVERTER_CROW_RESULT_TERM.change_$$eq(true);
-         |          $COLLECTOR_VARIABLE_TERM.collect($CONVERTER_CROW_RESULT_TERM);
+         |          $COLLECTOR_VARIABLE_TERM.collect($CONVERTER_ROW_RESULT_TERM);
          |      }
          |
          |      @Override
          |      public void retract(Object record) throws Exception {
          |          convertToRow(record);
-         |          $CONVERTER_CROW_RESULT_TERM.row_$$eq($CONVERTER_ROW_RESULT_TERM);
-         |          $CONVERTER_CROW_RESULT_TERM.change_$$eq(false);
-         |          $COLLECTOR_VARIABLE_TERM.collect($CONVERTER_CROW_RESULT_TERM);
+         |          $COLLECTOR_VARIABLE_TERM.retract($CONVERTER_ROW_RESULT_TERM);
          |      }
          |
          |      @Override

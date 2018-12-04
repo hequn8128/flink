@@ -25,6 +25,7 @@ import org.apache.flink.configuration.Configuration
 import org.apache.flink.streaming.api.functions.ProcessFunction
 import org.apache.flink.table.api.{StreamQueryConfig, Types}
 import org.apache.flink.table.codegen.{Compiler, GeneratedTableAggregationsFunction}
+import org.apache.flink.table.runtime.CRowWrappingRetractableCollector
 import org.apache.flink.table.runtime.types.CRow
 import org.apache.flink.table.util.Logging
 import org.apache.flink.types.Row
@@ -51,6 +52,8 @@ class TableAggProcessFunction(
   // counts the number of added and retracted input records
   private var cntState: ValueState[JLong] = _
 
+  private var retractableCollector: CRowWrappingRetractableCollector = _
+
   override def open(config: Configuration) {
     LOG.debug(s"Compiling TableAggregateHelper: $genAggregations.name \n\n " +
       s"Code:\n$genAggregations.code")
@@ -68,6 +71,8 @@ class TableAggProcessFunction(
     val inputCntDescriptor: ValueStateDescriptor[JLong] =
       new ValueStateDescriptor[JLong]("TableAggregateInputCounter", Types.LONG)
     cntState = getRuntimeContext.getState(inputCntDescriptor)
+
+    retractableCollector = new CRowWrappingRetractableCollector
 
     initCleanupTimeState("TableAggregateCleanupTime")
   }
@@ -111,7 +116,8 @@ class TableAggProcessFunction(
       function.retract(accumulators, input)
     }
 
-    function.emit(accumulators, out)
+    retractableCollector.out = out
+    function.emit(accumulators, retractableCollector)
 
     if (inputCnt == 0) {
       // and clear all state

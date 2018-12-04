@@ -22,7 +22,7 @@ import org.apache.flink.api.common.typeinfo.{TypeInformation}
 import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.api.dataview._
 import org.apache.flink.table.codegen.Indenter.toISC
-import org.apache.flink.table.functions.{AggregateFunction, UserDefinedAggregateFunction}
+import org.apache.flink.table.functions.UserDefinedAggregateFunction
 import org.apache.flink.table.runtime.aggregate.{GeneratedAggregations}
 
 /**
@@ -63,7 +63,7 @@ class AggregationCodeGenerator(
     constants: Option[Seq[RexLiteral]],
     name: String,
     physicalInputTypes: Seq[TypeInformation[_]],
-    aggregates: Array[AggregateFunction[_ <: Any, _ <: Any]],
+    aggregates: Array[UserDefinedAggregateFunction[_ <: Any, _ <: Any]],
     aggFields: Array[Array[Int]],
     aggMapping: Array[Int],
     isDistinctAggs: Array[Boolean],
@@ -83,7 +83,7 @@ class AggregationCodeGenerator(
     constants,
     name,
     physicalInputTypes,
-    aggregates.map(_.asInstanceOf[UserDefinedAggregateFunction[_, _]]),
+    aggregates,
     aggFields,
     aggMapping,
     isDistinctAggs,

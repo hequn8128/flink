@@ -20,6 +20,7 @@ package org.apache.flink.table.utils
 
 import java.sql.Timestamp
 import java.lang.{Integer => JInt, Long => JLong}
+import java.lang.{Iterable => JIterable}
 
 import org.apache.flink.table.api.Types
 import org.apache.flink.table.api.dataview.MapView
@@ -138,6 +139,11 @@ class Top3WithRetractInput extends TableAggregateFunction[(Int, Long, Int), Top3
     acc
   }
 
+  def resetAccumulator(acc: Top3Wrapper): Unit = {
+    acc.top3 = new ArrayBuffer[Long]()
+    acc.input = new ArrayBuffer[(Int, Long, Boolean)]()
+  }
+
   def accumulate(acc: Top3Wrapper, category: Int, value: Long) {
     acc.input.append((category, value, true))
   }
@@ -210,6 +216,58 @@ class Top3WithRetractInput extends TableAggregateFunction[(Int, Long, Int), Top3
 }
 
 /**
+  * Top3 for batch without merge method.
+  */
+class BatchTop3 extends Top3WithRetractInput {
+
+  override def emitValue(acc: Top3Wrapper, out: RetractableCollector[(Int, Long, Int)]): Unit = {
+    var category: Int = 0
+    var buf = new ArrayBuffer[Long]()
+    for ((cate, v, _) <- acc.input) {
+      category = cate
+      buf.append(v)
+    }
+
+    buf = buf.sorted.reverse
+    var i = 0
+    while (i < 3 && i < buf.length) {
+      out.collect((category, buf(i), i))
+      i += 1
+    }
+  }
+}
+
+/**
+  * Top3 for batch with merge method.
+  */
+class BatchTop3WithMerge extends Top3WithRetractInput {
+
+  def merge(acc: Top3Wrapper, its: JIterable[Top3Wrapper]): Unit = {
+    val iter = its.iterator()
+    while (iter.hasNext) {
+      val a = iter.next()
+      acc.input.++=(a.input)
+    }
+  }
+
+  override def emitValue(acc: Top3Wrapper, out: RetractableCollector[(Int, Long, Int)]): Unit = {
+    var category: Int = 0
+    var buf = new ArrayBuffer[Long]()
+    for ((cate, v, _) <- acc.input) {
+      category = cate
+      buf.append(v)
+    }
+
+    buf = buf.sorted.reverse
+    var i = 0
+    while (i < 3 && i < buf.length) {
+      out.collect((category, buf(i), i))
+      i += 1
+    }
+  }
+}
+
+/**
   * Test function for plan test.
   */
 class EmptyTableAggFunc extends TableAggregateFunction[(Int, Long, Int), Top3Wrapper] {
@@ -219,4 +277,18 @@ class EmptyTableAggFunc extends TableAggregateFunction[(Int, Long, Int), Top3Wra
   def accumulate(acc: Top3Wrapper, category: Long, value: Timestamp): Unit = {}
 
   def emitValue(acc: Top3Wrapper, out: RetractableCollector[(Int, Long, Int)]): Unit = {}
+}
+
+/**
+  * A Test function can emit retract messages.
+  */
+class EmitRetractTableAggFunc extends EmptyTableAggFunc {
+
+  def resetAccumulator(acc: Top3Wrapper): Unit = {}
+
+  def accumulate(acc: Top3Wrapper, category: Int, value: Long): Unit = {}
+
+  override def emitValue(acc: Top3Wrapper, out: RetractableCollector[(Int, Long, Int)]): Unit = {
+    out.retract((1, 2L, 1))
+  }
 }

@@ -19,8 +19,8 @@
 package org.apache.flink.table.runtime.aggregate
 
 import org.apache.flink.api.common.functions.{Function, RuntimeContext}
+import org.apache.flink.table.utils.RetractableCollector
 import org.apache.flink.types.Row
-import org.apache.flink.util.Collector
 
 /**
   * Base class for code-generated aggregations and table aggregations.
@@ -60,6 +60,14 @@ abstract class AggregationsFunction extends Function {
   def createAccumulators(): Row
 
   /**
+    * Resets all the accumulators.
+    *
+    * @param accumulators the accumulators (saved in a row) which contains the current
+    *                     aggregated results
+    */
+  def resetAccumulator(accumulators: Row)
+
+  /**
     * Merges two rows of accumulators into one row.
     *
     * @param a First row of accumulators
@@ -78,12 +86,6 @@ abstract class AggregationsFunction extends Function {
     * It can be used for clean up work. By default, this method does nothing.
     */
   def close()
-}
-
-/**
-  * Base class for code-generated aggregations.
-  */
-abstract class GeneratedAggregations extends AggregationsFunction {
 
   /**
     * Sets the results of the aggregations (partial or final) to the output row.
@@ -110,14 +112,13 @@ abstract class GeneratedAggregations extends AggregationsFunction {
     * @return an output row object with the correct arity.
     */
   def createOutputRow(): Row
+}
 
-  /**
-    * Resets all the accumulators.
-    *
-    * @param accumulators the accumulators (saved in a row) which contains the current
-    *                     aggregated results
-    */
-  def resetAccumulator(accumulators: Row)
+/**
+  * Base class for code-generated aggregations.
+  */
+abstract class GeneratedAggregations extends AggregationsFunction {
+
 }
 
 /**
@@ -128,7 +129,7 @@ abstract class GeneratedTableAggregations extends AggregationsFunction {
   /**
     * emit results.
     */
-  def emit(accumulators: Row, collector: Collector[_])
+  def emit(accumulators: Row, collector: RetractableCollector[_])
 }
 
 class SingleElementIterable[T] extends java.lang.Iterable[T] {

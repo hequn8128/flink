@@ -566,7 +566,7 @@ val result = orders.distinct()
     <tr>
       <td>
         <strong>GroupBy TableAggregation</strong><br>
-        <span class="label label-primary">Streaming</span><br>
+        <span class="label label-primary">Batch</span> <span class="label label-primary">Streaming</span><br>
         <span class="label label-info">Result Updating</span>
       </td>
       <td>
@@ -602,7 +602,7 @@ Table result = orders
     <tr>
       <td>
         <strong>GroupBy TableAggregation</strong><br>
-        <span class="label label-primary">Streaming</span><br>
+        <span class="label label-primary">Batch</span> <span class="label label-primary">Streaming</span><br>
         <span class="label label-info">Result Updating</span>
       </td>
       <td>

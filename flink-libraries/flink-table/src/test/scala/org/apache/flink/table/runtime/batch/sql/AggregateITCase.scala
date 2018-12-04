@@ -60,7 +60,7 @@ class AggregateITCase(
   }
 
   @Test
-  def testTableAggregation(): Unit = {
+  def testNonKeyedAggregation(): Unit = {
 
     val env = ExecutionEnvironment.getExecutionEnvironment
     val tEnv = TableEnvironment.getTableEnvironment(env, config)
