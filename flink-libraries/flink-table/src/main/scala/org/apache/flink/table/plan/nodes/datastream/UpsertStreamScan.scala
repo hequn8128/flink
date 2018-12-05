@@ -44,6 +44,8 @@ class UpsertStreamScan(
 
   val upsertStreamTable: UpsertStreamTable[Any] = getTable.unwrap(classOf[UpsertStreamTable[Any]])
 
+  override def producesUpdates: Boolean = true
+
   override def deriveRowType(): RelDataType = schema.relDataType
 
   override def copy(traitSet: RelTraitSet, inputs: java.util.List[RelNode]): RelNode = {

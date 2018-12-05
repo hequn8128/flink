@@ -22,13 +22,16 @@ import org.apache.calcite.adapter.enumerable.EnumerableTableScan
 import org.apache.calcite.plan.RelOptRule.{any, operand}
 import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall, RelOptRuleOperand}
 import org.apache.calcite.rel.logical.LogicalTableScan
+import org.apache.flink.table.plan.logical.rel.LogicalUpsertToRetraction
+import org.apache.flink.table.plan.schema.UpsertStreamTable
 
 /**
  * Rule that converts an EnumerableTableScan into a LogicalTableScan.
  * We need this rule because Calcite creates an EnumerableTableScan
  * when parsing a SQL query. We convert it into a LogicalTableScan
  * so we can merge the optimization process with any plan that might be created
- * by the Table API.
+ * by the Table API. The rule also checks whether the source is an upsert source and adds
+ * a UpsertToRetraction relnode after source.
  */
 class EnumerableToLogicalTableScan(
     operand: RelOptRuleOperand,
@@ -38,7 +41,25 @@ class EnumerableToLogicalTableScan(
     val oldRel = call.rel(0).asInstanceOf[EnumerableTableScan]
     val table = oldRel.getTable
     val newRel = LogicalTableScan.create(oldRel.getCluster, table)
-    call.transformTo(newRel)
+
+    val streamTable = table.unwrap(classOf[UpsertStreamTable[_]])
+    val isUpsertTable = streamTable match {
+      case _: UpsertStreamTable[_] =>
+        true
+      case _ =>
+        false
+    }
+
+    if (isUpsertTable) {
+      val upsertToRetraction = LogicalUpsertToRetraction.create(
+        newRel.getCluster,
+        newRel.getTraitSet,
+        newRel,
+        streamTable.uniqueKeys)
+      call.transformTo(upsertToRetraction)
+    } else {
+      call.transformTo(newRel)
+    }
   }
 }
 

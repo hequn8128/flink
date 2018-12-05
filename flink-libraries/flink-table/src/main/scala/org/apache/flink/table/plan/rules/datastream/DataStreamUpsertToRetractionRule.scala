@@ -22,32 +22,33 @@ import org.apache.calcite.plan.{RelOptRule, RelTraitSet}
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.convert.ConverterRule
 import org.apache.flink.table.plan.nodes.FlinkConventions
-import org.apache.flink.table.plan.nodes.datastream.DataStreamLastRow
-import org.apache.flink.table.plan.nodes.logical.FlinkLogicalLastRow
+import org.apache.flink.table.plan.nodes.datastream.DataStreamUpsertToRetraction
+import org.apache.flink.table.plan.nodes.logical.FlinkLogicalUpsertToRetraction
 import org.apache.flink.table.plan.schema.RowSchema
 
-class DataStreamLastRowRule
+class DataStreamUpsertToRetractionRule
   extends ConverterRule(
-    classOf[FlinkLogicalLastRow],
+    classOf[FlinkLogicalUpsertToRetraction],
     FlinkConventions.LOGICAL,
     FlinkConventions.DATASTREAM,
-    "DataStreamLastRowRule") {
+    "DataStreamUpsertToRetractionRule") {
 
   override def convert(rel: RelNode): RelNode = {
-    val lastRow = rel.asInstanceOf[FlinkLogicalLastRow]
+    val upsertToRetraction = rel.asInstanceOf[FlinkLogicalUpsertToRetraction]
     val traitSet: RelTraitSet = rel.getTraitSet.replace(FlinkConventions.DATASTREAM)
-    val convInput: RelNode = RelOptRule.convert(lastRow.getInput, FlinkConventions.DATASTREAM)
+    val convInput: RelNode =
+      RelOptRule.convert(upsertToRetraction.getInput, FlinkConventions.DATASTREAM)
 
-    new DataStreamLastRow(
-      lastRow.getCluster,
+    new DataStreamUpsertToRetraction(
+      upsertToRetraction.getCluster,
       traitSet,
       convInput,
       new RowSchema(convInput.getRowType),
       new RowSchema(rel.getRowType),
-      lastRow.keyNames)
+      upsertToRetraction.keyNames)
   }
 }
 
-object DataStreamLastRowRule {
-  val INSTANCE = new DataStreamLastRowRule
+object DataStreamUpsertToRetractionRule {
+  val INSTANCE = new DataStreamUpsertToRetractionRule
 }

@@ -62,9 +62,9 @@ class DataStreamConversions[T](dataStream: DataStream[T], inputType: TypeInforma
   /**
     * Converts the [[DataStream]] with upsert messages into a [[Table]] with keys.
     *
-    * The message will be encoded as [[Tuple2]]. The first field is a [[Boolean]] flag, the second
-    * field holds the record. A true [[Boolean]] flag indicates an update message, a false flag
-    * indicates a delete message.
+    * The incoming messages from the source DataStream are expected to be encoded as [[Tuple2]].
+    * The first field is a [[Boolean]] flag, the second field holds the record. A true [[Boolean]]
+    * flag indicates an update message, a false flag indicates a delete message.
     *
     * The field name and key of the new [[Table]] can be specified like this:
     *

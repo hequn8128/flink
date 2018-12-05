@@ -558,7 +558,7 @@ abstract class StreamTableEnvironment(
     // Can not apply key on append stream
     if (extractUniqueKeys(fields).nonEmpty) {
       throw new TableException(
-        s"Can not apply key on append stream, use fromUpsertStream instead.")
+        s"Defining key on append stream has not been supported yet, use fromUpsertStream instead.")
     }
 
     // adjust field indexes and field names
@@ -573,6 +573,17 @@ abstract class StreamTableEnvironment(
     registerTableInternal(name, dataStreamTable)
   }
 
+  def getTypeFromUpsertStream[T](dataStream: DataStream[T]): TypeInformation[T] = {
+    dataStream.getType match {
+      case c: CaseClassTypeInfo[_]
+        if (c.getTypeClass.equals(classOf[Tuple2[_, _]])) => c.getTypeAt(1)
+      case t: TupleTypeInfo[_]
+        if (t.getTypeClass.equals(classOf[JTuple2[_, _]])) => t.getTypeAt(1)
+      case _ =>
+        throw new TableException("You can only upsert from a datastream with type of Tuple2!")
+    }
+  }
+
   /**
     * Registers an upsert [[DataStream]] as a table under a given name in the [[TableEnvironment]]'s
     * catalog.
@@ -583,14 +594,7 @@ abstract class StreamTableEnvironment(
     */
   protected def registerUpsertStreamInternal[T](name: String, dataStream: DataStream[T]): Unit = {
 
-    val streamType: TypeInformation[T] = dataStream.getType match {
-      case c: CaseClassTypeInfo[_]
-        if (c.getTypeClass.equals(classOf[Tuple2[_, _]])) => c.getTypeAt(1)
-      case t: TupleTypeInfo[_]
-        if (t.getTypeClass.equals(classOf[JTuple2[_, _]])) => t.getTypeAt(1)
-      case _ =>
-        throw new TableException("You can only upsert from a datastream with type of Tuple2!")
-    }
+    val streamType: TypeInformation[T] = getTypeFromUpsertStream(dataStream)
 
     val (fieldNames, fieldIndexes) = getFieldInfo[T](streamType)
     val dataStreamTable = new UpsertStreamTable[T](
@@ -616,14 +620,7 @@ abstract class StreamTableEnvironment(
       fields: Array[Expression])
   : Unit = {
 
-    val streamType: TypeInformation[T] = dataStream.getType match {
-      case c: CaseClassTypeInfo[_]
-        if (c.getTypeClass.equals(classOf[Tuple2[_, _]])) => c.getTypeAt(1)
-      case t: TupleTypeInfo[_]
-        if (t.getTypeClass.equals(classOf[JTuple2[_, _]])) => t.getTypeAt(1)
-      case _ =>
-        throw new TableException("You can only upsert from a datastream with type of Tuple2!")
-    }
+    val streamType: TypeInformation[T] = getTypeFromUpsertStream(dataStream)
 
     // get field names and types for all non-replaced fields
     val (fieldNames, fieldIndexes) = getFieldInfo[T](streamType, fields)
@@ -762,10 +759,6 @@ abstract class StreamTableEnvironment(
       case (ProctimeAttribute(UnresolvedFieldReference(name)), idx) =>
         extractProctime(idx, name)
 
-      case (Key(UnresolvedFieldReference(name)), _) => fieldNames = name :: fieldNames
-
-      case (Key(Alias(UnresolvedFieldReference(_), name, _)), _) => name :: fieldNames
-
       case (UnresolvedFieldReference(name), _) => fieldNames = name :: fieldNames
 
       case (Alias(UnresolvedFieldReference(_), name, _), _) => fieldNames = name :: fieldNames
@@ -800,8 +793,8 @@ abstract class StreamTableEnvironment(
 
     var uniqueKeys: List[String] = Nil
     exprs.zipWithIndex.foreach {
-      case (Key(UnresolvedFieldReference(name)), _) => uniqueKeys = name :: uniqueKeys
-      case (Key(Alias(UnresolvedFieldReference(_), name, _)), _) => uniqueKeys = name :: uniqueKeys
+      case (expr: UnresolvedKeyFieldReference, _) => uniqueKeys = expr.name :: uniqueKeys
+      case (Alias(_: UnresolvedKeyFieldReference, name, _), _) => uniqueKeys = name :: uniqueKeys
       case _ =>
     }
 

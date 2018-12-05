@@ -52,6 +52,8 @@ case class UnresolvedFieldReference(name: String) extends Attribute {
     ValidationFailure(s"Unresolved reference $name.")
 }
 
+class UnresolvedKeyFieldReference(name: String) extends UnresolvedFieldReference(name) {}
+
 case class ResolvedFieldReference(
     name: String,
     resultType: TypeInformation[_]) extends Attribute {
@@ -224,14 +226,14 @@ case class ProctimeAttribute(expr: Expression) extends TimeAttribute(expr) {
   override def toString: String = s"proctime($child)"
 }
 
-case class Key(child: Expression) extends UnaryExpression {
-  override private[flink] def resultType: TypeInformation[_] = child.resultType
-
-  override private[flink] def toRexNode(implicit relBuilder: RelBuilder): RexNode = {
-    throw new UnsupportedOperationException(
-      s"Key Expression can only be used during table initialization.")
-  }
-}
+//case class Key(child: Expression) extends UnaryExpression {
+//  override private[flink] def resultType: TypeInformation[_] = child.resultType
+//
+//  override private[flink] def toRexNode(implicit relBuilder: RelBuilder): RexNode = {
+//    throw new UnsupportedOperationException(
+//      s"Key Expression can only be used during table initialization.")
+//  }
+//}
 
 /** Expression to access the timestamp of a StreamRecord. */
 case class StreamRecordTimestamp() extends LeafExpression {

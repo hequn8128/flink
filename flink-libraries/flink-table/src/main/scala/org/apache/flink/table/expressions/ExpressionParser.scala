@@ -526,21 +526,22 @@ object ExpressionParser extends JavaTokenParsers with PackratParsers {
 
   lazy val timeIndicator: PackratParser[Expression] = proctime | rowtime
 
+  lazy val aliasOrFieldReference = aliasMapping | "(" ~> aliasMapping <~ ")" | fieldReference
+
   lazy val proctime: PackratParser[Expression] =
-    (aliasMapping | "(" ~> aliasMapping <~ ")" | fieldReference) ~ "." ~ PROCTIME ^^ {
+    aliasOrFieldReference ~ "." ~ PROCTIME ^^ {
       case f ~ _ ~ _ => ProctimeAttribute(f)
     }
 
   lazy val rowtime: PackratParser[Expression] =
-    (aliasMapping | "(" ~> aliasMapping <~ ")" | fieldReference) ~ "." ~ ROWTIME ^^ {
+    aliasOrFieldReference ~ "." ~ ROWTIME ^^ {
       case f ~ _ ~ _ => RowtimeAttribute(f)
     }
 
-  // key
-
   lazy val key: PackratParser[Expression] =
-    (aliasMapping | "(" ~> aliasMapping <~ ")" | fieldReference) ~ "." ~ KEY ^^ {
-      case f ~ _ ~ _ => Key(f)
+    aliasOrFieldReference ~ "." ~ KEY ^^ {
+      case f ~ _ ~ _ =>
+        new UnresolvedKeyFieldReference(f.asInstanceOf[UnresolvedFieldReference].name)
     }
 
   // alias

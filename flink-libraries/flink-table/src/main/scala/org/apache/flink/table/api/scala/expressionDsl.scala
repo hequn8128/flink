@@ -869,12 +869,16 @@ trait ImplicitExpressionOperations {
     */
   def proctime = ProctimeAttribute(expr)
 
-  // Key definition
-
   /**
     * Declares a field as the unique key attribute for source Table.
     */
-  def key = Key(expr)
+  def key: Expression = {
+    expr match {
+      case u: UnresolvedFieldReference => new UnresolvedKeyFieldReference(u.name)
+      case _ => throw new TableException(
+        "The key method can only be used on a source field.")
+    }
+  }
 
   // Hash functions
 

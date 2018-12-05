@@ -39,7 +39,20 @@ class DataStreamScanRule
     val appendTable = scan.getTable.unwrap(classOf[AppendStreamTable[Any]])
     val upsertTable = scan.getTable.unwrap(classOf[UpsertStreamTable[Any]])
 
-    appendTable != null || upsertTable != null
+    val isAppendTable = appendTable match {
+      case _: AppendStreamTable[Any] =>
+        true
+      case _ =>
+        false
+    }
+    val isUpsertTable = upsertTable match {
+      case _: UpsertStreamTable[Any] =>
+        true
+      case _ =>
+        false
+    }
+
+    isAppendTable || isUpsertTable
   }
 
   def convert(rel: RelNode): RelNode = {

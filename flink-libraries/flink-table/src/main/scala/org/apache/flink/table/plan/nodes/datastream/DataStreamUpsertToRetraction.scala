@@ -28,7 +28,7 @@ import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.table.api.{StreamQueryConfig, StreamTableEnvironment}
 import org.apache.flink.table.plan.rules.datastream.DataStreamRetractionRules
 import org.apache.flink.table.plan.schema.RowSchema
-import org.apache.flink.table.runtime.{CRowKeySelector, LastRowProcessFunction}
+import org.apache.flink.table.runtime.{CRowKeySelector, UpsertToRetractionProcessFunction}
 import org.apache.flink.table.runtime.types.{CRow, CRowTypeInfo}
 
 import scala.collection.JavaConversions._
@@ -36,7 +36,7 @@ import scala.collection.JavaConversions._
 /**
   * Flink RelNode for ingesting upsert stream from source.
   */
-class DataStreamLastRow(
+class DataStreamUpsertToRetraction(
    cluster: RelOptCluster,
    traitSet: RelTraitSet,
    input: RelNode,
@@ -51,7 +51,7 @@ class DataStreamLastRow(
     .map(_._2).toArray
 
   override def copy(traitSet: RelTraitSet, inputs: util.List[RelNode]): RelNode = {
-    new DataStreamLastRow(
+    new DataStreamUpsertToRetraction(
       cluster,
       traitSet,
       inputs.get(0),
@@ -67,7 +67,7 @@ class DataStreamLastRow(
   }
 
   override def toString: String = {
-    s"LastRow(${
+    s"UpsertToRetractionConverter(${
       if (keyNames.nonEmpty) {
         s"keys:(${keyNames.mkString(", ")}), "
       } else {
@@ -88,7 +88,7 @@ class DataStreamLastRow(
 
     val needRetraction = DataStreamRetractionRules.isAccRetract(this)
     val result: DataStream[CRow] = if (needRetraction) {
-      val processFunction = new LastRowProcessFunction(
+      val processFunction = new UpsertToRetractionProcessFunction(
         schema.typeInfo.asInstanceOf[RowTypeInfo],
         queryConfig
       )
@@ -99,7 +99,7 @@ class DataStreamLastRow(
             new CRowKeySelector(keyIndexes, inputSchema.projectedTypeInfo(keyIndexes)))
           .process(processFunction)
           .returns(outRowType)
-          .name("DataStreamLastRow")
+          .name("DataStreamUpsertToRetraction")
           .asInstanceOf[DataStream[CRow]]
       } else {
         // upsert without key -> single row table
@@ -109,7 +109,7 @@ class DataStreamLastRow(
           .setParallelism(1)
           .setMaxParallelism(1)
           .returns(outRowType)
-          .name("DataStreamLastRow")
+          .name("DataStreamUpsertToRetraction")
           .asInstanceOf[DataStream[CRow]]
       }
     } else {
