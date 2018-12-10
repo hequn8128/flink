@@ -29,6 +29,8 @@ import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.functions.TableAggregateFunction
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils._
 
+import scala.collection.JavaConversions._
+
 /**
   * Calcite wrapper for user-defined table aggregate functions.
   *
@@ -66,6 +68,10 @@ class TableAggSqlFunction(
   override def toString: String = displayName
 
   override def getParamTypes: util.List[RelDataType] = null
+
+  def getOutputNames: Seq[String] = {
+    typeFactory.createTypeFromTypeInfo(returnType, isNullable = true).getFieldNames
+  }
 }
 
 object TableAggSqlFunction {

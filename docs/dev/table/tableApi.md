@@ -583,7 +583,25 @@ Table result = orders
         <p><b>Note:</b> For streaming queries the required state to compute the query result might grow infinitely depending on the type of aggregation and the number of distinct grouping keys. Please provide a query configuration with valid retention interval to prevent excessive state size. See <a href="streaming/query_configuration.html">Query Configuration</a> for details.</p>
       </td>
     </tr>
-
+    <tr>
+    	<td>
+        <strong>GroupBy Window TableAggregation</strong><br>
+        <span class="label label-primary">Streaming</span>
+      </td>
+    	<td>
+        <p>Groups and aggregates a table on a <a href="#group-windows">group window</a> and possibly one or more grouping keys. You have to close the "flatAggregate" with a select statement. And the select statement does not support * and aggregate functions.</p>
+{% highlight java %}
+TableAggregateFunction tableAggFunc = new MyTableAggregateFunction();
+tableEnv.registerFunction("myTableAggFunc", tableAggFunc);
+Table orders = tableEnv.scan("Orders");
+Table result = orders
+    .window(Tumble.over("5.minutes").on("rowtime").as("w")) // define window
+    .groupBy("a, w") // group by key and window
+    .flatAggregate("myTableAggFunc(a, b, c)")
+    .select("a, w.start, w.end, w.rowtime, _1, _2, _3"); // access window properties and aggregate results
+{% endhighlight %}
+      </td>
+    </tr>
   </tbody>
 </table>
 
@@ -601,9 +619,8 @@ Table result = orders
 
     <tr>
       <td>
-        <strong>GroupBy TableAggregation</strong><br>
-        <span class="label label-primary">Batch</span> <span class="label label-primary">Streaming</span><br>
-        <span class="label label-info">Result Updating</span>
+        <strong>GroupBy Window TableAggregation</strong><br>
+        <span class="label label-primary">Streaming</span><br>
       </td>
       <td>
         <p>Similar to a <b>GroupBy Aggregation</b>. Groups the rows on the grouping keys with a following running table aggregation operator to aggregate rows group-wise. The difference from an AggregateFunction is that TableAggregateFunction may return 0 or more records for a group. You have to close the "flatAggregate" with a select statement. And the select statement does not support * and aggregate functions.</p>
@@ -616,6 +633,25 @@ val result = orders
     .select('_1 as 'a, '_2 as 'b)
 {% endhighlight %}
         <p><b>Note:</b> For streaming queries the required state to compute the query result might grow infinitely depending on the type of aggregation and the number of distinct grouping keys. Please provide a query configuration with valid retention interval to prevent excessive state size. See <a href="streaming/query_configuration.html">Query Configuration</a> for details.</p>
+      </td>
+    </tr>
+    
+    <tr>
+    	<td>
+        <strong>GroupBy Window TableAggregation</strong><br>
+        <span class="label label-primary">Streaming</span>
+      </td>
+    	<td>
+        <p>Groups and aggregates a table on a <a href="#group-windows">group window</a> and possibly one or more grouping keys. You have to close the "flatAggregate" with a select statement. And the select statement does not support * and aggregate functions.</p>
+{% highlight scala %}
+val tableAggFunc: TableAggregateFunction = new MyTableAggregateFunction
+val orders: Table = tableEnv.scan("Orders")
+val result: Table = orders
+    .window(Tumble over 5.minutes on 'rowtime as 'w) // define window
+    .groupBy('a, 'w) // group by key and window
+    .flatAggregate(tableAggFunc('a, 'b, 'c))
+    .select('a, w.start, 'w.end, 'w.rowtime, '_1, '_2, '_3) // access window properties and aggregate results
+{% endhighlight %}
       </td>
     </tr>
     

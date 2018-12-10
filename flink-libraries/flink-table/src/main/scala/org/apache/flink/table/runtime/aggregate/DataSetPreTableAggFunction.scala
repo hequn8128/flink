@@ -21,7 +21,7 @@ import java.lang.Iterable
 
 import org.apache.flink.api.common.functions._
 import org.apache.flink.configuration.Configuration
-import org.apache.flink.table.codegen.{Compiler, GeneratedTableAggregationsFunction}
+import org.apache.flink.table.codegen.{Compiler, GeneratedAggregationsFunction}
 import org.apache.flink.table.util.Logging
 import org.apache.flink.types.Row
 import org.apache.flink.util.Collector
@@ -32,7 +32,7 @@ import org.apache.flink.util.Collector
   *
   * @param genAggregations Code-generated [[GeneratedTableAggregations]]
   */
-class DataSetPreTableAggFunction(genAggregations: GeneratedTableAggregationsFunction)
+class DataSetPreTableAggFunction(genAggregations: GeneratedAggregationsFunction)
   extends AbstractRichFunction
   with GroupCombineFunction[Row, Row]
   with MapPartitionFunction[Row, Row]

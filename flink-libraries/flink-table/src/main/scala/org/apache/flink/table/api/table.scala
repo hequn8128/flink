@@ -1126,13 +1126,6 @@ class GroupedFlatAggTable(
     * }}}
     */
   def select(fields: Expression*): Table = {
-    val expandedFields = expandProjectList(tableAggCall.args, table.logicalPlan, table.tableEnv)
-    val projectFields = extractFieldReferences(expandedFields ++ groupKey)
-
-    val flatAggTable = new Table(table.tableEnv,
-      TableAggregate(groupKey, tableAggCall,
-        Project(projectFields, table.logicalPlan).validate(table.tableEnv)
-      ).validate(table.tableEnv))
 
     // check no '*' in the select of flatAggregate.
     fields.foreach {
@@ -1140,6 +1133,14 @@ class GroupedFlatAggTable(
         throw new TableException("Currently, can't use * in the select after flatAggregate.")
       case _ => // ok
     }
+
+    val expandedFields = expandProjectList(tableAggCall.args, table.logicalPlan, table.tableEnv)
+    val projectFields = extractFieldReferences(expandedFields ++ groupKey)
+
+    val flatAggTable = new Table(table.tableEnv,
+      TableAggregate(groupKey, tableAggCall,
+        Project(projectFields, table.logicalPlan).validate(table.tableEnv)
+      ).validate(table.tableEnv))
 
     // check no aggregate functions in the select of flatAggregate.
     val expandedFieldsOfSelect =
@@ -1310,7 +1311,6 @@ class WindowedTable(
     val fieldsExpr = ExpressionParser.parseExpressionList(fields)
     groupBy(fieldsExpr: _*)
   }
-
 }
 
 class OverWindowedTable(
@@ -1403,5 +1403,120 @@ class WindowGroupedTable(
     //get the correct expression for AggFunctionCall
     val withResolvedAggFunctionCall = fieldExprs.map(replaceAggFunctionCall(_, table.tableEnv))
     select(withResolvedAggFunctionCall: _*)
+  }
+
+  /**
+    * Performs a flatAggregate operation on a window grouped table. FlatAggregate takes a
+    * TableAggregateFunction which returns multiple rows. Use a selection after flatAggregate.
+    *
+    * Example:
+    *
+    * {{{
+    *   val tableAggFunc: TableAggregateFunction = new MyTableAggregateFunction
+    *   windowGroupedTable.flatAggregate(tableAggFunc('a, 'b)).select('window.start, '_1, '_2, '_3)
+    * }}}
+    */
+  def flatAggregate(tableAggCall: TableAggFunctionCall): WindowGroupedFlagAggTable = {
+    new WindowGroupedFlagAggTable(table, groupKeys, window, tableAggCall)
+  }
+
+  /**
+    * Performs a flatAggregate operation on a window grouped table. FlatAggregate takes a
+    * TableAggregateFunction which returns multiple rows. Use a selection after flatAggregate.
+    *
+    * Example:
+    *
+    * {{{
+    *   val tableAggFunc: TableAggregateFunction = new MyTableAggregateFunction
+    *   tableEnv.registerFunction("myTableAggFunc", tableAggFunc);
+    *   windowGroupedTable.flatAggregate("myTableAggFunc(a, b)").select("window.start, _1, _2, _3")
+    * }}}
+    */
+  def flatAggregate(tableAggCall: String): WindowGroupedFlagAggTable = {
+    val call = UserDefinedFunctionUtils.createTableAggFunctionCall(table.tableEnv, tableAggCall)
+    new WindowGroupedFlagAggTable(table, groupKeys, window, call)
+  }
+}
+
+class WindowGroupedFlagAggTable(
+    private[flink] val table: Table,
+    private[flink] val groupKeys: Seq[Expression],
+    private[flink] val window: Window,
+    private[flink] val tableAggCall: TableAggFunctionCall) {
+
+  /**
+    * Performs a selection operation on a WindowGroupedFlagAggTable table. Similar to a SQL SELECT
+    * statement. The field expressions can contain complex expressions.
+    *
+    * __Note__: You have to close the flatAggregate with a select statement. And the select
+    * statement does not support * and aggregate functions.
+    *
+    * Example:
+    *
+    * {{{
+    *   val tableAggFunc: TableAggregateFunction = new MyTableAggregateFunction
+    *   windowGroupedTable
+    *     .flatAggregate(tableAggFunc('a, 'b))
+    *     .select('window.start, udf('_1), '_2, '_3)
+    * }}}
+    */
+  def select(fields: Expression*): Table = {
+
+    // check no '*' in the select of flatAggregate.
+    fields.foreach {
+      case n: UnresolvedFieldReference if n.name == "*" =>
+        throw new TableException("Currently, can't use * in the select after flatAggregate.")
+      case _ => // ok
+    }
+
+    val expandedFields = expandProjectList(fields, table.logicalPlan, table.tableEnv)
+    val (aggNames, propNames) = extractAggregationsAndProperties(expandedFields, table.tableEnv)
+
+    if (aggNames.nonEmpty) {
+      throw new ValidationException("Currently, can't use aggregate functions in the " +
+        "select after flatAggregate.")
+    }
+
+    val projectsOnAgg = replaceAggregationsAndProperties(
+      expandedFields, table.tableEnv, aggNames, propNames)
+
+    val aggInputFields = expandProjectList(tableAggCall.args, table.logicalPlan, table.tableEnv)
+    val projectFields = extractFieldReferences(aggInputFields ++ groupKeys :+ window.timeField)
+
+    new Table(table.tableEnv,
+      Project(
+        projectsOnAgg,
+        new WindowTableAggregate(
+          groupKeys,
+          window.toLogicalWindow,
+          propNames.map(a => Alias(a._1, a._2)).toSeq,
+          Seq(Alias(tableAggCall, tableAggCall.toString)),
+          Project(projectFields, table.logicalPlan).validate(table.tableEnv)
+        ).validate(table.tableEnv),
+        // required for proper resolution of the time attribute in multi-windows
+        explicitAlias = true
+      ).validate(table.tableEnv))
+  }
+
+  /**
+    * Performs a selection operation on a WindowGroupedFlagAggTable table. Similar to a SQL SELECT
+    * statement. The field expressions can contain complex expressions.
+    *
+    * __Note__: You have to close the flatAggregate with a select statement. And the select
+    * statement does not support * and aggregate functions.
+    *
+    * Example:
+    *
+    * {{{
+    *   val tableAggFunc: TableAggregateFunction = new MyTableAggregateFunction
+    *   tableEnv.registerFunction("myTableAggFunc", tableAggFunc);
+    *   windowGroupedTable
+    *     .flatAggregate("myTableAggFunc(a, b)")
+    *     .select("window.start, _1, _2, _3")
+    * }}}
+    */
+  def select(strFields: String): Table = {
+    val fields = ExpressionParser.parseExpressionList(strFields)
+    this.select(fields: _*)
   }
 }

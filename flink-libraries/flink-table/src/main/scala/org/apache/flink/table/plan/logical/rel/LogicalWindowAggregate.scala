@@ -27,6 +27,7 @@ import org.apache.calcite.rel.{RelNode, RelShuttle, RelWriter}
 import org.apache.calcite.util.ImmutableBitSet
 import org.apache.flink.table.calcite.FlinkRelBuilder.NamedWindowProperty
 import org.apache.flink.table.calcite.FlinkTypeFactory
+import org.apache.flink.table.functions.utils.TableAggSqlFunction
 import org.apache.flink.table.plan.logical.LogicalWindow
 
 class LogicalWindowAggregate(
@@ -35,6 +36,7 @@ class LogicalWindowAggregate(
     cluster: RelOptCluster,
     traitSet: RelTraitSet,
     child: RelNode,
+    val isTableAggregate: Boolean,
     indicatorFlag: Boolean,
     groupSet: ImmutableBitSet,
     groupSets: util.List[ImmutableBitSet],
@@ -68,6 +70,7 @@ class LogicalWindowAggregate(
       cluster,
       traitSet,
       input,
+      isTableAggregate,
       indicator,
       groupSet,
       groupSets,
@@ -81,6 +84,7 @@ class LogicalWindowAggregate(
       cluster,
       traitSet,
       input,
+      isTableAggregate,
       indicator,
       getGroupSet,
       getGroupSets,
@@ -93,7 +97,21 @@ class LogicalWindowAggregate(
     val aggregateRowType = super.deriveRowType()
     val typeFactory = getCluster.getTypeFactory.asInstanceOf[FlinkTypeFactory]
     val builder = typeFactory.builder
-    builder.addAll(aggregateRowType.getFieldList)
+
+    if (isTableAggregate) {
+      val tableAgg = aggCalls.get(0).getAggregation.asInstanceOf[TableAggSqlFunction]
+      val tableAggResultType = tableAgg.returnType
+      val groupKeyTypes = aggregateRowType.getFieldList.subList(0, groupSet.toArray.size)
+
+      // add group key types
+      builder.addAll(groupKeyTypes)
+      // add agg types
+      builder.addAll(typeFactory.createTypeFromTypeInfo(tableAggResultType, true).getFieldList)
+    } else {
+      // add group ley types and agg types
+      builder.addAll(aggregateRowType.getFieldList)
+    }
+
     namedProperties.foreach { namedProp =>
       builder.add(
         namedProp.name,
@@ -112,6 +130,11 @@ object LogicalWindowAggregate {
       aggregate: Aggregate)
     : LogicalWindowAggregate = {
 
+    // whether it is table aggregate
+    val aggCalls = aggregate.getAggCallList
+    val isTableAggreegate = aggCalls.size() == 1 &&
+      aggCalls.get(0).getAggregation.isInstanceOf[TableAggSqlFunction]
+
     val cluster: RelOptCluster = aggregate.getCluster
     val traitSet: RelTraitSet = cluster.traitSetOf(Convention.NONE)
     new LogicalWindowAggregate(
@@ -120,6 +143,7 @@ object LogicalWindowAggregate {
       cluster,
       traitSet,
       aggregate.getInput,
+      isTableAggreegate,
       aggregate.indicator,
       aggregate.getGroupSet,
       aggregate.getGroupSets,

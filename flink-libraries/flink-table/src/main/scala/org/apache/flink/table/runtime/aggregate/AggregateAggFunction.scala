@@ -18,11 +18,10 @@
 
 package org.apache.flink.table.runtime.aggregate
 
-import org.apache.flink.api.common.functions.AggregateFunction
-import org.apache.flink.table.codegen.{Compiler, GeneratedAggregationsFunction}
-import org.apache.flink.table.runtime.types.CRow
-import org.apache.flink.table.util.Logging
+import org.apache.flink.table.codegen.GeneratedAggregationsFunction
 import org.apache.flink.types.Row
+
+import java.util.{LinkedList => JList}
 
 /**
   * Aggregate Function used for the aggregate operator in
@@ -30,50 +29,19 @@ import org.apache.flink.types.Row
   *
   * @param genAggregations Generated aggregate helper function
   */
-class AggregateAggFunction(genAggregations: GeneratedAggregationsFunction)
-  extends AggregateFunction[CRow, Row, Row] with Compiler[GeneratedAggregations] with Logging {
+class AggregateAggFunction[F <: GeneratedAggregations](
+    genAggregations: GeneratedAggregationsFunction)
+  extends AggregateAggFunctionBase[JList[Row], F](genAggregations) {
 
-  private var function: GeneratedAggregations = _
 
-  override def createAccumulator(): Row = {
-    if (function == null) {
-      initFunction()
-    }
-    function.createAccumulators()
-  }
-
-  override def add(value: CRow, accumulatorRow: Row): Row = {
-    if (function == null) {
-      initFunction()
-    }
-    function.accumulate(accumulatorRow, value.row)
-    accumulatorRow
-  }
-
-  override def getResult(accumulatorRow: Row): Row = {
+  override def getResult(accumulatorRow: Row): JList[Row] = {
     if (function == null) {
       initFunction()
     }
     val output = function.createOutputRow()
     function.setAggregationResults(accumulatorRow, output)
-    output
-  }
-
-  override def merge(aAccumulatorRow: Row, bAccumulatorRow: Row): Row = {
-    if (function == null) {
-      initFunction()
-    }
-    function.mergeAccumulatorsPair(aAccumulatorRow, bAccumulatorRow)
-  }
-
-  def initFunction(): Unit = {
-    LOG.debug(s"Compiling AggregateHelper: $genAggregations.name \n\n " +
-                s"Code:\n$genAggregations.code")
-    val clazz = compile(
-      Thread.currentThread().getContextClassLoader,
-      genAggregations.name,
-      genAggregations.code)
-    LOG.debug("Instantiating AggregateHelper.")
-    function = clazz.newInstance()
+    val list = new JList[Row]()
+    list.add(output)
+    list
   }
 }

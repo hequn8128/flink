@@ -30,6 +30,7 @@ import org.apache.calcite.sql.SqlKind
 import org.apache.calcite.util.ImmutableBitSet
 import org.apache.flink.table.calcite.FlinkRelBuilder.NamedWindowProperty
 import org.apache.flink.table.calcite.FlinkTypeFactory
+import org.apache.flink.table.functions.utils.TableAggSqlFunction
 import org.apache.flink.table.plan.logical.LogicalWindow
 import org.apache.flink.table.plan.logical.rel.LogicalWindowAggregate
 import org.apache.flink.table.plan.nodes.FlinkConventions
@@ -42,6 +43,7 @@ class FlinkLogicalWindowAggregate(
     cluster: RelOptCluster,
     traitSet: RelTraitSet,
     child: RelNode,
+    val isTableAggregate: Boolean,
     indicator: Boolean,
     groupSet: ImmutableBitSet,
     groupSets: util.List[ImmutableBitSet],
@@ -68,6 +70,7 @@ class FlinkLogicalWindowAggregate(
       cluster,
       traitSet,
       input,
+      isTableAggregate,
       indicator,
       groupSet,
       groupSets,
@@ -80,7 +83,21 @@ class FlinkLogicalWindowAggregate(
     val aggregateRowType = super.deriveRowType()
     val typeFactory = getCluster.getTypeFactory.asInstanceOf[FlinkTypeFactory]
     val builder = typeFactory.builder
-    builder.addAll(aggregateRowType.getFieldList)
+
+    if (isTableAggregate) {
+      val tableAgg = aggCalls.get(0).getAggregation.asInstanceOf[TableAggSqlFunction]
+      val tableAggResultType = tableAgg.returnType
+      val groupKeyTypes = aggregateRowType.getFieldList.subList(0, groupSet.toArray.size)
+
+      // add group key types
+      builder.addAll(groupKeyTypes)
+      // add agg types
+      builder.addAll(typeFactory.createTypeFromTypeInfo(tableAggResultType, true).getFieldList)
+    } else {
+      // add group ley types and agg types
+      builder.addAll(aggregateRowType.getFieldList)
+    }
+
     namedProperties.foreach { namedProp =>
       builder.add(
         namedProp.name,
@@ -131,6 +148,7 @@ class FlinkLogicalWindowAggregateConverter
       rel.getCluster,
       traitSet,
       newInput,
+      agg.isTableAggregate,
       agg.indicator,
       agg.getGroupSet,
       agg.getGroupSets,

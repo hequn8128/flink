@@ -85,16 +85,16 @@ class DataStreamTableAggregate(
       } else {
         ""
       }
-    } flatAggregate:(${aggregationToString(
-      inputSchema.relDataType, groupings, getRowType, namedAggregates, Nil)}))"
+    } flatAggregate:(${
+      tableAggregateFunctionToString(true, inputSchema.relDataType, namedAggregates)}))"
   }
 
   override def explainTerms(pw: RelWriter): RelWriter = {
     super.explainTerms(pw)
       .itemIf("groupBy", groupingToString(
         inputSchema.relDataType, groupings), !groupings.isEmpty)
-      .item("flatAggregate", aggregationToString(
-        inputSchema.relDataType, groupings, getRowType, namedAggregates, Nil))
+      .item("flatAggregate",
+        tableAggregateFunctionToString(true, inputSchema.relDataType, namedAggregates))
   }
 
   override def translateToPlan(
@@ -105,7 +105,7 @@ class DataStreamTableAggregate(
     val outRowType = CRowTypeInfo(schema.typeInfo)
     val aggCall = namedAggregates(0).left
 
-    val processFunction = AggregateUtil.createTableAggregateFunction(
+    val processFunction = AggregateUtil.createDataStreamTableAggregateFunction(
       tableEnv.getConfig,
       false,
       inputSchema.typeInfo,

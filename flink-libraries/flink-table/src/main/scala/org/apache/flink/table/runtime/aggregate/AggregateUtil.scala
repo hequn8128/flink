@@ -18,6 +18,7 @@
 package org.apache.flink.table.runtime.aggregate
 
 import java.util
+import java.util.{LinkedList => JList}
 
 import org.apache.calcite.rel.`type`._
 import org.apache.calcite.rel.core.AggregateCall
@@ -28,7 +29,7 @@ import org.apache.calcite.sql.fun._
 import org.apache.calcite.sql.{SqlAggFunction, SqlKind}
 import org.apache.flink.api.common.functions.{MapFunction, RichGroupReduceFunction, AggregateFunction => DataStreamAggFunction, _}
 import org.apache.flink.api.common.typeinfo.{BasicTypeInfo, TypeInformation}
-import org.apache.flink.api.java.typeutils.{PojoField, PojoTypeInfo, RowTypeInfo}
+import org.apache.flink.api.java.typeutils.{ListTypeInfo, PojoField, PojoTypeInfo, RowTypeInfo}
 import org.apache.flink.streaming.api.functions.ProcessFunction
 import org.apache.flink.streaming.api.functions.windowing.{AllWindowFunction, WindowFunction}
 import org.apache.flink.streaming.api.windowing.windows.{Window => DataStreamWindow}
@@ -36,7 +37,7 @@ import org.apache.flink.table.api.dataview.DataViewSpec
 import org.apache.flink.table.api.{StreamQueryConfig, TableConfig, TableException}
 import org.apache.flink.table.calcite.FlinkRelBuilder.NamedWindowProperty
 import org.apache.flink.table.calcite.FlinkTypeFactory
-import org.apache.flink.table.codegen.{AggregationCodeGenerator, TableAggregationCodeGenerator}
+import org.apache.flink.table.codegen.{AggregationCodeGenerator, TableAggregationCodeGenerator, WindowFunctionCodeGenerator}
 import org.apache.flink.table.dataview.MapViewTypeInfo
 import org.apache.flink.table.expressions.ExpressionUtils.isTimeIntervalLiteral
 import org.apache.flink.table.expressions._
@@ -171,11 +172,12 @@ object AggregateUtil {
     * @param inputFieldTypes    Types of the physical input fields
     * @param groupings          the position (in the input Row) of the grouping keys
     * @param queryConfig        The configuration of the query to generate.
+    * @param tableConfig        The configuration to define the runtime behavior of the Table API.
     * @param generateRetraction It is a tag that indicates whether generate retract record.
     * @param consumeRetraction  It is a tag that indicates whether consume the retract record.
     * @return [[org.apache.flink.streaming.api.functions.ProcessFunction]]
     */
-  private[flink] def createGroupAggregateFunction(
+  private[flink] def createDataStreamGroupAggregateFunction(
       config: TableConfig,
       nullableInput: Boolean,
       input: TypeInformation[_ <: Any],
@@ -249,11 +251,12 @@ object AggregateUtil {
     * @param outputSchema        The type of the rows emitted by flatAggregate operator
     * @param groupings           the position (in the input Row) of the grouping keys
     * @param queryConfig         The configuration of the query to generate.
+    * @param tableConfig         The configuration to define the runtime behavior of the Table API.
     * @param generateRetraction  It is a tag that indicates whether generate retract record.
     * @param consumeRetraction   It is a tag that indicates whether consume the retract record.
     * @return [[org.apache.flink.streaming.api.functions.ProcessFunction]]
     */
-  private[flink] def createTableAggregateFunction(
+  private[flink] def createDataStreamTableAggregateFunction(
       config: TableConfig,
       nullableInput: Boolean,
       input: TypeInformation[_ <: Any],
@@ -1310,20 +1313,25 @@ object AggregateUtil {
   private[flink] def createAggregationAllWindowFunction(
       window: LogicalWindow,
       finalRowArity: Int,
-      properties: Seq[NamedWindowProperty])
-    : AllWindowFunction[Row, CRow, DataStreamWindow] = {
+      properties: Seq[NamedWindowProperty],
+      tableConfig: TableConfig)
+  : AllWindowFunction[JList[Row], CRow, DataStreamWindow] = {
 
     if (isTimeWindow(window)) {
-      val (startPos, endPos, timePos) = computeWindowPropertyPos(properties)
-      new IncrementalAggregateAllTimeWindowFunction(
-        startPos,
-        endPos,
-        timePos,
+
+      val generator = new WindowFunctionCodeGenerator(tableConfig)
+      val allWindowFunction = generator.generateAggregateAllTimeWindowFunction(
+        "IncrementalAggregateAllTimeWindowFunction",
+        properties,
         finalRowArity)
-        .asInstanceOf[AllWindowFunction[Row, CRow, DataStreamWindow]]
+      new IncrementalAggregateAllWindowFunction(allWindowFunction)
+
     } else {
-      new IncrementalAggregateAllWindowFunction(
+      val generator = new WindowFunctionCodeGenerator(tableConfig)
+      val allWindowFunction = generator.generateAggregateAllWindowFunction(
+        "IncrementalAggregateAllWindowFunction",
         finalRowArity)
+      new IncrementalAggregateAllWindowFunction(allWindowFunction)
     }
   }
 
@@ -1333,30 +1341,44 @@ object AggregateUtil {
   private[flink] def createAggregationGroupWindowFunction(
       window: LogicalWindow,
       numGroupingKeys: Int,
-      numAggregates: Int,
+      namedAggregates: Seq[CalcitePair[AggregateCall, String]],
       finalRowArity: Int,
-      properties: Seq[NamedWindowProperty]):
-    WindowFunction[Row, CRow, Row, DataStreamWindow] = {
+      properties: Seq[NamedWindowProperty],
+      isTableAgg: Boolean,
+      tableConfig: TableConfig):
+    WindowFunction[JList[Row], CRow, Row, DataStreamWindow] = {
+
+    val aggOutputArity = if (isTableAgg) {
+      val tableAgg = namedAggregates(0).left.getAggregation.asInstanceOf[TableAggSqlFunction]
+      tableAgg.returnType.getArity
+    } else {
+      namedAggregates.size
+    }
 
     if (isTimeWindow(window)) {
-      val (startPos, endPos, timePos) = computeWindowPropertyPos(properties)
-      new IncrementalAggregateTimeWindowFunction(
+
+      val generator = new WindowFunctionCodeGenerator(tableConfig)
+      val windowFunction = generator.generateAggregateTimeWindowFunction(
+        "IncrementalAggregateTimeWindowFunction",
         numGroupingKeys,
-        numAggregates,
-        startPos,
-        endPos,
-        timePos,
+        aggOutputArity,
+        properties,
         finalRowArity)
-        .asInstanceOf[WindowFunction[Row, CRow, Row, DataStreamWindow]]
+      new IncrementalAggregateWindowFunction(windowFunction)
+
     } else {
-      new IncrementalAggregateWindowFunction(
+
+      val generator = new WindowFunctionCodeGenerator(tableConfig)
+      val windowFunction = generator.generateAggregateWindowFunction(
+        "IncrementalAggregateWindowFunction",
         numGroupingKeys,
-        numAggregates,
+        aggOutputArity,
         finalRowArity)
+      new IncrementalAggregateWindowFunction(windowFunction)
     }
   }
 
-  private[flink] def createDataStreamAggregateFunction(
+  private[flink] def createDataStreamWindowAggregateFunction(
       config: TableConfig,
       nullableInput: Boolean,
       input: TypeInformation[_ <: Any],
@@ -1367,8 +1389,9 @@ object AggregateUtil {
       outputType: RelDataType,
       groupingKeys: Array[Int],
       needMerge: Boolean,
+      isTableAgg: Boolean,
       tableConfig: TableConfig)
-    : (DataStreamAggFunction[CRow, Row, Row], RowTypeInfo, RowTypeInfo) = {
+  : (DataStreamAggFunction[CRow, Row, JList[Row]], RowTypeInfo, TypeInformation[JList[Row]]) = {
 
     val needRetract = false
     val (aggFields, aggregates, isDistinctAggs, accTypes, _) =
@@ -1377,40 +1400,82 @@ object AggregateUtil {
         inputType,
         needRetract,
         tableConfig)
-
     val aggMapping = aggregates.indices.toArray
-    val outputArity = aggregates.length
 
-    val generator = new AggregationCodeGenerator(
-      config,
-      nullableInput,
-      input,
-      constants,
-      "GroupingWindowAggregateHelper",
-      inputFieldTypeInfo,
-      aggregates,
-      aggFields,
-      aggMapping,
-      isDistinctAggs,
-      isStateBackedDataViews = false,
-      partialResults = false,
-      groupingKeys,
-      None,
-      outputArity,
-      needRetract,
-      needMerge,
-      needReset = false,
-      None
-    )
-    val genFunction = generator.generateAggregations
+    if (isTableAgg) {
+      val tableAgg = namedAggregates(0).left.getAggregation.asInstanceOf[TableAggSqlFunction]
+      val tableAggReturnType = tableAgg.returnType
+      val relDataType = new FlinkTypeFactory(tableAgg.typeFactory.getTypeSystem)
+        .createTypeFromTypeInfo(tableAggReturnType, true)
+      val outputSchema = new RowSchema(relDataType)
 
-    val aggResultTypes = namedAggregates.map(a => FlinkTypeFactory.toTypeInfo(a.left.getType))
+      val outputArity = outputSchema.arity
+      val generator = new TableAggregationCodeGenerator(
+        config,
+        nullableInput,
+        input,
+        constants,
+        "GroupingWindowTableAggregateHelper",
+        inputFieldTypeInfo,
+        tableAggReturnType,
+        outputSchema,
+        aggregates,
+        aggFields,
+        aggMapping,
+        isDistinctAggs,
+        isStateBackedDataViews = false,
+        partialResults = false,
+        groupingKeys,
+        None,
+        outputArity,
+        needRetract,
+        needEmitWithRetract = false,
+        needMerge,
+        needReset = false,
+        None
+      )
+      val genFunction = generator.generateTableAggregations
 
-    val accumulatorRowType = new RowTypeInfo(accTypes: _*)
-    val aggResultRowType = new RowTypeInfo(aggResultTypes: _*)
-    val aggFunction = new AggregateAggFunction(genFunction)
+      val aggResultTypes = namedAggregates.map(a => FlinkTypeFactory.toTypeInfo(a.left.getType))
+      val accumulatorRowType = new RowTypeInfo(accTypes: _*)
+      val aggResultRowType = new ListTypeInfo(new RowTypeInfo(aggResultTypes: _*))
+      val aggFunction = new TableAggregateAggFunction(genFunction)
 
-    (aggFunction, accumulatorRowType, aggResultRowType)
+      (aggFunction, accumulatorRowType, aggResultRowType.asInstanceOf[TypeInformation[JList[Row]]])
+
+    } else {
+
+      val outputArity = aggregates.length
+      val generator = new AggregationCodeGenerator(
+        config,
+        nullableInput,
+        input,
+        constants,
+        "GroupingWindowAggregateHelper",
+        inputFieldTypeInfo,
+        aggregates,
+        aggFields,
+        aggMapping,
+        isDistinctAggs,
+        isStateBackedDataViews = false,
+        partialResults = false,
+        groupingKeys,
+        None,
+        outputArity,
+        needRetract,
+        needMerge,
+        needReset = false,
+        None
+      )
+      val genFunction = generator.generateAggregations
+
+      val aggResultTypes = namedAggregates.map(a => FlinkTypeFactory.toTypeInfo(a.left.getType))
+      val accumulatorRowType = new RowTypeInfo(accTypes: _*)
+      val aggResultRowType = new ListTypeInfo(new RowTypeInfo(aggResultTypes: _*))
+      val aggFunction = new AggregateAggFunction[GeneratedAggregations](genFunction)
+
+      (aggFunction, accumulatorRowType, aggResultRowType.asInstanceOf[TypeInformation[JList[Row]]])
+    }
   }
 
   /**

@@ -69,14 +69,14 @@ class DataSetTableAggregate(
         ""
       }
     }flatAggregate: (" +
-      s"${aggregationToString(inputType, grouping, getRowType, namedAggregates, Nil)}))"
+      s"${tableAggregateFunctionToString(true, inputType, namedAggregates)}))"
   }
 
   override def explainTerms(pw: RelWriter): RelWriter = {
     super.explainTerms(pw)
       .itemIf("groupBy", groupingToString(inputType, grouping), !grouping.isEmpty)
       .item("flatAggregate",
-        aggregationToString(inputType, grouping, getRowType, namedAggregates, Nil))
+        tableAggregateFunctionToString(true, inputType, namedAggregates))
   }
 
   override def computeSelfCost(planner: RelOptPlanner, metadata: RelMetadataQuery): RelOptCost = {
@@ -118,7 +118,7 @@ class DataSetTableAggregate(
         grouping,
         tableEnv.getConfig)
 
-    val aggString = aggregationToString(inputType, grouping, getRowType, namedAggregates, Nil)
+    val aggString = tableAggregateFunctionToString(true, inputType, namedAggregates)
 
     if (grouping.length > 0) {
       // grouped aggregation

@@ -124,7 +124,7 @@ class DataStreamGroupAggregate(
       s"select: ($aggString)"
     val nonKeyedAggOpName = s"select: ($aggString)"
 
-    val processFunction = AggregateUtil.createGroupAggregateFunction(
+    val processFunction = AggregateUtil.createDataStreamGroupAggregateFunction(
       tableEnv.getConfig,
       false,
       inputSchema.typeInfo,

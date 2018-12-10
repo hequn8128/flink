@@ -22,7 +22,7 @@ import java.lang.Iterable
 
 import org.apache.flink.api.common.functions.RichGroupReduceFunction
 import org.apache.flink.configuration.Configuration
-import org.apache.flink.table.codegen.{Compiler, GeneratedTableAggregationsFunction}
+import org.apache.flink.table.codegen.{Compiler, GeneratedAggregationsFunction}
 import org.apache.flink.table.util.Logging
 import org.apache.flink.types.Row
 import org.apache.flink.util.Collector
@@ -34,7 +34,7 @@ import org.apache.flink.util.Collector
   * @param genAggregations Code-generated [[GeneratedTableAggregations]]
   */
 class DataSetFinalTableAggFunction(
-    private val genAggregations: GeneratedTableAggregationsFunction)
+    private val genAggregations: GeneratedAggregationsFunction)
   extends RichGroupReduceFunction[Row, Row]
     with Compiler[GeneratedTableAggregations] with Logging {
 

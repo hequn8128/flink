@@ -18,31 +18,41 @@
 package org.apache.flink.table.runtime.aggregate
 
 import java.lang.Iterable
+import java.util.{LinkedList => JList}
 
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.streaming.api.functions.windowing.RichWindowFunction
 import org.apache.flink.streaming.api.windowing.windows.Window
+import org.apache.flink.table.codegen.{Compiler, GeneratedWindowFunction}
 import org.apache.flink.table.runtime.types.CRow
+import org.apache.flink.table.util.Logging
 import org.apache.flink.types.Row
 import org.apache.flink.util.Collector
 
 /**
   * Computes the final aggregate value from incrementally computed aggregates.
   *
-  * @param numGroupingKey The number of grouping keys.
-  * @param numAggregates The number of aggregates.
-  * @param finalRowArity The arity of the final output row.
+  * @param generatedWindowFunction The Code-generated [[GeneratedWindowFunction]].
   */
 class IncrementalAggregateWindowFunction[W <: Window](
-    private val numGroupingKey: Int,
-    private val numAggregates: Int,
-    private val finalRowArity: Int)
-  extends RichWindowFunction[Row, CRow, Row, W] {
+    generatedWindowFunction: GeneratedWindowFunction)
+  extends RichWindowFunction[JList[Row], CRow, Row, W]
+  with Compiler[RichWindowFunction[JList[Row], CRow, Row, W]]
+  with Logging {
 
-  private var output: CRow = _
+  protected var function: RichWindowFunction[JList[Row], CRow, Row, W] = _
 
   override def open(parameters: Configuration): Unit = {
-    output = new CRow(new Row(finalRowArity), true)
+    LOG.debug(s"Compiling WindowFunctionHelper: $generatedWindowFunction.name \n\n " +
+      s"Code:\n$generatedWindowFunction.code")
+    val clazz = compile(
+      Thread.currentThread().getContextClassLoader,
+      generatedWindowFunction.name,
+      generatedWindowFunction.code)
+    LOG.debug("Instantiating WindowFunctionHelper.")
+    function = clazz.newInstance()
+
+    function.open(parameters)
   }
 
   /**
@@ -52,26 +62,8 @@ class IncrementalAggregateWindowFunction[W <: Window](
   override def apply(
       key: Row,
       window: W,
-      records: Iterable[Row],
+      records: Iterable[JList[Row]],
       out: Collector[CRow]): Unit = {
-
-    val iterator = records.iterator
-
-    if (iterator.hasNext) {
-      val record = iterator.next()
-
-      var i = 0
-      while (i < numGroupingKey) {
-        output.row.setField(i, key.getField(i))
-        i += 1
-      }
-      i = 0
-      while (i < numAggregates) {
-        output.row.setField(numGroupingKey + i, record.getField(i))
-        i += 1
-      }
-
-      out.collect(output)
-    }
+    function.apply(key, window, records, out)
   }
 }

@@ -24,7 +24,7 @@ import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.streaming.api.functions.ProcessFunction
 import org.apache.flink.table.api.{StreamQueryConfig, Types}
-import org.apache.flink.table.codegen.{Compiler, GeneratedTableAggregationsFunction}
+import org.apache.flink.table.codegen.{Compiler, GeneratedAggregationsFunction}
 import org.apache.flink.table.runtime.CRowWrappingRetractableCollector
 import org.apache.flink.table.runtime.types.CRow
 import org.apache.flink.table.util.Logging
@@ -38,7 +38,7 @@ import org.apache.flink.util.Collector
   * @param aggregationStateType The row type info of table aggregation
   */
 class TableAggProcessFunction(
-    private val genAggregations: GeneratedTableAggregationsFunction,
+    private val genAggregations: GeneratedAggregationsFunction,
     private val aggregationStateType: RowTypeInfo,
     private val generateRetraction: Boolean,
     private val queryConfig: StreamQueryConfig)

@@ -50,6 +50,7 @@ class DataStreamGroupWindowAggregate(
     cluster: RelOptCluster,
     traitSet: RelTraitSet,
     inputNode: RelNode,
+    isTableAggregate: Boolean,
     namedAggregates: Seq[CalcitePair[AggregateCall, String]],
     schema: RowSchema,
     inputSchema: RowSchema,
@@ -76,6 +77,7 @@ class DataStreamGroupWindowAggregate(
       cluster,
       traitSet,
       inputs.get(0),
+      isTableAggregate,
       namedAggregates,
       schema,
       inputSchema,
@@ -90,6 +92,14 @@ class DataStreamGroupWindowAggregate(
         ""
       }
     }window: ($window), " +
+      s"${
+        if (isTableAggregate) {
+          s"flatAggregate: (${tableAggregateFunctionToString(
+            isTableAggregate, inputSchema.relDataType, namedAggregates)}), "
+        } else {
+          ""
+        }
+      }" +
       s"select: (${
         aggregationToString(
           inputSchema.relDataType,
@@ -104,8 +114,10 @@ class DataStreamGroupWindowAggregate(
     super.explainTerms(pw)
       .itemIf("groupBy", groupingToString(inputSchema.relDataType, grouping), !grouping.isEmpty)
       .item("window", window)
+      .itemIf("flatAggregate", tableAggregateFunctionToString(
+        isTableAggregate, inputSchema.relDataType, namedAggregates), isTableAggregate)
       .item(
-        "select", aggregationToString(
+        s"select", aggregationToString(
           inputSchema.relDataType,
           grouping,
           schema.relDataType,
@@ -169,6 +181,14 @@ class DataStreamGroupWindowAggregate(
 
     val keyedAggOpName = s"groupBy: (${groupingToString(inputSchema.relDataType, grouping)}), " +
       s"window: ($window), " +
+      s"${
+        if (isTableAggregate) {
+          s"flatAggregate: (${tableAggregateFunctionToString(
+            isTableAggregate, inputSchema.relDataType, namedAggregates)}), "
+        } else {
+          ""
+        }
+      }" +
       s"select: ($aggString)"
     val nonKeyedAggOpName = s"window: ($window), select: ($aggString)"
 
@@ -176,35 +196,39 @@ class DataStreamGroupWindowAggregate(
       case SessionGroupWindow(_, _, _) => true
       case _ => false
     }
+
+    val (aggFunction, accumulatorRowType, aggResultRowType) =
+      AggregateUtil.createDataStreamWindowAggregateFunction(
+        tableEnv.getConfig,
+        false,
+        inputSchema.typeInfo,
+        None,
+        namedAggregates,
+        inputSchema.relDataType,
+        inputSchema.fieldTypeInfos,
+        schema.relDataType,
+        grouping,
+        needMerge,
+        isTableAggregate,
+        tableEnv.getConfig)
+
     // grouped / keyed aggregation
     if (grouping.length > 0) {
-      val windowFunction = AggregateUtil.createAggregationGroupWindowFunction(
-        window,
-        grouping.length,
-        namedAggregates.size,
-        schema.arity,
-        namedProperties)
 
       val keySelector = new CRowKeySelector(grouping, inputSchema.projectedTypeInfo(grouping))
-
       val keyedStream = timestampedInput.keyBy(keySelector)
       val windowedStream =
         createKeyedWindowedStream(queryConfig, window, keyedStream)
           .asInstanceOf[WindowedStream[CRow, Row, DataStreamWindow]]
 
-      val (aggFunction, accumulatorRowType, aggResultRowType) =
-        AggregateUtil.createDataStreamAggregateFunction(
-          tableEnv.getConfig,
-          false,
-          inputSchema.typeInfo,
-          None,
-          namedAggregates,
-          inputSchema.relDataType,
-          inputSchema.fieldTypeInfos,
-          schema.relDataType,
-          grouping,
-          needMerge,
-          tableEnv.getConfig)
+      val windowFunction = AggregateUtil.createAggregationGroupWindowFunction(
+        window,
+        grouping.length,
+        namedAggregates,
+        schema.arity,
+        namedProperties,
+        isTableAggregate,
+        tableEnv.getConfig)
 
       windowedStream
         .aggregate(aggFunction, windowFunction, accumulatorRowType, aggResultRowType, outRowType)
@@ -212,28 +236,16 @@ class DataStreamGroupWindowAggregate(
     }
     // global / non-keyed aggregation
     else {
-      val windowFunction = AggregateUtil.createAggregationAllWindowFunction(
-        window,
-        schema.arity,
-        namedProperties)
 
       val windowedStream =
         createNonKeyedWindowedStream(queryConfig, window, timestampedInput)
           .asInstanceOf[AllWindowedStream[CRow, DataStreamWindow]]
 
-      val (aggFunction, accumulatorRowType, aggResultRowType) =
-        AggregateUtil.createDataStreamAggregateFunction(
-          tableEnv.getConfig,
-          false,
-          inputSchema.typeInfo,
-          None,
-          namedAggregates,
-          inputSchema.relDataType,
-          inputSchema.fieldTypeInfos,
-          schema.relDataType,
-          Array[Int](),
-          needMerge,
-          tableEnv.getConfig)
+      val windowFunction = AggregateUtil.createAggregationAllWindowFunction(
+        window,
+        schema.arity,
+        namedProperties,
+        tableEnv.getConfig)
 
       windowedStream
         .aggregate(aggFunction, windowFunction, accumulatorRowType, aggResultRowType, outRowType)

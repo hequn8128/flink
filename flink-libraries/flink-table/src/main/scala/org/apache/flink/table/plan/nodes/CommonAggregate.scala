@@ -35,6 +35,23 @@ trait CommonAggregate {
     grouping.map( inFields(_) ).mkString(", ")
   }
 
+  private[flink] def tableAggregateFunctionToString(
+      isTableAggregate: Boolean,
+      inputType: RelDataType,
+      namedAggregates: Seq[CalcitePair[AggregateCall, String]]): String = {
+
+    if (isTableAggregate) {
+      val inFields = inputType.getFieldNames.asScala
+      val aggs = namedAggregates.map(_.getKey)
+      val fieldNames = aggs(0).getAggregation.asInstanceOf[TableAggSqlFunction].getOutputNames
+      val parameters = aggs.map( a =>
+        s"${a.getAggregation}(${a.getArgList.asScala.map(inFields(_)).mkString(", ")})")
+      parameters(0) + " AS (" + fieldNames.mkString(", ") + ")"
+    } else {
+      ""
+    }
+  }
+
   private[flink] def aggregationToString(
       inputType: RelDataType,
       grouping: Array[Int],
@@ -49,28 +66,28 @@ trait CommonAggregate {
     val groupStrings = grouping.map( inFields(_) )
 
     val aggs = namedAggregates.map(_.getKey)
-    val aggStrings = aggs.map( a => s"${a.getAggregation}(${
-      val prefix = if (a.isDistinct) "DISTINCT " else ""
-      prefix + (if (a.getArgList.size() > 0) {
-        a.getArgList.asScala.map(inFields(_)).mkString(", ")
+    val aggStrings: Seq[String] =
+      if (aggs.nonEmpty && aggs(0).getAggregation.isInstanceOf[TableAggSqlFunction]) {
+        aggs(0).getAggregation.asInstanceOf[TableAggSqlFunction].getOutputNames
       } else {
-        "*"
-      })
-    })")
+        aggs.map( a => s"${a.getAggregation}(${
+          val prefix = if (a.isDistinct) "DISTINCT " else ""
+          prefix + (if (a.getArgList.size() > 0) {
+            a.getArgList.asScala.map(inFields(_)).mkString(", ")
+          } else {
+            "*"
+          })
+        })")
+      }
 
     val propStrings = namedProperties.map(_.property.toString)
 
-    if (aggs.nonEmpty && aggs(0).getAggregation.isInstanceOf[TableAggSqlFunction]) {
-      // table aggregate
-      aggStrings(0) + " AS (" + outFields.mkString(", ") + ")"
-    } else {
-      (groupStrings ++ aggStrings ++ propStrings).zip(outFields).map {
-        case (f, o) => if (f == o) {
-          f
-        } else {
-          s"$f AS $o"
-        }
-      }.mkString(", ")
-    }
+    (groupStrings ++ aggStrings ++ propStrings).zip(outFields).map {
+      case (f, o) => if (f == o) {
+        f
+      } else {
+        s"$f AS $o"
+      }
+    }.mkString(", ")
   }
 }

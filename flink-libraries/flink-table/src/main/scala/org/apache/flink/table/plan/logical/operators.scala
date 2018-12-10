@@ -604,6 +604,34 @@ case class LogicalRelNode(
   override def validate(tableEnv: TableEnvironment): LogicalNode = this
 }
 
+class WindowTableAggregate(
+    groupingExpressions: Seq[Expression],
+    window: LogicalWindow,
+    propertyExpressions: Seq[NamedExpression],
+    aggregateExpressions: Seq[NamedExpression],
+    child: LogicalNode)
+  extends WindowAggregate(
+    groupingExpressions,
+    window,
+    propertyExpressions,
+    aggregateExpressions,
+    child
+  ) {
+
+  private val tableAggFunctionCall: TableAggFunctionCall =
+    aggregateExpressions(0).asInstanceOf[Alias].child.asInstanceOf[TableAggFunctionCall]
+  private val (generatedNames, _, fieldTypes) = getFieldInfo(tableAggFunctionCall.resultTypeInfo)
+
+  override def output: Seq[Attribute] = {
+    (groupingExpressions ++ propertyExpressions).map {
+      case ne: NamedExpression => ne.toAttribute
+      case e => Alias(e, e.toString).toAttribute
+    } ++ generatedNames.zip(fieldTypes).map {
+      case (n, t) => ResolvedFieldReference(n, t)
+    }
+  }
+}
+
 case class WindowAggregate(
     groupingExpressions: Seq[Expression],
     window: LogicalWindow,

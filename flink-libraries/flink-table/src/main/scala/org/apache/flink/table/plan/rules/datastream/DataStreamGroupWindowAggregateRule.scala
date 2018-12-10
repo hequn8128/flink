@@ -59,6 +59,7 @@ class DataStreamGroupWindowAggregateRule
       rel.getCluster,
       traitSet,
       convInput,
+      agg.isTableAggregate,
       agg.getNamedAggCalls,
       new RowSchema(rel.getRowType),
       new RowSchema(agg.getInput.getRowType),

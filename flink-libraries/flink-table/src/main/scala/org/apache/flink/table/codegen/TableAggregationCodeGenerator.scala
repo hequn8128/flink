@@ -199,10 +199,9 @@ class TableAggregationCodeGenerator(
     * Generates a [[org.apache.flink.table.runtime.aggregate.GeneratedAggregations]] that can be
     * passed to a Java compiler.
     *
-    * @param isBatch Whether generate class for batch.
     * @return A GeneratedAggregationsFunction
     */
-  def generateTableAggregations: GeneratedTableAggregationsFunction = {
+  def generateTableAggregations: GeneratedAggregationsFunction = {
 
     init()
     val aggFuncCode = Seq(
@@ -277,7 +276,7 @@ class TableAggregationCodeGenerator(
          |}
          """.stripMargin
 
-    GeneratedTableAggregationsFunction(funcName, funcCode)
+    GeneratedAggregationsFunction(funcName, funcCode)
   }
 }
 
