@@ -19,7 +19,7 @@
 package org.apache.flink.table.api.batch.table.validation
 
 import org.apache.flink.api.scala._
-import org.apache.flink.table.api.ValidationException
+import org.apache.flink.table.api.{TableException, ValidationException}
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.utils.{EmptyTableAggFunc, TableTestBase}
 import org.junit._
@@ -65,7 +65,7 @@ class TableAggregateValidationTest extends TableTestBase {
       .select('_1, '_2, '_3)
   }
 
-  @Test(expected = classOf[ValidationException])
+  @Test(expected = classOf[TableException])
   def testInvalidSelectStar(): Unit = {
     val util = batchTestUtil()
     val table = util.addTable[(Long, Int, String)]('a, 'b, 'c)
