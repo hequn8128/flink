@@ -122,17 +122,7 @@ class Table(
     }
 
     if (aggNames.nonEmpty) {
-      val projectsOnAgg = replaceAggregationsAndProperties(
-        expandedFields, tableEnv, aggNames, propNames)
-      val projectFields = extractFieldReferences(expandedFields)
-
-      new Table(tableEnv,
-        Project(projectsOnAgg,
-          Aggregate(Nil, aggNames.map(a => Alias(a._1, a._2)).toSeq,
-            Project(projectFields, logicalPlan).validate(tableEnv)
-          ).validate(tableEnv)
-        ).validate(tableEnv)
-      )
+      groupBy().select(fields: _*)
     } else {
       new Table(tableEnv,
         Project(expandedFields.map(UnresolvedAlias), logicalPlan).validate(tableEnv))
