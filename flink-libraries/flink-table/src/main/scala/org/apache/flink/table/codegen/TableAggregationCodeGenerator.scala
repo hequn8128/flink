@@ -21,6 +21,7 @@ import org.apache.calcite.rex.RexLiteral
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.api.dataview._
+import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.Indenter.toISC
 import org.apache.flink.table.functions.UserDefinedAggregateFunction
 import org.apache.flink.table.runtime.aggregate.GeneratedTableAggregations
@@ -29,6 +30,7 @@ import org.apache.flink.table.utils.RetractableCollector
 import org.apache.flink.types.Row
 import org.apache.flink.util.Collector
 import org.apache.flink.table.codegen.TableAggregationCodeGenerator._
+import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils.getUserDefinedMethod
 import org.apache.flink.table.plan.schema.RowSchema
 
 /**
@@ -43,7 +45,6 @@ import org.apache.flink.table.plan.schema.RowSchema
   *                               Does not need to be unique but has to be a valid Java class
   *                               identifier.
   * @param physicalInputTypes     Physical input row types
-  * @param tableAggOutputTypes    Output types of TableAggregateFunction
   * @param outputSchema           The type of the rows emitted by TableAggregate operator
   * @param aggregates             All aggregate functions
   * @param aggFields              Indexes of the input fields for all aggregate functions
@@ -73,7 +74,6 @@ class TableAggregationCodeGenerator(
     constants: Option[Seq[RexLiteral]],
     name: String,
     physicalInputTypes: Seq[TypeInformation[_]],
-    tableAggOutputTypes: TypeInformation[_],
     outputSchema: RowSchema,
     aggregates: Array[UserDefinedAggregateFunction[_ <: Any, _ <: Any]],
     aggFields: Array[Array[Int]],
@@ -89,7 +89,7 @@ class TableAggregationCodeGenerator(
     needMerge: Boolean,
     needReset: Boolean,
     accConfig: Option[Array[Seq[DataViewSpec[_]]]])
-  extends AggregationBaseCodeGenerator(
+  extends BaseAggregationCodeGenerator(
     config,
     nullableInput,
     input,
@@ -110,6 +110,7 @@ class TableAggregationCodeGenerator(
     needReset,
     accConfig) {
 
+  val tableAggOutputTypes = FlinkTypeFactory.toTypeInfo(outputSchema.relDataType)
 
   def genEmit: String = {
 
@@ -127,19 +128,19 @@ class TableAggregationCodeGenerator(
              |      ${genAccDataViewFieldSetter(s"acc$i", i)}
              |      ${aggs(i)}.$emitMethodName(acc$i
              |        ${if (!parametersCode(i).isEmpty) "," else ""}
-             |        ${CONVERT_COLLECTOR_VARIABLE_TERM});
-               """.stripMargin
+             |        $CONVERT_COLLECTOR_VARIABLE_TERM);
+             """.stripMargin
         j"""
            |    ${accTypes(i)} acc$i = (${accTypes(i)}) accs.getField($i);
            |    $CONVERT_COLLECTOR_VARIABLE_TERM.$COLLECTOR_VARIABLE_TERM = collector;
            |    $emitAcc
-               """.stripMargin
+           """.stripMargin
       }
     }.mkString("\n")
 
     j"""$sig {
        |$emit
-       |  }""".stripMargin
+       |}""".stripMargin
   }
 
   def genRecordToRow: String = {
@@ -154,46 +155,38 @@ class TableAggregationCodeGenerator(
       None)
 
     functionGenerator.outRecordTerm = s"$CONVERTER_ROW_RESULT_TERM"
-    val inputAccessExprs = functionGenerator.generateFieldAccessExprs
+    val resultExprs = functionGenerator.generateConverterResultExpression(
+      outputSchema.typeInfo, outputSchema.fieldNames)
 
-    // gen result expr
-    val conversion = functionGenerator.generateResultExpression(
-      inputAccessExprs,
-      outputSchema.typeInfo,
-      outputSchema.fieldNames)
-    conversion.code
+    functionGenerator.reuseInputUnboxingCode() + resultExprs.code
+  }
+
+  /**
+    * Call super init and check emit methods.
+    */
+  override def init(): Unit = {
+    super.init()
+    // check and validate the emit methods
+    aggregates.zipWithIndex.map {
+      case (a, i) =>
+        val methodName = if (needEmitWithRetract) "emitValueWithRetract" else "emitValue"
+        getUserDefinedMethod(
+          a, methodName, Array(accTypeClasses(i), classOf[RetractableCollector[_]]))
+          .getOrElse(
+            throw new CodeGenException(
+              s"No matching $methodName method found for " +
+                s"tableAggregate ${a.getClass.getCanonicalName}'.")
+          )
+    }
   }
 
   /**
     * Generates a [[org.apache.flink.table.runtime.aggregate.GeneratedAggregations]] that can be
     * passed to a Java compiler.
     *
-    * @param name                   Class name of the function.
-    *                               Does not need to be unique but has to be a valid Java class
-    *                               identifier.
-    * @param physicalInputTypes     Physical input row types
-    * @param aggregates             All aggregate functions
-    * @param aggFields              Indexes of the input fields for all aggregate functions
-    * @param aggMapping             The mapping of aggregates to output fields
-    * @param isDistinctAggs         The flag array indicating whether it is distinct aggregate.
-    * @param isStateBackedDataViews a flag to indicate if distinct filter uses state backend.
-    * @param partialResults         A flag defining whether final or partial results (accumulators)
-    *                               are set
-    *                               to the output row.
-    * @param fwdMapping             The mapping of input fields to output fields
-    * @param mergeMapping           An optional mapping to specify the accumulators to merge. If
-    *                               not set, we
-    *                               assume that both rows have the accumulators at the same
-    *                               position.
-    * @param outputArity            The number of fields in the output row.
-    * @param needRetract            a flag to indicate if the aggregate needs the retract method
-    * @param needMerge              a flag to indicate if the aggregate needs the merge method
-    * @param needReset              a flag to indicate if the aggregate needs the resetAccumulator
-    *                               method
-    * @param accConfig              Data view specification for accumulators
     * @return A GeneratedAggregationsFunction
     */
-  def generateTableAggregations: GeneratedTableAggregationsFunction = {
+  def generateTableAggregations: GeneratedAggregationsFunction = {
 
     init()
     val aggFuncCode = Seq(
@@ -233,15 +226,15 @@ class TableAggregationCodeGenerator(
          |    ${reuseCloseCode()}
          |  }
          |
-         |  public class $CONVERT_COLLECTOR_CLASS_TERM extends $RETRACTABLE_COLLECTOR {
+         |  private class $CONVERT_COLLECTOR_CLASS_TERM implements $RETRACTABLE_COLLECTOR {
          |
          |      public $COLLECTOR<$CROW> $COLLECTOR_VARIABLE_TERM;
-         |      public $CROW $CONVERTER_CROW_RESULT_TERM = new $CROW();
-         |      public final $ROW $CONVERTER_ROW_RESULT_TERM = new $ROW($outputArity);
+         |      private $CROW $CONVERTER_CROW_RESULT_TERM = new $CROW();
+         |      private final $ROW $CONVERTER_ROW_RESULT_TERM = new $ROW($outputArity);
          |
          |      public void convertToRow(Object record) throws Exception {
          |         $aggOutputTypeName in1 = ($aggOutputTypeName) record;
-         |         ${genRecordToRow}
+         |         $genRecordToRow
          |      }
          |
          |      @Override
@@ -268,7 +261,7 @@ class TableAggregationCodeGenerator(
          |}
          """.stripMargin
 
-    GeneratedTableAggregationsFunction(funcName, funcCode)
+    GeneratedAggregationsFunction(funcName, funcCode)
   }
 }
 

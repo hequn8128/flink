@@ -23,9 +23,9 @@ import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.scala._
 import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.{StreamQueryConfig, TableEnvironment, Types}
+import org.apache.flink.table.api.{StreamQueryConfig, TableEnvironment, Types, ValidationException}
 import org.apache.flink.table.runtime.utils._
-import org.apache.flink.table.utils.{Top3WithRetractInput, TopN}
+import org.apache.flink.table.utils.{EmptyTableAggFunc, Top3WithRetractInput, TopN}
 import org.apache.flink.types.Row
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -33,7 +33,7 @@ import org.junit.Test
 import scala.collection.mutable
 
 /**
-  * Tests of groupby (without window) aggregations
+  * Tests of groupby (without window) table aggregations
   */
 class TableAggregateITCase extends StreamingWithStateTestBase {
   private val queryConfig = new StreamQueryConfig()
@@ -55,7 +55,6 @@ class TableAggregateITCase extends StreamingWithStateTestBase {
           Array[TypeInformation[_]](Types.INT, Types.LONG, Types.INT)))
 
     val top3 = new TopN(3)
-    tEnv.registerFunction("top3", top3)
     val source = StreamTestData.get3TupleDataStream(env).toTable(tEnv, 'a, 'b, 'c)
     source
       .flatAggregate(top3("1".cast(Types.INT), 'a.cast(Types.LONG)))
@@ -88,7 +87,6 @@ class TableAggregateITCase extends StreamingWithStateTestBase {
           Array[TypeInformation[_]](Types.INT, Types.LONG, Types.INT)))
 
     val top3 = new TopN(3)
-    tEnv.registerFunction("top3", top3)
     val source = StreamTestData.get3TupleDataStream(env).toTable(tEnv, 'a, 'b, 'c)
     source.groupBy('b)
       .flatAggregate(top3('b.cast(Types.INT), 'a.cast(Types.LONG)))
@@ -128,7 +126,6 @@ class TableAggregateITCase extends StreamingWithStateTestBase {
     StreamITCase.clear
 
     val top3 = new TopN(3)
-    tEnv.registerFunction("top3", top3)
     val source = StreamTestData.get3TupleDataStream(env).toTable(tEnv, 'a, 'b, 'c)
     val t = source
       .flatAggregate(top3("1".cast(Types.INT), 'a.cast(Types.LONG)))
@@ -154,7 +151,6 @@ class TableAggregateITCase extends StreamingWithStateTestBase {
     StreamITCase.clear
 
     val top3 = new TopN(3)
-    tEnv.registerFunction("top3", top3)
     val source = StreamTestData.get3TupleDataStream(env).toTable(tEnv, 'a, 'b, 'c)
     val t = source.groupBy('b)
       .flatAggregate(top3('b.cast(Types.INT), 'a.cast(Types.LONG)))
@@ -192,7 +188,6 @@ class TableAggregateITCase extends StreamingWithStateTestBase {
     StreamITCase.clear
 
     val top3 = new Top3WithRetractInput
-    tEnv.registerFunction("top3", top3)
     val source = StreamTestData.get3TupleDataStream(env).toTable(tEnv, 'a, 'b, 'c)
     val t = source
       .groupBy('b)
@@ -210,5 +205,23 @@ class TableAggregateITCase extends StreamingWithStateTestBase {
       "1,5,1",
       "1,4,2")
     assertEquals(expected.sorted, StreamITCase.retractedResults.sorted)
+  }
+
+  @Test(expected = classOf[ValidationException])
+  def testEmitMethod(): Unit = {
+    val env = StreamExecutionEnvironment.getExecutionEnvironment
+    env.setStateBackend(getStateBackend)
+    val tEnv = TableEnvironment.getTableEnvironment(env)
+    StreamITCase.clear
+
+    val tableAgg = new EmptyTableAggFunc
+    val source = StreamTestData.get3TupleDataStream(env).toTable(tEnv, 'a, 'b, 'c)
+    val t = source
+      .groupBy('a)
+      .flatAggregate(tableAgg('b, 'a))
+      .select('_1, '_2, '_3)
+
+    t.toRetractStream[Row](queryConfig)
+    env.execute()
   }
 }

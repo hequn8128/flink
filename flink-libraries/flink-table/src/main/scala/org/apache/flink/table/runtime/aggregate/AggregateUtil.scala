@@ -43,7 +43,7 @@ import org.apache.flink.table.expressions._
 import org.apache.flink.table.functions.aggfunctions._
 import org.apache.flink.table.functions.utils.{AggSqlFunction, TableAggSqlFunction}
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils._
-import org.apache.flink.table.functions.{AggregateFunction, TableAggregateFunction, UserDefinedAggregateFunction}
+import org.apache.flink.table.functions.UserDefinedAggregateFunction
 import org.apache.flink.table.plan.logical._
 import org.apache.flink.table.plan.schema.RowSchema
 import org.apache.flink.table.runtime.types.{CRow, CRowTypeInfo}
@@ -244,7 +244,6 @@ object AggregateUtil {
     * @param namedAggregates     List of calls to aggregate functions and their output field names
     * @param inputRowType        Input row type
     * @param inputFieldTypes     Types of the physical input fields
-    * @param tableAggOutputTypes Output types of TableAggregateFunction
     * @param outputSchema        The type of the rows emitted by flatAggregate operator
     * @param groupings           the position (in the input Row) of the grouping keys
     * @param queryConfig         The configuration of the query to generate.
@@ -260,7 +259,6 @@ object AggregateUtil {
       namedAggregates: Seq[CalcitePair[AggregateCall, String]],
       inputRowType: RelDataType,
       inputFieldTypes: Seq[TypeInformation[_]],
-      tableAggOutputTypes: TypeInformation[_],
       outputSchema: RowSchema,
       groupings: Array[Int],
       queryConfig: StreamQueryConfig,
@@ -289,7 +287,6 @@ object AggregateUtil {
       constants,
       "TableAggregationHelper",
       inputFieldTypes,
-      tableAggOutputTypes,
       outputSchema,
       aggregates,
       aggFields,

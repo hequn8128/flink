@@ -60,9 +60,9 @@ trait CommonAggregate {
 
     val propStrings = namedProperties.map(_.property.toString)
 
-    if (aggs.nonEmpty && aggs(0).getAggregation.isInstanceOf[TableAggSqlFunction]) {
+    if (aggs.nonEmpty && aggs.head.getAggregation.isInstanceOf[TableAggSqlFunction]) {
       // table aggregate
-      aggStrings(0) + " AS (" + outFields.mkString(", ") + ")"
+      aggStrings.head + " AS (" + outFields.mkString(", ") + ")"
     } else {
       (groupStrings ++ aggStrings ++ propStrings).zip(outFields).map {
         case (f, o) => if (f == o) {

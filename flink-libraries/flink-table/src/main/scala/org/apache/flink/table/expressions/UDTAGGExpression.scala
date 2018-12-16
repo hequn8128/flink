@@ -33,7 +33,7 @@ case class UDTAGGExpression[T: TypeInformation, ACC: TypeInformation](
     * @param params actual parameters of function
     * @return a [[TableAggFunctionCall]]
     */
-  def apply(params: Expression*): TableAggFunctionCall = {
+  def apply(params: Expression*): TableAggFunctionCallAliasable = {
     val resultTypeInfo: TypeInformation[_] = getResultTypeOfAggregateFunction(
       tableAggregateFunction,
       implicitly[TypeInformation[T]])
@@ -42,6 +42,16 @@ case class UDTAGGExpression[T: TypeInformation, ACC: TypeInformation](
       tableAggregateFunction,
       implicitly[TypeInformation[ACC]])
 
-    TableAggFunctionCall(tableAggregateFunction, resultTypeInfo, accTypeInfo, params)
+    new TableAggFunctionCallAliasable(tableAggregateFunction, resultTypeInfo, accTypeInfo, params)
+  }
+
+  /**
+    * Perform distinct to an [[TableAggregateFunction]].
+    *
+    * @param params actual parameters of function
+    * @return a [[TableAggFunctionCallAliasable]]
+    */
+  def distinct(params: Expression*): TableAggFunctionCallAliasable = {
+    this.apply(params: _*).distinct()
   }
 }

@@ -23,14 +23,14 @@ import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.convert.ConverterRule
 import org.apache.flink.table.plan.logical.rel.LogicalTableAggregate
 import org.apache.flink.table.plan.nodes.FlinkConventions
-import org.apache.flink.table.plan.nodes.datastream.DataStreamTableAggregate
+import org.apache.flink.table.plan.nodes.datastream.DataStreamGroupTableAggregate
 import org.apache.flink.table.plan.nodes.logical.FlinkLogicalTableAggregate
 import org.apache.flink.table.plan.schema.RowSchema
 
 import scala.collection.JavaConversions._
 
 /**
-  * Rule to convert a [[LogicalTableAggregate]] into a [[DataStreamTableAggregate]].
+  * Rule to convert a [[LogicalTableAggregate]] into a [[DataStreamGroupTableAggregate]].
   */
 class DataStreamTableAggregateRule
   extends ConverterRule(
@@ -44,7 +44,7 @@ class DataStreamTableAggregateRule
     val traitSet: RelTraitSet = rel.getTraitSet.replace(FlinkConventions.DATASTREAM)
     val convInput: RelNode = RelOptRule.convert(agg.getInput, FlinkConventions.DATASTREAM)
 
-    new DataStreamTableAggregate(
+    new DataStreamGroupTableAggregate(
       rel.getCluster,
       traitSet,
       convInput,

@@ -32,6 +32,8 @@ import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils._
 import org.apache.flink.table.validate.{ValidationFailure, ValidationResult, ValidationSuccess}
 
+import scala.collection.JavaConversions._
+
 abstract sealed class Aggregation extends Expression {
 
   override def toString = s"Aggregate"
@@ -419,7 +421,9 @@ case class TableAggFunctionCall(
     aggregateFunction: TableAggregateFunction[_, _],
     resultTypeInfo: TypeInformation[_],
     accTypeInfo: TypeInformation[_],
-    args: Seq[Expression])
+    args: Seq[Expression],
+    alias: Option[Seq[Expression]],
+    isDistinct: Boolean)
   extends Aggregation {
 
   override private[flink] def children: Seq[Expression] = args
@@ -458,16 +462,66 @@ case class TableAggFunctionCall(
 
   override private[flink] def getSqlAggFunction()(implicit relBuilder: RelBuilder) = {
     val typeFactory = relBuilder.getTypeFactory.asInstanceOf[FlinkTypeFactory]
+
+    // rename result names if there is an alias
+    val aliasResultType =
+      if (alias.isDefined) {
+        val flinkTypeFactory = new FlinkTypeFactory(relBuilder.getTypeFactory.getTypeSystem)
+        val relDataType = flinkTypeFactory.createTypeFromTypeInfo(resultType, true)
+        val fieldBuilder = relBuilder.getTypeFactory.builder()
+        alias.get
+          .map(_.asInstanceOf[UnresolvedFieldReference].name)
+          .zip(relDataType.getFieldList.map(_.getType))
+          .map(e => fieldBuilder.add(e._1, e._2))
+        FlinkTypeFactory.toTypeInfo(fieldBuilder.build())
+      } else {
+        resultType
+      }
+
     TableAggSqlFunction(
       aggregateFunction.functionIdentifier,
       aggregateFunction.toString,
       aggregateFunction,
-      resultType,
+      aliasResultType,
       accTypeInfo,
       typeFactory)
   }
 
   override private[flink] def toRexNode(implicit relBuilder: RelBuilder): RexNode = {
     relBuilder.call(this.getSqlAggFunction(), args.map(_.toRexNode): _*)
+  }
+}
+
+class TableAggFunctionCallAliasable(
+      aggregateFunction: TableAggregateFunction[_, _],
+      resultTypeInfo: TypeInformation[_],
+      accTypeInfo: TypeInformation[_],
+      args: Seq[Expression],
+      alias: Option[Seq[Expression]] = None,
+      isDistinct: Boolean = false)
+  extends TableAggFunctionCall(
+    aggregateFunction,
+    resultTypeInfo,
+    accTypeInfo,
+    args,
+    alias,
+    isDistinct) {
+
+  def as(fields: Expression*): TableAggFunctionCall = {
+    val newAlias = if (fields.isEmpty) {
+      None
+    } else {
+      Some(fields)
+    }
+    TableAggFunctionCall(aggregateFunction, resultTypeInfo, accTypeInfo, args, newAlias, isDistinct)
+  }
+
+  private[flink] def distinct(): TableAggFunctionCallAliasable = {
+    new TableAggFunctionCallAliasable(
+      aggregateFunction, resultTypeInfo, accTypeInfo, args, alias, true)
+  }
+
+  private[flink] def toTableAggFunctionCall(): TableAggFunctionCall = {
+    TableAggFunctionCall(aggregateFunction, resultTypeInfo, accTypeInfo, args, alias, isDistinct)
   }
 }

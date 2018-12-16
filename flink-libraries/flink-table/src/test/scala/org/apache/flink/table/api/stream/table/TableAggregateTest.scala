@@ -42,7 +42,7 @@ class TableAggregateTest extends TableTestBase {
       unaryNode(
         "DataStreamCalc",
         unaryNode(
-          "DataStreamTableAggregate",
+          "DataStreamGroupTableAggregate",
           unaryNode(
             "DataStreamCalc",
             streamTableNode(0),
@@ -70,62 +70,7 @@ class TableAggregateTest extends TableTestBase {
       unaryNode(
         "DataStreamCalc",
         unaryNode(
-          "DataStreamTableAggregate",
-          streamTableNode(0),
-          term("flatAggregate", "TopN(a, b) AS (_1, _2, _3)")
-        ),
-        term("select", "Func0$(_1) AS a", "_2 AS b", "_3 AS c")
-      )
-    util.verifyTable(resultTable, expected)
-  }
-
-  @Test
-  def testTableAggregateWithGroupByForString(): Unit = {
-    val util = streamTestUtil()
-    val table = util.addTable[(Int, Long, String)]('a, 'b, 'c)
-
-    val top3 = new TopN(3)
-    util.tableEnv.registerFunction("top3", top3)
-    val resultTable = table
-      .groupBy("b % 5")
-      .flatAggregate("Top3(a + 1, b)")
-      .select("_1 + 1 as a, _2 as b, _3 as c")
-
-    val expected =
-      unaryNode(
-        "DataStreamCalc",
-        unaryNode(
-          "DataStreamTableAggregate",
-          unaryNode(
-            "DataStreamCalc",
-            streamTableNode(0),
-            term("select", "a", "b", "MOD(b, 5) AS $f2", "+(a, 1) AS $f3")
-          ),
-          term("groupBy", "$f2"),
-          term("flatAggregate", "TopN($f3, b) AS (_1, _2, _3)")
-        ),
-        term("select", "+(_1, 1) AS a", "_2 AS b", "_3 AS c")
-      )
-    util.verifyTable(resultTable, expected)
-  }
-
-  @Test
-  def testTableAggregateWithoutGroupByForString(): Unit = {
-    val util = streamTestUtil()
-    val table = util.addTable[(Int, Long, String)]('a, 'b, 'c)
-
-    val top3 = new TopN(3)
-    util.tableEnv.registerFunction("top3", top3)
-    util.tableEnv.registerFunction("Func0", Func0)
-    val resultTable = table
-      .flatAggregate("top3(a, b)")
-      .select("Func0(_1) as a, _2 as b, _3 as c")
-
-    val expected =
-      unaryNode(
-        "DataStreamCalc",
-        unaryNode(
-          "DataStreamTableAggregate",
+          "DataStreamGroupTableAggregate",
           streamTableNode(0),
           term("flatAggregate", "TopN(a, b) AS (_1, _2, _3)")
         ),
@@ -146,13 +91,78 @@ class TableAggregateTest extends TableTestBase {
 
     val expected =
       unaryNode(
-        "DataStreamTableAggregate",
+        "DataStreamGroupTableAggregate",
         unaryNode(
           "DataStreamCalc",
           streamTableNode(0),
           term("select", "CAST(a) AS a", "PROCTIME(d) AS d")
         ),
         term("flatAggregate", "EmptyTableAggFunc(a, d) AS (_1, _2, _3)")
+      )
+    util.verifyTable(resultTable, expected)
+  }
+
+  @Test
+  def testTableAggregateWithoutSelectStar(): Unit = {
+    val util = streamTestUtil()
+    val table = util.addTable[(Int, Long, String)]('a, 'b, 'c)
+
+    val top3 = new TopN(3)
+    val resultTable = table
+      .flatAggregate(top3('a, 'b))
+      .select("*")
+
+    val expected =
+      unaryNode(
+        "DataStreamGroupTableAggregate",
+        streamTableNode(0),
+        term("flatAggregate", "TopN(a, b) AS (_1, _2, _3)")
+      )
+    util.verifyTable(resultTable, expected)
+  }
+
+  @Test
+  def testTableAggregateWithAlias(): Unit = {
+    val util = streamTestUtil()
+    val table = util.addTable[(Int, Long, String)]('a, 'b, 'c)
+
+    val top3 = new TopN(3)
+    val resultTable = table
+      .flatAggregate(top3('a, 'b) as ('a, 'b, 'c))
+      .select('*)
+
+    val expected =
+      unaryNode(
+        "DataStreamGroupTableAggregate",
+        streamTableNode(0),
+        term("flatAggregate", "TopN(a, b) AS (a, b, c)")
+      )
+    util.verifyTable(resultTable, expected)
+  }
+
+  @Test
+  def testTableAggregateWithDistinct(): Unit = {
+    val util = streamTestUtil()
+    val table = util.addTable[(Int, Long, String)]('a, 'b, 'c)
+
+    val top3 = new TopN(3)
+    val resultTable = table
+      .flatAggregate(top3.distinct('a, 'b) as ('a, 'b, 'c))
+      .select('*)
+
+    val expected =
+      unaryNode(
+        "DataStreamGroupTableAggregate",
+        unaryNode(
+          "DataStreamGroupAggregate",
+          unaryNode("DataStreamCalc",
+            streamTableNode(0),
+            term("select", "a", "b")
+          ),
+          term("groupBy", "a", "b"),
+          term("select", "a", "b")
+        ),
+        term("flatAggregate", "TopN(a, b) AS (a, b, c)")
       )
     util.verifyTable(resultTable, expected)
   }

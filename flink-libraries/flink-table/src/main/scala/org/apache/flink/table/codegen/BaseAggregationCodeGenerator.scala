@@ -72,7 +72,7 @@ import scala.collection.mutable
   *                               method
   * @param accConfig              Data view specification for accumulators
   */
-class AggregationBaseCodeGenerator(
+class BaseAggregationCodeGenerator(
     config: TableConfig,
     nullableInput: Boolean,
     input: TypeInformation[_ <: Any],
@@ -436,7 +436,7 @@ class AggregationBaseCodeGenerator(
                |    output.setField(
                |      ${aggMapping(i)},
                |      baseClass$i.getValue(acc$i));
-                 """.stripMargin
+               """.stripMargin
           if (isDistinctAggs(i)) {
             j"""
                |    org.apache.flink.table.functions.AggregateFunction baseClass$i =
@@ -444,14 +444,14 @@ class AggregationBaseCodeGenerator(
                |    $distinctAccType distinctAcc$i = ($distinctAccType) accs.getField($i);
                |    ${accTypes(i)} acc$i = (${accTypes(i)}) distinctAcc$i.getRealAcc();
                |    $setAccOutput
-                   """.stripMargin
+               """.stripMargin
           } else {
             j"""
                |    org.apache.flink.table.functions.AggregateFunction baseClass$i =
                |      (org.apache.flink.table.functions.AggregateFunction) ${aggs(i)};
                |    ${accTypes(i)} acc$i = (${accTypes(i)}) accs.getField($i);
                |    $setAccOutput
-                   """.stripMargin
+               """.stripMargin
           }
         }
     }.mkString("\n")
@@ -477,7 +477,7 @@ class AggregationBaseCodeGenerator(
              |      ${genAccDataViewFieldSetter(s"acc$i", i)}
              |      ${aggs(i)}.accumulate(acc$i
              |        ${if (!parametersCode(i).isEmpty) "," else ""} ${parametersCode(i)});
-               """.stripMargin
+             """.stripMargin
         if (isDistinctAggs(i)) {
           j"""
              |    $distinctAccType distinctAcc$i = ($distinctAccType) accs.getField($i);
@@ -487,12 +487,12 @@ class AggregationBaseCodeGenerator(
              |      ${accTypes(i)} acc$i = (${accTypes(i)}) distinctAcc$i.getRealAcc();
              |      $accumulateAcc
              |    }
-               """.stripMargin
+             """.stripMargin
         } else {
           j"""
              |    ${accTypes(i)} acc$i = (${accTypes(i)}) accs.getField($i);
              |    $accumulateAcc
-               """.stripMargin
+             """.stripMargin
         }
       }
     }.mkString("\n")
@@ -517,7 +517,7 @@ class AggregationBaseCodeGenerator(
              |    ${genAccDataViewFieldSetter(s"acc$i", i)}
              |    ${aggs(i)}.retract(
              |      acc$i ${if (!parametersCode(i).isEmpty) "," else ""} ${parametersCode(i)});
-               """.stripMargin
+             """.stripMargin
         if (isDistinctAggs(i)) {
           j"""
              |    $distinctAccType distinctAcc$i = ($distinctAccType) accs.getField($i);
@@ -527,12 +527,12 @@ class AggregationBaseCodeGenerator(
              |      ${accTypes(i)} acc$i = (${accTypes(i)}) distinctAcc$i.getRealAcc();
              |      $retractAcc
              |    }
-               """.stripMargin
+             """.stripMargin
         } else {
           j"""
              |    ${accTypes(i)} acc$i = (${accTypes(i)}) accs.getField($i);
              |    $retractAcc
-               """.stripMargin
+             """.stripMargin
         }
       }
     }.mkString("\n")
@@ -558,8 +558,7 @@ class AggregationBaseCodeGenerator(
     val init: String =
       j"""
          |      org.apache.flink.types.Row accs =
-         |          new org.apache.flink.types.Row(${aggs.length});"""
-        .stripMargin
+         |          new org.apache.flink.types.Row(${aggs.length});""".stripMargin
     val create: String = {
       for (i <- aggs.indices) yield {
         if (isDistinctAggs(i)) {
@@ -569,22 +568,19 @@ class AggregationBaseCodeGenerator(
              |      new ${classOf[DistinctAccumulator[_]].getCanonicalName} (acc$i);
              |    accs.setField(
              |      $i,
-             |      distinctAcc$i);"""
-            .stripMargin
+             |      distinctAcc$i);""".stripMargin
         } else {
           j"""
              |    ${accTypes(i)} acc$i = (${accTypes(i)}) ${aggs(i)}.createAccumulator();
              |    accs.setField(
              |      $i,
-             |      acc$i);"""
-            .stripMargin
+             |      acc$i);""".stripMargin
         }
       }
     }.mkString("\n")
     val ret: String =
       j"""
-         |      return accs;"""
-        .stripMargin
+         |      return accs;""".stripMargin
 
     j"""$sig {
        |$init
@@ -648,7 +644,7 @@ class AggregationBaseCodeGenerator(
          |  public final org.apache.flink.types.Row mergeAccumulatorsPair(
          |    org.apache.flink.types.Row a,
          |    org.apache.flink.types.Row b)
-           """.stripMargin
+         """.stripMargin
     val merge: String = {
       for (i <- aggs.indices) yield {
         if (isDistinctAggs(i)) {
@@ -669,7 +665,7 @@ class AggregationBaseCodeGenerator(
              |      }
              |    }
              |    a.setField($i, aDistinctAcc$i);
-               """.stripMargin
+             """.stripMargin
         } else {
           j"""
              |    ${accTypes(i)} aAcc$i = (${accTypes(i)}) a.getField($i);
@@ -677,14 +673,14 @@ class AggregationBaseCodeGenerator(
              |    accIt$i.setElement(bAcc$i);
              |    ${aggs(i)}.merge(aAcc$i, accIt$i);
              |    a.setField($i, aAcc$i);
-               """.stripMargin
+             """.stripMargin
         }
       }
     }.mkString("\n")
     val ret: String =
       j"""
          |      return a;
-           """.stripMargin
+         """.stripMargin
 
     if (needMerge) {
       if (accConfig.isDefined) {
@@ -711,7 +707,7 @@ class AggregationBaseCodeGenerator(
         j"""
            |    private final $singleIterableClass<${accTypes(i)}> accIt$i =
            |      new $singleIterableClass<${accTypes(i)}>();
-             """.stripMargin
+           """.stripMargin
     }.mkString("\n")
   }
 

@@ -570,7 +570,7 @@ val result = orders.distinct()
         <span class="label label-info">Result Updating</span>
       </td>
       <td>
-        <p>Similar to a <b>GroupBy Aggregation</b>. Groups the rows on the grouping keys with a following running table aggregation operator to aggregate rows group-wise. The difference from an AggregateFunction is that TableAggregateFunction may return 0 or more records for a group. You have to close the "flatAggregate" with a select statement. And the select statement does not support * and aggregate functions.</p>
+        <p>Similar to a <b>GroupBy Aggregation</b>. Groups the rows on the grouping keys with a following running table aggregation operator to aggregate rows group-wise. The difference from an AggregateFunction is that TableAggregateFunction may return 0 or more records for a group. You have to close the "flatAggregate" with a select statement. And the select statement does not support aggregate functions.</p>
 {% highlight java %}
 TableAggregateFunction tableAggFunc = new MyTableAggregateFunction();
 tableEnv.registerFunction("myTableAggFunc", tableAggFunc);
@@ -606,7 +606,7 @@ Table result = orders
         <span class="label label-info">Result Updating</span>
       </td>
       <td>
-        <p>Similar to a <b>GroupBy Aggregation</b>. Groups the rows on the grouping keys with a following running table aggregation operator to aggregate rows group-wise. The difference from an AggregateFunction is that TableAggregateFunction may return 0 or more records for a group. You have to close the "flatAggregate" with a select statement. And the select statement does not support * and aggregate functions.</p>
+        <p>Similar to a <b>GroupBy Aggregation</b>. Groups the rows on the grouping keys with a following running table aggregation operator to aggregate rows group-wise. The difference from an AggregateFunction is that TableAggregateFunction may return 0 or more records for a group. You have to close the "flatAggregate" with a select statement. And the select statement does not support aggregate functions.</p>
 {% highlight scala %}
 val tableAggFunc: TableAggregateFunction = new MyTableAggregateFunction
 val orders: Table = tableEnv.scan("Orders")

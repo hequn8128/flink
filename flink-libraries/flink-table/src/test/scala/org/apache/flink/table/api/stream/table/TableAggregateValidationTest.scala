@@ -50,7 +50,7 @@ class TableAggregateValidationTest extends TableTestBase {
     table
       .groupBy('c)
       // must fail. func take 2 parameters of type Long and Timestamp
-      .flatAggregate(func('a, 'b))
+      .flatAggregate(func('a, 'c))
       .select('_1, '_2, '_3)
   }
 
@@ -67,29 +67,29 @@ class TableAggregateValidationTest extends TableTestBase {
       .select('_1, '_2, '_3)
   }
 
-  @Test(expected = classOf[TableException])
-  def testInvalidSelectStar(): Unit = {
+  @Test(expected = classOf[ValidationException])
+  def testInvalidAliasWithWrongNumber(): Unit = {
     val util = streamTestUtil()
     val table = util.addTable[(Long, Int, Timestamp)]('a, 'b, 'c)
 
     val func = new EmptyTableAggFunc
     table
       .groupBy('b)
-      .flatAggregate(func('a, 'c))
-      // must fail. * is not supported in the select of flatAggregate.
+      // must fail. alias with wrong number of fields
+      .flatAggregate(func('a, 'b) as ('a, 'b))
       .select('*)
   }
 
   @Test(expected = classOf[ValidationException])
-  def testInvalidSelectAgg(): Unit = {
+  def testInvalidAliasWithNonUnresolvedFieldReference(): Unit = {
     val util = streamTestUtil()
     val table = util.addTable[(Long, Int, Timestamp)]('a, 'b, 'c)
 
     val func = new EmptyTableAggFunc
     table
       .groupBy('b)
-      .flatAggregate(func('a, 'c))
-      // must fail. agg function is not supported in the select of flatAggregate.
-      .select('_1.sum, '_2.count)
+      // must fail. alias with wrong number of fields
+      .flatAggregate(func('a, 'b) as ('a, 'b, 'c + 1))
+      .select('*)
   }
 }

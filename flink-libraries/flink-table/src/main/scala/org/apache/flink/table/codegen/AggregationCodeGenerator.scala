@@ -76,7 +76,7 @@ class AggregationCodeGenerator(
     needMerge: Boolean,
     needReset: Boolean,
     accConfig: Option[Array[Seq[DataViewSpec[_]]]])
-  extends AggregationBaseCodeGenerator(
+  extends BaseAggregationCodeGenerator(
     config,
     nullableInput,
     input,

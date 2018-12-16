@@ -23,7 +23,7 @@ import org.apache.calcite.sql.fun.SqlStdOperatorTable
 import org.apache.calcite.sql.util.{ChainedSqlOperatorTable, ListSqlOperatorTable, ReflectiveSqlOperatorTable}
 import org.apache.calcite.sql._
 import org.apache.flink.table.api._
-import org.apache.flink.table.expressions._
+import org.apache.flink.table.expressions.{TableAggFunctionCallAliasable, _}
 import org.apache.flink.table.functions.sql.ScalarSqlFunctions
 import org.apache.flink.table.functions.utils.{AggSqlFunction, ScalarSqlFunction, TableAggSqlFunction, TableSqlFunction}
 import org.apache.flink.table.functions.{AggregateFunction, ScalarFunction, TableAggregateFunction, TableFunction}
@@ -107,7 +107,7 @@ class FunctionCatalog {
         val function = tableAggregateFunction.getFunction
         val returnType = tableAggregateFunction.returnType
         val accType = tableAggregateFunction.accType
-        TableAggFunctionCall(function, returnType, accType, children)
+        new TableAggFunctionCallAliasable(function, returnType, accType, children)
 
       // general expression call
       case expression if classOf[Expression].isAssignableFrom(expression) =>

@@ -23,8 +23,8 @@ import org.apache.flink.annotation.PublicEvolving;
 /**
  * Base class for user-defined table aggregates.
  *
- * <p>The behavior of an {@link TableAggregateFunction} can be defined by implementing a series of custom
- * methods. An {@link TableAggregateFunction} needs at least three methods:
+ * <p>The behavior of a {@link TableAggregateFunction} can be defined by implementing a series of custom
+ * methods. A {@link TableAggregateFunction} needs at least three methods:
  *  - <code>createAccumulator</code>,
  *  - <code>accumulate</code>, and
  *  - <code>emitValue</code> or <code>emitValueWithRetract</code>.
@@ -35,8 +35,8 @@ import org.apache.flink.annotation.PublicEvolving;
  *  - <code>resetAccumulator</code>.
  *
  * <p>All these methods must be declared publicly, not static, and named exactly as the names
- * mentioned above. The methods {@link #createAccumulator()} are defined in
- * the {@link TableAggregateFunction} functions, while other methods are explained below.
+ * mentioned above. The method {@link #createAccumulator()} is defined in
+ * the {@link UserDefinedAggregateFunction} functions, while other methods are explained below.
  *
  * <pre>
  * {@code
@@ -55,8 +55,7 @@ import org.apache.flink.annotation.PublicEvolving;
  * {@code
  * Retracts the input values from the accumulator instance. The current design assumes the
  * inputs are the values that have been previously accumulated. The method retract can be
- * overloaded with different custom types and arguments. This function must be implemented for
- * data stream bounded OVER aggregates.
+ * overloaded with different custom types and arguments.
  *
  * param: accumulator           the accumulator which contains the current aggregated results
  * param: [user defined inputs] the input value (usually obtained from a new arrived data).
@@ -83,7 +82,7 @@ import org.apache.flink.annotation.PublicEvolving;
  *
  * <pre>
  * {@code
- * Resets the accumulator for this AggregateFunction. This function must be implemented for
+ * Resets the accumulator for this TableAggregateFunction. This function must be implemented for
  * data set grouping aggregates.
  *
  * param: accumulator the accumulator which needs to be reset
@@ -95,7 +94,7 @@ import org.apache.flink.annotation.PublicEvolving;
  * <pre>
  * {@code
  * Output data incrementally in upsert or append mode. For example, if we emit data for a TopN
- * TableAggregateFunction, we don't have to output all top N elements each time a record comes.
+ * TableAggregateFunction, we don't need to output all top N elements each time a record comes.
  * It is more efficient to output data incrementally in upsert mode, i.e, only output data whose
  * rank has been changed.
  *
@@ -109,7 +108,7 @@ import org.apache.flink.annotation.PublicEvolving;
  * <pre>
  * {@code
  * Output data incrementally in retract mode. Once there is an update, we have to retract old
- * records before send new updated ones.
+ * records before sending new updated ones.
  *
  * param: accumulator           the accumulator which contains the current aggregated results
  * param: out                   the collector used to output data.

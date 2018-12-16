@@ -23,7 +23,6 @@ import org.apache.calcite.rel.{RelNode, RelWriter, SingleRel}
 import org.apache.flink.api.java.functions.NullByteKeySelector
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.table.api.{StreamQueryConfig, StreamTableEnvironment}
-import org.apache.flink.table.functions.utils.TableAggSqlFunction
 import org.apache.flink.table.plan.nodes.CommonAggregate
 import org.apache.flink.table.plan.rules.datastream.DataStreamRetractionRules
 import org.apache.flink.table.plan.schema.RowSchema
@@ -46,7 +45,7 @@ import org.apache.flink.table.util.Logging
   * @param namedAggregates List of calls to aggregate functions and their output field names
   * @param groupings       The position (in the input Row) of the grouping keys
   */
-class DataStreamTableAggregate(
+class DataStreamGroupTableAggregate(
     cluster: RelOptCluster,
     traitSet: RelTraitSet,
     inputNode: RelNode,
@@ -68,7 +67,7 @@ class DataStreamTableAggregate(
   override def consumesRetractions = true
 
   override def copy(traitSet: RelTraitSet, inputs: java.util.List[RelNode]): RelNode = {
-    new DataStreamTableAggregate(
+    new DataStreamGroupTableAggregate(
       cluster,
       traitSet,
       inputs.get(0),
@@ -101,9 +100,15 @@ class DataStreamTableAggregate(
       tableEnv: StreamTableEnvironment,
       queryConfig: StreamQueryConfig): DataStream[CRow] = {
 
+    if (groupings.length > 0 && queryConfig.getMinIdleStateRetentionTime < 0) {
+      LOG.warn(
+        "No state retention interval configured for a query which accumulates state. " +
+        "Please provide a query configuration with valid retention interval to prevent excessive " +
+        "state size. You may specify a retention time of 0 to not clean up the state.")
+    }
+
     val inputDS = getInput.asInstanceOf[DataStreamRel].translateToPlan(tableEnv, queryConfig)
     val outRowType = CRowTypeInfo(schema.typeInfo)
-    val aggCall = namedAggregates(0).left
 
     val processFunction = AggregateUtil.createTableAggregateFunction(
       tableEnv.getConfig,
@@ -113,7 +118,6 @@ class DataStreamTableAggregate(
       namedAggregates,
       inputSchema.relDataType,
       inputSchema.fieldTypeInfos,
-      aggCall.getAggregation.asInstanceOf[TableAggSqlFunction].returnType,
       schema,
       groupings,
       queryConfig,
@@ -122,7 +126,7 @@ class DataStreamTableAggregate(
       DataStreamRetractionRules.isAccRetract(getInput))
 
     val result: DataStream[CRow] =
-    // grouped / keyed table aggregation
+      // grouped / keyed table aggregation
       if (groupings.nonEmpty) {
         inputDS
           .keyBy(new CRowKeySelector(groupings, inputSchema.projectedTypeInfo(groupings)))

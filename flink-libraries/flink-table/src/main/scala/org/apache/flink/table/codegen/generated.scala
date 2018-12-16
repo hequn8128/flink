@@ -72,16 +72,6 @@ case class GeneratedAggregationsFunction(
     code: String)
 
 /**
-  * Describes a generated table aggregate helper function
-  *
-  * @param name class name of the generated Function.
-  * @param code code of the generated Function.
-  */
-case class GeneratedTableAggregationsFunction(
-    name: String,
-    code: String)
-
-/**
   * Describes a generated [[InputFormat]].
   *
   * @param name class name of the generated input function.

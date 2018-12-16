@@ -23,22 +23,15 @@ import org.apache.flink.util.Collector;
 
 /**
  * Collects a record and forwards it. The collector can output retract messages with retract method.
- * Currently, RetractableCollector is used in TableAggregateFunction.
+ * Currently, RetractableCollector can only be used in TableAggregateFunction.
  */
 @Internal
-public abstract class RetractableCollector<T> implements Collector<T> {
-
-	/**
-	 * Collect a record.
-	 *
-	 * @param record The record to collect.
-	 */
-	public abstract void collect(T record);
+public interface RetractableCollector<T> extends Collector<T> {
 
 	/**
 	 * Retract a record.
 	 *
 	 * @param record The record to retract.
 	 */
-	public abstract void retract(T record);
+	void retract(T record);
 }

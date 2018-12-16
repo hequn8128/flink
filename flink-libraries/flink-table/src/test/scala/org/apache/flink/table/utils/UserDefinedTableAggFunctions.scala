@@ -218,5 +218,7 @@ class EmptyTableAggFunc extends TableAggregateFunction[(Int, Long, Int), Top3Wra
 
   def accumulate(acc: Top3Wrapper, category: Long, value: Timestamp): Unit = {}
 
+  def accumulate(acc: Top3Wrapper, category: Long, value: Int): Unit = {}
+
   def emitValue(acc: Top3Wrapper, out: RetractableCollector[(Int, Long, Int)]): Unit = {}
 }

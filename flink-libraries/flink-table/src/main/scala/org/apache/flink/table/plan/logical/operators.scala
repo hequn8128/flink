@@ -283,9 +283,15 @@ case class TableAggregate(
     tableAggFunctionCall: TableAggFunctionCall,
     child: LogicalNode) extends UnaryNode {
 
-  private val (generatedNames, _, fieldTypes) = getFieldInfo(tableAggFunctionCall.resultTypeInfo)
+  private var (generatedNames, _, fieldTypes) = getFieldInfo(tableAggFunctionCall.resultTypeInfo)
 
   override def output: Seq[Attribute] = {
+    // change field names of result type if there is an alias
+    if (tableAggFunctionCall.alias.isDefined) {
+      generatedNames =
+        tableAggFunctionCall.alias.get.map(_.asInstanceOf[UnresolvedFieldReference].name).toArray
+    }
+
     generatedNames.zip(fieldTypes).map {
       case (n, t) => ResolvedFieldReference(n, t)
     }
@@ -325,6 +331,28 @@ case class TableAggregate(
             "because it's not a valid key type which must be hashable and comparable")
       }
     }
+
+    def validateAlias: Unit = {
+      if (tableAggFunctionCall.alias.isDefined) {
+        val exprs = tableAggFunctionCall.alias.get
+        val exprsSize = exprs.size
+        val resultTypeSize = tableAggFunctionCall.resultType.getArity
+        if (exprsSize != resultTypeSize) {
+          failValidation(
+            s"Field number(${exprsSize}) of alias doesn't equal to the " +
+              s"number(${resultTypeSize}) of output fields of TableAggregate. ")
+        }
+
+        exprs.foreach {
+          case _: UnresolvedFieldReference => // ok
+          case _ =>
+            failValidation(
+              s"Alias field must be an instance of UnresolvedFieldReference")
+        }
+      }
+    }
+
+    validateAlias
     resolvedAggregate
   }
 }

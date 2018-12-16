@@ -21,7 +21,7 @@ import org.apache.calcite.rel.RelNode
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.operators.join.JoinType
 import org.apache.flink.table.calcite.{FlinkRelBuilder, FlinkTypeFactory}
-import org.apache.flink.table.expressions.{Alias, Asc, Expression, ExpressionParser, Ordering, ResolvedFieldReference, TableAggFunctionCall, UnresolvedAlias, UnresolvedFieldReference, WindowProperty}
+import org.apache.flink.table.expressions.{Alias, Asc, Expression, ExpressionParser, Ordering, ResolvedFieldReference, TableAggFunctionCall, TableAggFunctionCallAliasable, UnresolvedAlias, UnresolvedFieldReference, WindowProperty}
 import org.apache.flink.table.functions.TemporalTableFunction
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils
 import org.apache.flink.table.plan.ProjectionTranslator._
@@ -395,7 +395,6 @@ class Table(
     * }}}
     */
   def flatAggregate(tableAggCall: String): FlatAggTable = {
-    this.groupBy().flatAggregate(tableAggCall)
     val call = UserDefinedFunctionUtils.createTableAggFunctionCall(this.tableEnv, tableAggCall)
     new FlatAggTable(this, call)
   }
@@ -1070,7 +1069,7 @@ class FlatAggTable(
     * The field expressions can contain complex expressions.
     *
     * __Note__: You have to close the flatAggregate with a select statement. And the select
-    * statement does not support * and aggregate functions.
+    * statement does not support aggregate functions.
     *
     * Example:
     *
@@ -1088,7 +1087,7 @@ class FlatAggTable(
     * The field expressions can contain complex expressions.
     *
     * __Note__: You have to close the flatAggregate with a select statement. And the select
-    * statement does not support * and aggregate functions.
+    * statement does not support aggregate functions.
     *
     * Example:
     *
@@ -1109,14 +1108,14 @@ class FlatAggTable(
 class GroupedFlatAggTable(
   private[flink] val table: Table,
   private[flink] val groupKey: Seq[Expression],
-  private[flink] val tableAggCall: TableAggFunctionCall) {
+  private[flink] val aggCall: TableAggFunctionCall) {
 
   /**
     * Performs a selection operation on a GroupedFlatAggTable table. Similar to an SQL SELECT
     * statement. The field expressions can contain complex expressions.
     *
     * __Note__: You have to close the flatAggregate with a select statement. And the select
-    * statement does not support * and aggregate functions.
+    * statement does not support aggregate functions.
     *
     * Example:
     *
@@ -1126,19 +1125,28 @@ class GroupedFlatAggTable(
     * }}}
     */
   def select(fields: Expression*): Table = {
+
+    val tableAggCall = aggCall match {
+      case t: TableAggFunctionCallAliasable => t.toTableAggFunctionCall()
+      case _ => aggCall
+    }
+
     val expandedFields = expandProjectList(tableAggCall.args, table.logicalPlan, table.tableEnv)
     val projectFields = extractFieldReferences(expandedFields ++ groupKey)
 
-    val flatAggTable = new Table(table.tableEnv,
-      TableAggregate(groupKey, tableAggCall,
-        Project(projectFields, table.logicalPlan).validate(table.tableEnv)
-      ).validate(table.tableEnv))
-
-    // check no '*' in the select of flatAggregate.
-    fields.foreach {
-      case n: UnresolvedFieldReference if n.name == "*" =>
-        throw new TableException("Currently, can't use * in the select after flatAggregate.")
-      case _ => // ok
+    val flatAggTable = if (tableAggCall.isDistinct) {
+      // a distinct operator is more efficient than a distinct agg function
+      new Table(table.tableEnv,
+        TableAggregate(groupKey, tableAggCall,
+          Distinct(
+            Project(projectFields, table.logicalPlan).validate(table.tableEnv)
+          ).validate(table.tableEnv)
+        ).validate(table.tableEnv))
+    } else {
+      new Table(table.tableEnv,
+        TableAggregate(groupKey, tableAggCall,
+          Project(projectFields, table.logicalPlan).validate(table.tableEnv)
+        ).validate(table.tableEnv))
     }
 
     // check no aggregate functions in the select of flatAggregate.
@@ -1158,7 +1166,7 @@ class GroupedFlatAggTable(
     * statement. The field expressions can contain complex expressions.
     *
     * __Note__: You have to close the flatAggregate with a select statement. And the select
-    * statement does not support * and aggregate functions.
+    * statement does not support aggregate functions.
     *
     * Example:
     *

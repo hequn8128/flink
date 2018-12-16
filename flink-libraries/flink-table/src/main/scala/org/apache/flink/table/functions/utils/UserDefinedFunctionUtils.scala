@@ -936,24 +936,47 @@ object UserDefinedFunctionUtils {
       tableEnv: TableEnvironment,
       udtagg: String): TableAggFunctionCall = {
 
-    var alias: Option[Seq[String]] = None
+    var alias: Option[Seq[Expression]] = None
+    var isDistinct: Boolean = false
 
     // unwrap an Expression until we get a TableAggFunctionCall
     def unwrap(expr: Expression): TableAggFunctionCall = expr match {
-      case Alias(child, name, extraNames) =>
-        alias = Some(Seq(name) ++ extraNames)
+      case Alias(child, name, extraNames: Seq[String]) =>
+        alias = Some(Seq(new UnresolvedFieldReference(name)) ++
+          extraNames.map(new UnresolvedFieldReference(_)))
         unwrap(child)
       case Call(name, args) =>
         val function = tableEnv.functionCatalog.lookupFunction(name, args)
         unwrap(function)
       case c: TableAggFunctionCall => c
+      case d: DistinctAgg =>
+        isDistinct = true
+        unwrap(d.child)
       case _ =>
         throw new TableException(
           "flatAggregate(String) constructor only accept String that " +
             "define table aggregate function.")
     }
 
-    unwrap(ExpressionParser.parseExpression(udtagg))
+    val tableAggCallInfo = unwrap(ExpressionParser.parseExpression(udtagg))
+      .asInstanceOf[TableAggFunctionCallAliasable]
+
+    val distincted = if (isDistinct) {
+      tableAggCallInfo.distinct()
+    } else {
+      tableAggCallInfo
+    }
+
+    val aliased = if (alias.isDefined) {
+      distincted.as(alias.get: _*)
+    } else {
+      distincted
+    }
+
+    aliased match {
+      case t: TableAggFunctionCallAliasable => t.toTableAggFunctionCall()
+      case _ => aliased
+    }
   }
 
   def getOperandTypeInfo(callBinding: SqlCallBinding): Seq[TypeInformation[_]] = {
