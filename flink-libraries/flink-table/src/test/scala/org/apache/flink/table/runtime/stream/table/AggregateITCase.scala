@@ -49,7 +49,8 @@ class AggregateITCase extends StreamingWithStateTestBase {
     StreamITCase.clear
 
     val testAgg = new DataViewTestAgg
-    val t = StreamTestData.get5TupleDataStream(env).toTable(tEnv, 'a, 'b, 'c, 'd, 'e)
+    val t = StreamTestData.get5TupleDataStream(env)
+      .toTableFromAppendStream(tEnv, 'a, 'b, 'c, 'd, 'e)
       .groupBy('e)
       .select('e, testAgg.distinct('d, 'e))
 
@@ -69,7 +70,8 @@ class AggregateITCase extends StreamingWithStateTestBase {
     StreamITCase.clear
 
     val testAgg = new WeightedAvg
-    val t = StreamTestData.get5TupleDataStream(env).toTable(tEnv, 'a, 'b, 'c, 'd, 'e)
+    val t = StreamTestData.get5TupleDataStream(env)
+      .toTableFromAppendStream(tEnv, 'a, 'b, 'c, 'd, 'e)
       .groupBy('e)
       .select('e, testAgg.distinct('a, 'a), testAgg('a, 'a))
 
@@ -88,7 +90,8 @@ class AggregateITCase extends StreamingWithStateTestBase {
     val tEnv = TableEnvironment.getTableEnvironment(env)
     StreamITCase.clear
 
-    val t = StreamTestData.get5TupleDataStream(env).toTable(tEnv, 'a, 'b, 'c, 'd, 'e)
+    val t = StreamTestData.get5TupleDataStream(env)
+      .toTableFromAppendStream(tEnv, 'a, 'b, 'c, 'd, 'e)
       .groupBy('e)
       .select('e, 'a.count.distinct)
 
@@ -107,7 +110,8 @@ class AggregateITCase extends StreamingWithStateTestBase {
     val tEnv = TableEnvironment.getTableEnvironment(env)
     StreamITCase.clear
 
-    val t = StreamTestData.get5TupleDataStream(env).toTable(tEnv, 'a, 'b, 'c, 'd, 'e)
+    val t = StreamTestData.get5TupleDataStream(env)
+      .toTableFromAppendStream(tEnv, 'a, 'b, 'c, 'd, 'e)
       .groupBy('e)
       .select('e, 'a.count.distinct, 'b.count)
 
@@ -126,7 +130,8 @@ class AggregateITCase extends StreamingWithStateTestBase {
     val tEnv = TableEnvironment.getTableEnvironment(env)
     StreamITCase.clear
 
-    val t = StreamTestData.get3TupleDataStream(env).toTable(tEnv, 'a, 'b, 'c)
+    val t = StreamTestData.get3TupleDataStream(env)
+      .toTableFromAppendStream(tEnv, 'a, 'b, 'c)
       .select('b, Null(Types.LONG)).distinct()
 
     val results = t.toRetractStream[Row](queryConfig)
@@ -144,7 +149,8 @@ class AggregateITCase extends StreamingWithStateTestBase {
     val tEnv = TableEnvironment.getTableEnvironment(env)
     StreamITCase.clear
 
-    val t = StreamTestData.get5TupleDataStream(env).toTable(tEnv, 'a, 'b, 'c, 'd, 'e)
+    val t = StreamTestData.get5TupleDataStream(env)
+      .toTableFromAppendStream(tEnv, 'a, 'b, 'c, 'd, 'e)
       .groupBy('e).select('e, 'a.count).distinct()
 
     val results = t.toRetractStream[Row](queryConfig)
@@ -162,8 +168,9 @@ class AggregateITCase extends StreamingWithStateTestBase {
     val tEnv = TableEnvironment.getTableEnvironment(env)
     StreamITCase.clear
 
-    val t = StreamTestData.get3TupleDataStream(env).toTable(tEnv, 'a, 'b, 'c)
-            .select('a.sum, 'b.sum)
+    val t = StreamTestData.get3TupleDataStream(env)
+      .toTableFromAppendStream(tEnv, 'a, 'b, 'c)
+      .select('a.sum, 'b.sum)
 
     val results = t.toRetractStream[Row](queryConfig)
     results.addSink(new StreamITCase.RetractingSink).setParallelism(1)
@@ -180,7 +187,8 @@ class AggregateITCase extends StreamingWithStateTestBase {
     val tEnv = TableEnvironment.getTableEnvironment(env)
     StreamITCase.clear
 
-    val t = StreamTestData.get3TupleDataStream(env).toTable(tEnv, 'a, 'b, 'c)
+    val t = StreamTestData.get3TupleDataStream(env)
+      .toTableFromAppendStream(tEnv, 'a, 'b, 'c)
       .groupBy('b)
       .select('b, 'a.sum)
 
@@ -199,7 +207,8 @@ class AggregateITCase extends StreamingWithStateTestBase {
     val tEnv = TableEnvironment.getTableEnvironment(env)
     StreamITCase.clear
 
-    val t = StreamTestData.get3TupleDataStream(env).toTable(tEnv, 'a, 'b, 'c)
+    val t = StreamTestData.get3TupleDataStream(env)
+      .toTableFromAppendStream(tEnv, 'a, 'b, 'c)
       .groupBy('b)
       .select('a.count as 'cnt, 'b)
       .groupBy('cnt)
@@ -220,7 +229,8 @@ class AggregateITCase extends StreamingWithStateTestBase {
     val tEnv = TableEnvironment.getTableEnvironment(env)
     StreamITCase.clear
 
-    val t = StreamTestData.get5TupleDataStream(env).toTable(tEnv, 'a, 'b, 'c, 'd, 'e)
+    val t = StreamTestData.get5TupleDataStream(env)
+      .toTableFromAppendStream(tEnv, 'a, 'b, 'c, 'd, 'e)
       .groupBy('e, 'b % 3)
       .select('c.min, 'e, 'a.avg, 'd.count)
 
@@ -242,7 +252,8 @@ class AggregateITCase extends StreamingWithStateTestBase {
     val tEnv = TableEnvironment.getTableEnvironment(env)
     StreamITCase.clear
 
-    val t = StreamTestData.get3TupleDataStream(env).toTable(tEnv, 'a, 'b, 'c)
+    val t = StreamTestData.get3TupleDataStream(env)
+      .toTableFromAppendStream(tEnv, 'a, 'b, 'c)
       .groupBy('b)
       .select('b, 'a.collect)
 
@@ -279,7 +290,8 @@ class AggregateITCase extends StreamingWithStateTestBase {
 
     val distinct = new CountDistinct
     val testAgg = new DataViewTestAgg
-    val t = env.fromCollection(data).toTable(tEnv, 'a, 'b, 'c)
+    val t = env.fromCollection(data)
+      .toTableFromAppendStream(tEnv, 'a, 'b, 'c)
       .groupBy('b)
       .select('b, distinct('c), testAgg('c, 'b))
 
@@ -313,9 +325,10 @@ class AggregateITCase extends StreamingWithStateTestBase {
       new TestUpsertSink(Array("c"), false).configure(
         Array[String]("c", "bMax"), Array[TypeInformation[_]](Types.STRING, Types.LONG)))
 
-    val t = env.fromCollection(data).toTable(tEnv, 'a, 'b, 'c)
-            .groupBy('c)
-            .select('c, 'b.max)
+    val t = env.fromCollection(data)
+      .toTableFromAppendStream(tEnv, 'a, 'b, 'c)
+      .groupBy('c)
+      .select('c, 'b.max)
 
     t.insertInto("testSink")
     env.execute()
