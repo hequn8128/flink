@@ -189,6 +189,11 @@ object UpdatingPlanChecker {
             .filter(e => l.keyIndexes.contains(e._2))
             .map(_._1)
           Some(uniqueKeyNames.map(e => (e, e)))
+
+        case scan: UpsertStreamScan =>
+          val uniqueKeyNames = scan.upsertStreamTable.uniqueKeys
+          Some(uniqueKeyNames.map(e => (e, e)))
+
         case _: DataStreamRel =>
           // anything else does not forward keys, so we can stop
           None

@@ -1089,19 +1089,6 @@ abstract class TableEnvironment(val config: TableConfig) {
             } else {
               referenceByName(origName, t).map((_, name))
             }
-          case (Key(UnresolvedFieldReference(name: String)), idx) =>
-            if (isRefByPos) {
-              Some((idx, name))
-            } else {
-              referenceByName(name, t).map((_, name))
-            }
-          case (Key(Alias(UnresolvedFieldReference(origName), name: String, _)), _) =>
-            if (isRefByPos) {
-              throw new TableException(
-                s"Alias '$name' is not allowed if other fields are referenced by position.")
-            } else {
-              referenceByName(origName, t).map((_, name))
-            }
           case (_: TimeAttribute, _) =>
             None
           case _ => throw new TableException(
@@ -1114,10 +1101,6 @@ abstract class TableEnvironment(val config: TableConfig) {
             referenceByName(name, p).map((_, name))
           case Alias(UnresolvedFieldReference(origName), name: String, _) =>
             referenceByName(origName, p).map((_, name))
-          case (Key(UnresolvedFieldReference(name: String))) =>
-            referenceByName(name, p).map((_, name))
-          case Key(Alias(UnresolvedFieldReference(origName), name: String, _)) =>
-            referenceByName(origName, p).map((_, name))
           case _: TimeAttribute =>
             None
           case _ => throw new TableException(
@@ -1129,14 +1112,10 @@ abstract class TableEnvironment(val config: TableConfig) {
         exprs flatMap {
           case _: TimeAttribute =>
             None
-          case UnresolvedFieldReference(_) | Key(UnresolvedFieldReference(_)) if referenced =>
+          case UnresolvedFieldReference(_) if referenced =>
             // only accept the first field for an atomic type
             throw new TableException("Only the first field can reference an atomic type.")
           case UnresolvedFieldReference(name: String) =>
-            referenced = true
-            // first field reference is mapped to atomic type
-            Some((0, name))
-          case Key(UnresolvedFieldReference(name: String)) =>
             referenced = true
             // first field reference is mapped to atomic type
             Some((0, name))
