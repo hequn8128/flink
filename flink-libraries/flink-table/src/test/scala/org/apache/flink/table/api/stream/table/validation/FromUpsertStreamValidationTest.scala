@@ -41,7 +41,7 @@ class FromUpsertStreamValidationTest extends TableTestBase {
     val tEnv = TableEnvironment.getTableEnvironment(env)
     val stream = env
       .fromCollection(data)
-    stream.toTable(tEnv, 'long, 'int, 'double)
+    stream.toTableFromAppendStream(tEnv, 'long, 'int, 'double)
   }
 
   @Test(expected = classOf[TableException])

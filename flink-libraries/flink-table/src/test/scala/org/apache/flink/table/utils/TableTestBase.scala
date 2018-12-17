@@ -299,13 +299,13 @@ case class StreamTableTestUtil() extends TableTestUtil {
       fields: Expression*)
     : Table = {
 
-    val table = env.fromElements().toTable(tableEnv, fields: _*)
+    val table = env.fromElements().toTableFromAppendStream(tableEnv, fields: _*)
     tableEnv.registerTable(name, table)
     table
   }
 
   override def addKeyedTable[T: TypeInformation](name: String, fields: Expression*): Table = {
-    val table = env.fromElements().toKeyedTable(tableEnv, fields: _*)
+    val table = env.fromElements().toTableFromUpsertStream(tableEnv, fields: _*)
     tableEnv.registerTable(name, table)
     table
   }

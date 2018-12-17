@@ -61,7 +61,7 @@ class OverWindowITCase extends StreamingWithStateTestBase {
     StreamITCase.clear
 
     val t = StreamTestData.get5TupleDataStream(env)
-      .toTable(tEnv, 'a, 'b, 'c, 'd, 'e, 'proctime.proctime)
+      .toTableFromAppendStream(tEnv, 'a, 'b, 'c, 'd, 'e, 'proctime.proctime)
     tEnv.registerTable("MyTable", t)
 
     val sqlQuery = "SELECT a, " +
@@ -104,7 +104,7 @@ class OverWindowITCase extends StreamingWithStateTestBase {
     StreamITCase.clear
 
     val t = StreamTestData.get5TupleDataStream(env)
-      .toTable(tEnv, 'a, 'b, 'c, 'd, 'e, 'proctime.proctime)
+      .toTableFromAppendStream(tEnv, 'a, 'b, 'c, 'd, 'e, 'proctime.proctime)
     tEnv.registerTable("MyTable", t)
 
     val sqlQuery = "SELECT a, " +
@@ -146,7 +146,7 @@ class OverWindowITCase extends StreamingWithStateTestBase {
     // for sum aggregation ensure that every time the order of each element is consistent
     env.setParallelism(1)
 
-    val t1 = env.fromCollection(data).toTable(tEnv, 'a, 'b, 'c, 'proctime.proctime)
+    val t1 = env.fromCollection(data).toTableFromAppendStream(tEnv, 'a, 'b, 'c, 'proctime.proctime)
 
     tEnv.registerTable("T1", t1)
 
@@ -174,7 +174,7 @@ class OverWindowITCase extends StreamingWithStateTestBase {
     val tEnv = TableEnvironment.getTableEnvironment(env)
     StreamITCase.clear
 
-    val t1 = env.fromCollection(data).toTable(tEnv, 'a, 'b, 'c, 'proctime.proctime)
+    val t1 = env.fromCollection(data).toTableFromAppendStream(tEnv, 'a, 'b, 'c, 'proctime.proctime)
 
     tEnv.registerTable("T1", t1)
 
@@ -209,7 +209,7 @@ class OverWindowITCase extends StreamingWithStateTestBase {
     // for sum aggregation ensure that every time the order of each element is consistent
     env.setParallelism(1)
 
-    val t1 = env.fromCollection(data).toTable(tEnv, 'a, 'b, 'c, 'proctime.proctime)
+    val t1 = env.fromCollection(data).toTableFromAppendStream(tEnv, 'a, 'b, 'c, 'proctime.proctime)
 
     tEnv.registerTable("T1", t1)
 
@@ -236,7 +236,7 @@ class OverWindowITCase extends StreamingWithStateTestBase {
     val tEnv = TableEnvironment.getTableEnvironment(env)
     StreamITCase.clear
 
-    val t1 = env.fromCollection(data).toTable(tEnv, 'a, 'b, 'c, 'proctime.proctime)
+    val t1 = env.fromCollection(data).toTableFromAppendStream(tEnv, 'a, 'b, 'c, 'proctime.proctime)
 
     tEnv.registerTable("T1", t1)
 
@@ -294,7 +294,7 @@ class OverWindowITCase extends StreamingWithStateTestBase {
 
     val t1 = env
       .addSource[(Long, Int, String)](new EventTimeSourceFunction[(Long, Int, String)](data))
-      .toTable(tEnv, 'a, 'b, 'c, 'rowtime.rowtime)
+      .toTableFromAppendStream(tEnv, 'a, 'b, 'c, 'rowtime.rowtime)
 
     tEnv.registerTable("T1", t1)
     tEnv.registerFunction("LTCNT", new LargerThanCount)
@@ -359,7 +359,7 @@ class OverWindowITCase extends StreamingWithStateTestBase {
 
     val t1 = env
       .addSource[(Long, Int, String)](new EventTimeSourceFunction[(Long, Int, String)](data))
-      .toTable(tEnv, 'a, 'b, 'c, 'rowtime.rowtime)
+      .toTableFromAppendStream(tEnv, 'a, 'b, 'c, 'rowtime.rowtime)
 
     tEnv.registerTable("T1", t1)
     tEnv.registerFunction("LTCNT", new LargerThanCount)
@@ -430,7 +430,7 @@ class OverWindowITCase extends StreamingWithStateTestBase {
 
     val t1 = env
       .addSource[(Long, Int, String)](new EventTimeSourceFunction[(Long, Int, String)](data))
-      .toTable(tEnv, 'a, 'b, 'c, 'rowtime.rowtime)
+      .toTableFromAppendStream(tEnv, 'a, 'b, 'c, 'rowtime.rowtime)
 
     tEnv.registerTable("T1", t1)
 
@@ -493,7 +493,7 @@ class OverWindowITCase extends StreamingWithStateTestBase {
 
     val t1 = env
       .addSource[(Long, Int, String)](new EventTimeSourceFunction[(Long, Int, String)](data))
-      .toTable(tEnv, 'a, 'b, 'c, 'rowtime.rowtime)
+      .toTableFromAppendStream(tEnv, 'a, 'b, 'c, 'rowtime.rowtime)
 
     tEnv.registerTable("T1", t1)
 
@@ -562,7 +562,7 @@ class OverWindowITCase extends StreamingWithStateTestBase {
 
     val t1 = env
       .addSource(new EventTimeSourceFunction[(Int, Long, String)](data))
-      .toTable(tEnv, 'a, 'b, 'c, 'rowtime.rowtime)
+      .toTableFromAppendStream(tEnv, 'a, 'b, 'c, 'rowtime.rowtime)
 
     tEnv.registerTable("T1", t1)
     tEnv.registerFunction("LTCNT", new LargerThanCount)
@@ -631,7 +631,7 @@ class OverWindowITCase extends StreamingWithStateTestBase {
       Right(14000030L))
 
     val t1 = env.addSource(new EventTimeSourceFunction[(Int, Long, String)](data))
-             .toTable(tEnv, 'a, 'b, 'c, 'rowtime.rowtime)
+             .toTableFromAppendStream(tEnv, 'a, 'b, 'c, 'rowtime.rowtime)
 
     tEnv.registerTable("T1", t1)
     tEnv.registerFunction("LTCNT", new LargerThanCount)
@@ -694,7 +694,7 @@ class OverWindowITCase extends StreamingWithStateTestBase {
 
     val t1 = env
       .addSource(new EventTimeSourceFunction[(Int, Long, String)](data))
-      .toTable(tEnv, 'a, 'b, 'c, 'rowtime.rowtime)
+      .toTableFromAppendStream(tEnv, 'a, 'b, 'c, 'rowtime.rowtime)
 
     tEnv.registerTable("T1", t1)
 
@@ -755,7 +755,7 @@ class OverWindowITCase extends StreamingWithStateTestBase {
 
     val t1 = env
       .addSource(new EventTimeSourceFunction[(Int, Long, String)](data))
-      .toTable(tEnv, 'a, 'b, 'c, 'rowtime.rowtime)
+      .toTableFromAppendStream(tEnv, 'a, 'b, 'c, 'rowtime.rowtime)
 
     tEnv.registerTable("T1", t1)
 
@@ -827,7 +827,7 @@ class OverWindowITCase extends StreamingWithStateTestBase {
     )
 
     val t1 = env.addSource(new EventTimeSourceFunction[(Int, Long, String)](data))
-      .toTable(tEnv, 'a, 'b, 'c, 'rowtime.rowtime)
+      .toTableFromAppendStream(tEnv, 'a, 'b, 'c, 'rowtime.rowtime)
 
     tEnv.registerTable("T1", t1)
 
@@ -864,7 +864,7 @@ class OverWindowITCase extends StreamingWithStateTestBase {
     StreamITCase.clear
 
     val t = StreamTestData.get5TupleDataStream(env)
-      .toTable(tEnv, 'a, 'b, 'c, 'd, 'e, 'proctime.proctime)
+      .toTableFromAppendStream(tEnv, 'a, 'b, 'c, 'd, 'e, 'proctime.proctime)
     tEnv.registerTable("MyTable", t)
 
     val sqlQuery = "SELECT a, " +
@@ -909,7 +909,7 @@ class OverWindowITCase extends StreamingWithStateTestBase {
     StreamITCase.clear
 
     val t = StreamTestData.get5TupleDataStream(env)
-      .toTable(tEnv, 'a, 'b, 'c, 'd, 'e, 'proctime.proctime)
+      .toTableFromAppendStream(tEnv, 'a, 'b, 'c, 'd, 'e, 'proctime.proctime)
     tEnv.registerTable("MyTable", t)
 
     val sqlQuery = "SELECT a, " +
@@ -969,7 +969,7 @@ class OverWindowITCase extends StreamingWithStateTestBase {
 
     val table = env.fromCollection(data)
       .assignAscendingTimestamps(_._1)
-      .toTable(tEnv, 'a, 'b, 'c, 'rtime.rowtime)
+      .toTableFromAppendStream(tEnv, 'a, 'b, 'c, 'rtime.rowtime)
 
     tEnv.registerTable("MyTable", table)
     tEnv.registerFunction("CntNullNonNull", new CountNullNonNull)
@@ -1016,7 +1016,8 @@ class OverWindowITCase extends StreamingWithStateTestBase {
     env.setParallelism(1)
     StreamITCase.clear
 
-    val table = env.fromCollection(data).toTable(tEnv, 'a, 'b, 'proctime.proctime)
+    val table = env.fromCollection(data)
+      .toTableFromAppendStream(tEnv, 'a, 'b, 'proctime.proctime)
     tEnv.registerTable("MyTable", table)
     tEnv.registerFunction("PairCount", new CountPairs)
 

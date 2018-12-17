@@ -32,7 +32,7 @@ import org.apache.flink.streaming.api.scala.DataStream
 class DataStreamConversions[T](dataStream: DataStream[T], inputType: TypeInformation[T]) {
 
   /**
-    * Converts the [[DataStream]] into a [[Table]].
+    * Converts the append [[DataStream]] into a [[Table]].
     *
     * The field name of the new [[Table]] can be specified like this:
     *
@@ -41,7 +41,7 @@ class DataStreamConversions[T](dataStream: DataStream[T], inputType: TypeInforma
     *   val tEnv = TableEnvironment.getTableEnvironment(env)
     *
     *   val stream: DataStream[(String, Int)] = ...
-    *   val table = stream.toTable(tEnv, 'name, 'amount)
+    *   val table = stream.toTableFromAppendStream(tEnv, 'name, 'amount)
     * }}}
     *
     * If not explicitly specified, field names are automatically extracted from the type of
@@ -51,7 +51,7 @@ class DataStreamConversions[T](dataStream: DataStream[T], inputType: TypeInforma
     * @param fields The field names of the new [[Table]] (optional).
     * @return The resulting [[Table]].
     */
-  def toTable(tableEnv: StreamTableEnvironment, fields: Expression*): Table = {
+  def toTableFromAppendStream(tableEnv: StreamTableEnvironment, fields: Expression*): Table = {
     if (fields.isEmpty) {
       tableEnv.fromAppendStream(dataStream)
     } else {
@@ -60,7 +60,7 @@ class DataStreamConversions[T](dataStream: DataStream[T], inputType: TypeInforma
   }
 
   /**
-    * Converts the [[DataStream]] with upsert messages into a [[Table]] with keys.
+    * Converts the upsert [[DataStream]] with upsert messages into a [[Table]] with keys.
     *
     * The incoming messages from the source DataStream are expected to be encoded as [[Tuple2]].
     * The first field is a [[Boolean]] flag, the second field holds the record. A true [[Boolean]]
@@ -73,7 +73,7 @@ class DataStreamConversions[T](dataStream: DataStream[T], inputType: TypeInforma
     *   val tEnv = TableEnvironment.getTableEnvironment(env)
     *
     *   val stream: DataStream[(Boolean, (String, Int))] = ...
-    *   val table = stream.toKeyedTable(tEnv, 'name.key, 'amount)
+    *   val table = stream.toTableFromUpsertStream(tEnv, 'name.key, 'amount)
     * }}}
     *
     * If field names are not explicitly specified, names are automatically extracted from the type
@@ -85,7 +85,7 @@ class DataStreamConversions[T](dataStream: DataStream[T], inputType: TypeInforma
     * @param fields The field names of the new [[Table]] (optional).
     * @return The resulting [[Table]].
     */
-  def toKeyedTable(tableEnv: StreamTableEnvironment, fields: Expression*): Table = {
+  def toTableFromUpsertStream(tableEnv: StreamTableEnvironment, fields: Expression*): Table = {
     if (fields.isEmpty) {
       tableEnv.fromUpsertStream(dataStream)
     } else {

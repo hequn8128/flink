@@ -67,7 +67,7 @@ class FromUpsertStreamITCase extends StreamingWithStateTestBase {
     StreamITCase.clear
 
     val ds = StreamTestData.get3TupleUpsertStream(env)
-    val t = ds.toKeyedTable(tEnv, 'a, 'b.key, 'c)
+    val t = ds.toTableFromUpsertStream(tEnv, 'a, 'b.key, 'c)
     tEnv.registerTable("MyTableRow", t)
     val sqlQuery = "SELECT a, b, c FROM MyTableRow"
     tEnv.sqlQuery(sqlQuery)
