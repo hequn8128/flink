@@ -350,14 +350,22 @@ case class StreamTableTestUtil() extends TableTestUtil {
     verifyTable(tableEnv.sqlQuery(query), expected)
   }
 
+  def verifySql(query: String, expected: String, updatesAsRetraction: Boolean): Unit = {
+    verifyTable(tableEnv.sqlQuery(query), expected, updatesAsRetraction)
+  }
+
   def verifySqlPlansIdentical(query1: String, queries: String*): Unit = {
     val resultTable1 = tableEnv.sqlQuery(query1)
     queries.foreach(s => verify2Tables(resultTable1, tableEnv.sqlQuery(s)))
   }
 
   def verifyTable(resultTable: Table, expected: String): Unit = {
+    verifyTable(resultTable, expected, updatesAsRetraction = false)
+  }
+
+  def verifyTable(resultTable: Table, expected: String, updatesAsRetraction: Boolean): Unit = {
     val relNode = resultTable.getRelNode
-    val optimized = tableEnv.optimize(relNode, updatesAsRetraction = false)
+    val optimized = tableEnv.optimize(relNode, updatesAsRetraction)
     verifyString(expected, optimized)
   }
 
@@ -373,9 +381,17 @@ case class StreamTableTestUtil() extends TableTestUtil {
     verifyJavaTable(javaTableEnv.sqlQuery(query), expected)
   }
 
+  def verifyJavaSql(query: String, expected: String, updatesAsRetraction: Boolean): Unit = {
+    verifyJavaTable(javaTableEnv.sqlQuery(query), expected, updatesAsRetraction)
+  }
+
   def verifyJavaTable(resultTable: Table, expected: String): Unit = {
+    verifyJavaTable(resultTable, expected, updatesAsRetraction = false)
+  }
+
+  def verifyJavaTable(resultTable: Table, expected: String, updatesAsRetraction: Boolean): Unit = {
     val relNode = resultTable.getRelNode
-    val optimized = javaTableEnv.optimize(relNode, updatesAsRetraction = false)
+    val optimized = javaTableEnv.optimize(relNode, updatesAsRetraction)
     verifyString(expected, optimized)
   }
 

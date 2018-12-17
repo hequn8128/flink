@@ -46,6 +46,8 @@ object FlinkRuleSets {
     TableScanRule.INSTANCE)
 
   val POST_EXPAND_CLEAN_UP_RULES: RuleSet = RuleSets.ofList(
+    // logical table to enumerable table to make sure EnumerableToLogicalTableScan will be applied
+    LogicalToEnumerableTableScan.INSTANCE,
     EnumerableToLogicalTableScan.INSTANCE)
 
   val LOGICAL_OPT_RULES: RuleSet = RuleSets.ofList(
@@ -240,7 +242,9 @@ object FlinkRuleSets {
     // retraction rules
     DataStreamRetractionRules.DEFAULT_RETRACTION_INSTANCE,
     DataStreamRetractionRules.UPDATES_AS_RETRACTION_INSTANCE,
-    DataStreamRetractionRules.ACCMODE_INSTANCE
+    DataStreamRetractionRules.ACCMODE_INSTANCE,
+    // remove DataStreamUpsertToRetraction under AccMode.
+    RemoveDataStreamUpsertToRetractionRule.INSTANCE
   )
 
 }

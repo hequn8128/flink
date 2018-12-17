@@ -22,40 +22,28 @@ import org.apache.calcite.adapter.enumerable.EnumerableTableScan
 import org.apache.calcite.plan.RelOptRule.{any, operand}
 import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall, RelOptRuleOperand}
 import org.apache.calcite.rel.logical.LogicalTableScan
-import org.apache.flink.table.plan.logical.rel.LogicalUpsertToRetraction
-import org.apache.flink.table.plan.schema.UpsertStreamTable
 
 /**
- * Rule that converts an EnumerableTableScan into a LogicalTableScan.
- * The rule also checks whether the source is an upsert source and adds
- * an UpsertToRetraction relnode after source.
+ * Rule that converts a LogicalTableScan into an EnumerableTableScan. We need this rule to
+ * transform all TableScan to EnumerableTableScan, so that to make sure
+ * [[EnumerableToLogicalTableScan]] be called. We transform upsert source in
+ * [[EnumerableToLogicalTableScan]]. Please note that Calcite also creates an EnumerableTableScan
+ * when parsing a SQL query.
  */
-class EnumerableToLogicalTableScan(
+class LogicalToEnumerableTableScan(
     operand: RelOptRuleOperand,
     description: String) extends RelOptRule(operand, description) {
 
   override def onMatch(call: RelOptRuleCall): Unit = {
-    val oldRel = call.rel(0).asInstanceOf[EnumerableTableScan]
+    val oldRel = call.rel(0).asInstanceOf[LogicalTableScan]
     val table = oldRel.getTable
-    val newRel = LogicalTableScan.create(oldRel.getCluster, table)
-
-    val streamTable = table.unwrap(classOf[UpsertStreamTable[_]])
-    streamTable match {
-      case _: UpsertStreamTable[_] =>
-        val upsertToRetraction = LogicalUpsertToRetraction.create(
-          newRel.getCluster,
-          newRel.getTraitSet,
-          newRel,
-          streamTable.uniqueKeys)
-        call.transformTo(upsertToRetraction)
-      case _ =>
-        call.transformTo(newRel)
-    }
+    val newRel = EnumerableTableScan.create(oldRel.getCluster, table)
+    call.transformTo(newRel)
   }
 }
 
-object EnumerableToLogicalTableScan {
-  val INSTANCE = new EnumerableToLogicalTableScan(
-      operand(classOf[EnumerableTableScan], any),
-    "EnumerableToLogicalTableScan")
+object LogicalToEnumerableTableScan {
+  val INSTANCE = new LogicalToEnumerableTableScan(
+    operand(classOf[LogicalTableScan], any),
+    "LogicalToEnumerableTableScan")
 }

@@ -36,6 +36,23 @@ class FromUpsertStreamTest extends TableTestBase {
   private val streamUtil: StreamTableTestUtil = streamTestUtil()
 
   @Test
+  def testRemoveUpsertToRetraction() = {
+    streamUtil.addKeyedTable[(Boolean, (Int, String, Long))](
+      "MyTable", 'a, 'b.key, 'c, 'proctime.proctime, 'rowtime.rowtime)
+
+    val sql = "SELECT a, b, c, proctime, rowtime FROM MyTable"
+
+    val expected =
+      unaryNode(
+        "DataStreamCalc",
+        UpsertTableNode(0),
+        term("select", "a", "b", "c", "PROCTIME(proctime) AS proctime",
+          "CAST(rowtime) AS rowtime")
+      )
+    streamUtil.verifySql(sql, expected)
+  }
+
+  @Test
   def testMaterializeTimeIndicatorAndCalcUpsertToRetractionTranspose() = {
     streamUtil.addKeyedTable[(Boolean, (Int, String, Long))](
       "MyTable", 'a, 'b.key, 'c, 'proctime.proctime, 'rowtime.rowtime)
@@ -54,7 +71,7 @@ class FromUpsertStreamTest extends TableTestBase {
         term("keys", "b1"),
         term("select", "b1", "c", "proctime1", "rowtime1")
       )
-    streamUtil.verifySql(sql, expected)
+    streamUtil.verifySql(sql, expected, true)
   }
 
   @Test
@@ -74,7 +91,7 @@ class FromUpsertStreamTest extends TableTestBase {
         term("keys", "bb"),
         term("select", "a", "bb")
       )
-    streamUtil.verifySql(sql, expected)
+    streamUtil.verifySql(sql, expected, true)
   }
 
   @Test
@@ -94,7 +111,7 @@ class FromUpsertStreamTest extends TableTestBase {
         ),
         term("select", "a", "c")
       )
-    streamUtil.verifySql(sql, expected)
+    streamUtil.verifySql(sql, expected, true)
   }
 
   @Test
@@ -112,7 +129,7 @@ class FromUpsertStreamTest extends TableTestBase {
         ),
         term("select", "a", "b")
       )
-    streamUtil.verifySql(sql, expected)
+    streamUtil.verifySql(sql, expected, true)
   }
 
   @Test
@@ -135,6 +152,6 @@ class FromUpsertStreamTest extends TableTestBase {
         term("keys", "bb"),
         term("select", "a", "bb")
       )
-    streamUtil.verifyJavaSql(sql, expected)
+    streamUtil.verifyJavaSql(sql, expected, true)
   }
 }
