@@ -22,46 +22,46 @@ import org.apache.calcite.plan.RelOptRule.{none, operand}
 import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall}
 import org.apache.calcite.rex.{RexCall, RexInputRef}
 import org.apache.calcite.sql.SqlKind
-import org.apache.flink.table.plan.nodes.logical.{FlinkLogicalCalc, FlinkLogicalLastRow}
+import org.apache.flink.table.plan.nodes.logical.{FlinkLogicalCalc, FlinkLogicalUpsertToRetraction}
 
 import scala.collection.JavaConversions._
 
 /**
-  * Use this rule to transpose Calc through LastRow. It is beneficial if we get smaller state size
-  * in LastRow.
+  * Use this rule to transpose Calc through UpsertToRetraction relnode. It is beneficial if we get
+  * smaller state size in upsertToRetraction.
   */
-class CalcLastRowTransposeRule extends RelOptRule(
+class CalcUpsertToRetractionTransposeRule extends RelOptRule(
   operand(classOf[FlinkLogicalCalc],
-    operand(classOf[FlinkLogicalLastRow], none)),
-  "CalcLastRowTransposeRule") {
+    operand(classOf[FlinkLogicalUpsertToRetraction], none)),
+  "CalcUpsertToRetractionTransposeRule") {
 
   override def matches(call: RelOptRuleCall): Boolean = {
     val calc = call.rel(0).asInstanceOf[FlinkLogicalCalc]
-    val lastRow = call.rel(1).asInstanceOf[FlinkLogicalLastRow]
+    val upsertToRetraction = call.rel(1).asInstanceOf[FlinkLogicalUpsertToRetraction]
 
     // column pruning or push Filter down
-    calc.getRowType.getFieldCount <= lastRow.getRowType.getFieldCount &&
+    calc.getRowType.getFieldCount <= upsertToRetraction.getRowType.getFieldCount &&
     // key fields should not be changed
-      fieldsRemainAfterCalc(lastRow.keyNames, calc)
+      fieldsRemainAfterCalc(upsertToRetraction.keyNames, calc)
   }
 
   override def onMatch(call: RelOptRuleCall) {
     val calc = call.rel(0).asInstanceOf[FlinkLogicalCalc]
-    val lastRow = call.rel(1).asInstanceOf[FlinkLogicalLastRow]
+    val upsertToRetraction = call.rel(1).asInstanceOf[FlinkLogicalUpsertToRetraction]
 
     // get new calc
-    val newCalc = calc.copy(calc.getTraitSet, lastRow.getInput, calc.getProgram)
-    // get new lastRow
-    val oldKeyNames = lastRow.keyNames
+    val newCalc = calc.copy(calc.getTraitSet, upsertToRetraction.getInput, calc.getProgram)
+    // get new upsertToRetraction
+    val oldKeyNames = upsertToRetraction.keyNames
     val newKeyNames = getNamesAfterCalc(oldKeyNames, calc)
 
-    val newLastRow = new FlinkLogicalLastRow(
-      lastRow.getCluster,
-      lastRow.getTraitSet,
+    val newUpsertToRetraction = new FlinkLogicalUpsertToRetraction(
+      upsertToRetraction.getCluster,
+      upsertToRetraction.getTraitSet,
       newCalc,
       newKeyNames)
 
-    call.transformTo(newLastRow)
+    call.transformTo(newUpsertToRetraction)
   }
 
   private def fieldsRemainAfterCalc(fields: Seq[String], calc: FlinkLogicalCalc): Boolean = {
@@ -103,7 +103,7 @@ class CalcLastRowTransposeRule extends RelOptRule(
   }
 }
 
-object CalcLastRowTransposeRule {
-  val INSTANCE = new CalcLastRowTransposeRule()
+object CalcUpsertToRetractionTransposeRule {
+  val INSTANCE = new CalcUpsertToRetractionTransposeRule()
 }
 

@@ -29,12 +29,12 @@ import org.apache.flink.types.Row
 import org.apache.flink.util.Collector
 
 /**
-  * Function used to handle upsert inputs. Output a retract message if there is a new update.
+  * Function used to convert upsert to retractions.
   *
   * @param rowTypeInfo the output row type info.
   * @param queryConfig the configuration for the query.
   */
-class LastRowProcessFunction(
+class UpsertToRetractionProcessFunction(
     private val rowTypeInfo: RowTypeInfo,
     private val queryConfig: StreamQueryConfig)
   extends ProcessFunctionWithCleanupState[CRow, CRow](queryConfig)
@@ -49,11 +49,11 @@ class LastRowProcessFunction(
     prevRow = new CRow(new Row(rowTypeInfo.getArity), false)
 
     val stateDescriptor: ValueStateDescriptor[Row] =
-      new ValueStateDescriptor[Row]("LastRowState", rowTypeInfo)
+      new ValueStateDescriptor[Row]("UpsertToRetractionState", rowTypeInfo)
     state = getRuntimeContext.getState(stateDescriptor)
 
-    initCleanupTimeState("LastRowCleanupTime")
-    LOG.info("Init LastRowProcessFunction.")
+    initCleanupTimeState("UpsertToRetractionCleanupTime")
+    LOG.info("Init UpsertToRetractionProcessFunction.")
   }
 
   override def processElement(

@@ -24,31 +24,29 @@ import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
 import org.apache.calcite.rel.{RelNode, SingleRel}
 
 /**
-  * Represent an upsert source.
-  *
-  * @param keyNames   The upsert key names.
+  * Represent a relnode which convert upsert to retraction.
   */
-class LogicalLastRow(
+class LogicalUpsertToRetraction(
     cluster: RelOptCluster,
     traitSet: RelTraitSet,
     child: RelNode,
-    val keyNames: Array[String])
+    val upsertKeyNames: Array[String])
   extends SingleRel(cluster, traitSet, child) {
 
   override def copy(traitSet: RelTraitSet, inputs: util.List[RelNode]): RelNode = {
-    new LogicalLastRow(cluster, traitSet, inputs.get(0), keyNames)
+    new LogicalUpsertToRetraction(cluster, traitSet, inputs.get(0), upsertKeyNames)
   }
 }
 
-object LogicalLastRow {
+object LogicalUpsertToRetraction {
 
   def create(
     cluster: RelOptCluster,
     traitSet: RelTraitSet,
     child: RelNode,
-    keyIndexes: Array[String]): LogicalLastRow = {
+    keyIndexes: Array[String]): LogicalUpsertToRetraction = {
 
-    new LogicalLastRow(cluster, traitSet, child, keyIndexes)
+    new LogicalUpsertToRetraction(cluster, traitSet, child, keyIndexes)
   }
 }
 

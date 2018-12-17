@@ -36,7 +36,7 @@ class FromUpsertStreamTest extends TableTestBase {
   private val streamUtil: StreamTableTestUtil = streamTestUtil()
 
   @Test
-  def testMaterializeTimeIndicatorAndCalcLastRowTranspose() = {
+  def testMaterializeTimeIndicatorAndCalcUpsertToRetractionTranspose() = {
     streamUtil.addKeyedTable[(Boolean, (Int, String, Long))](
       "MyTable", 'a, 'b.key, 'c, 'proctime.proctime, 'rowtime.rowtime)
 
@@ -44,7 +44,7 @@ class FromUpsertStreamTest extends TableTestBase {
 
     val expected =
       unaryNode(
-        "DataStreamLastRow",
+        "DataStreamUpsertToRetraction",
         unaryNode(
           "DataStreamCalc",
           UpsertTableNode(0),
@@ -58,14 +58,14 @@ class FromUpsertStreamTest extends TableTestBase {
   }
 
   @Test
-  def testCalcTransposeLastRow() = {
+  def testCalcTransposeUpsertToRetraction() = {
     streamUtil.addKeyedTable[(Boolean, (Int, String, Long))]("MyTable", 'a, 'b.key, 'c)
 
     val sql = "SELECT a, b as bb FROM MyTable"
 
     val expected =
       unaryNode(
-        "DataStreamLastRow",
+        "DataStreamUpsertToRetraction",
         unaryNode(
           "DataStreamCalc",
           UpsertTableNode(0),
@@ -78,7 +78,7 @@ class FromUpsertStreamTest extends TableTestBase {
   }
 
   @Test
-  def testCalcCannotTransposeLastRow() = {
+  def testCalcCannotTransposeUpsertToRetraction() = {
     streamUtil.addKeyedTable[(Boolean, (Int, String, Long))]("MyTable", 'a, 'b.key, 'c)
 
     val sql = "SELECT a, c FROM MyTable"
@@ -87,7 +87,7 @@ class FromUpsertStreamTest extends TableTestBase {
       unaryNode(
         "DataStreamCalc",
         unaryNode(
-          "DataStreamLastRow",
+          "DataStreamUpsertToRetraction",
           UpsertTableNode(0),
           term("keys", "b"),
           term("select", "a", "b", "c")
@@ -104,7 +104,7 @@ class FromUpsertStreamTest extends TableTestBase {
 
     val expected =
       unaryNode(
-        "DataStreamLastRow",
+        "DataStreamUpsertToRetraction",
         unaryNode(
           "DataStreamCalc",
           UpsertTableNode(0),
@@ -126,7 +126,7 @@ class FromUpsertStreamTest extends TableTestBase {
 
     val expected =
       unaryNode(
-        "DataStreamLastRow",
+        "DataStreamUpsertToRetraction",
         unaryNode(
           "DataStreamCalc",
           UpsertTableNode(0),

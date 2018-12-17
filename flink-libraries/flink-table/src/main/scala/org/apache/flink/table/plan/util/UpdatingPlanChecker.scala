@@ -184,7 +184,7 @@ object UpdatingPlanChecker {
             )
           }
 
-        case l: DataStreamLastRow =>
+        case l: DataStreamUpsertToRetraction =>
           val uniqueKeyNames = l.getRowType.getFieldNames.zipWithIndex
             .filter(e => l.keyIndexes.contains(e._2))
             .map(_._1)
