@@ -142,7 +142,7 @@ class FromUpsertStreamITCase extends StreamingWithStateTestBase {
   }
 
   @Test
-  def testCalcTransposeLastRow(): Unit = {
+  def testCalcTransposeUpsertToRetract(): Unit = {
 
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     val tEnv = TableEnvironment.getTableEnvironment(env)
@@ -192,7 +192,7 @@ class FromUpsertStreamITCase extends StreamingWithStateTestBase {
 
     val ds = env.fromCollection(data)
     // use aliases, swap all attributes, and skip b2
-    val t = tEnv.fromUpsertStream(ds, 'b, 'c as 'c, ('a as 'a).key)
+    val t = tEnv.fromUpsertStream(ds, 'b, 'c as 'c, 'a.key as 'a)
     tEnv.registerTable("MyTableRow", t)
 
     val sqlQuery = "SELECT a, b, c FROM MyTableRow"

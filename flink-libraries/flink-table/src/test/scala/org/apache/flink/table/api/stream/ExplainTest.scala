@@ -22,7 +22,6 @@ import org.apache.flink.api.scala._
 import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
 import org.apache.flink.table.api.TableEnvironment
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.runtime.utils.StreamTestData
 import org.apache.flink.test.util.AbstractTestBase
 import org.junit.Assert.assertEquals
 import org.junit._
@@ -61,21 +60,6 @@ class ExplainTest extends AbstractTestBase {
 
     val source = scala.io.Source.fromFile(testFilePath +
       "../../src/test/scala/resources/testUnionStream0.out").mkString
-    val expect = replaceString(source)
-    assertEquals(expect, result)
-  }
-
-  @Test
-  def testFromUpsertStreamWithoutRetraction(): Unit = {
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
-
-    val ds = StreamTestData.get3TupleUpsertStream(env)
-    val table = tEnv.fromUpsertStream(ds, 'a, 'b.key, 'c)
-    val result = replaceString(tEnv.explain(table))
-
-    val source = scala.io.Source.fromFile(testFilePath +
-      "../../src/test/scala/resources/testFromUpsertStream.out").mkString
     val expect = replaceString(source)
     assertEquals(expect, result)
   }

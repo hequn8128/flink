@@ -24,10 +24,10 @@ import org.apache.calcite.plan._
 import org.apache.calcite.rel.{RelNode, SingleRel}
 import org.apache.calcite.rel.convert.ConverterRule
 import org.apache.calcite.rel.metadata.RelMetadataQuery
-import org.apache.flink.table.plan.logical.rel.LogicalLastRow
+import org.apache.flink.table.plan.logical.rel.LogicalUpsertToRetraction
 import org.apache.flink.table.plan.nodes.FlinkConventions
 
-class FlinkLogicalLastRow(
+class FlinkLogicalUpsertToRetraction(
     cluster: RelOptCluster,
     traitSet: RelTraitSet,
     child: RelNode,
@@ -36,39 +36,39 @@ class FlinkLogicalLastRow(
   with FlinkLogicalRel {
 
   override def copy(traitSet: RelTraitSet, inputs: JList[RelNode]): RelNode = {
-    new FlinkLogicalLastRow(cluster, traitSet, inputs.get(0), keyNames)
+    new FlinkLogicalUpsertToRetraction(cluster, traitSet, inputs.get(0), keyNames)
   }
 
   override def computeSelfCost(planner: RelOptPlanner, mq: RelMetadataQuery): RelOptCost = {
     val child = this.getInput
     val rowCnt = mq.getRowCount(child)
-    // take rowCnt and fieldCnt into account, so that cost will be smaller when generate LastRow
-    // after Calc.
+    // take rowCnt and fieldCnt into account, so that cost will be smaller when generate
+    // UpsertToRetractionConverter after Calc.
     planner.getCostFactory.makeCost(rowCnt, rowCnt * child.getRowType.getFieldCount, 0)
   }
 }
 
-private class FlinkLogicalLastRowConverter
+private class FlinkLogicalUpsertToRetractionConverter
   extends ConverterRule(
-    classOf[LogicalLastRow],
+    classOf[LogicalUpsertToRetraction],
     Convention.NONE,
     FlinkConventions.LOGICAL,
-    "FlinkLogicalLastRowConverter") {
+    "FlinkLogicalUpsertToRetractionConverter") {
 
   override def convert(rel: RelNode): RelNode = {
-    val lastRow = rel.asInstanceOf[LogicalLastRow]
+    val upsertToRetraction = rel.asInstanceOf[LogicalUpsertToRetraction]
     val traitSet = rel.getTraitSet.replace(FlinkConventions.LOGICAL)
-    val newInput = RelOptRule.convert(lastRow.getInput, FlinkConventions.LOGICAL)
+    val newInput = RelOptRule.convert(upsertToRetraction.getInput, FlinkConventions.LOGICAL)
 
-    new FlinkLogicalLastRow(
+    new FlinkLogicalUpsertToRetraction(
       rel.getCluster,
       traitSet,
       newInput,
-      lastRow.keyNames
+      upsertToRetraction.upsertKeyNames
     )
   }
 }
 
-object FlinkLogicalLastRow {
-  val CONVERTER: ConverterRule = new FlinkLogicalLastRowConverter()
+object FlinkLogicalUpsertToRetraction {
+  val CONVERTER: ConverterRule = new FlinkLogicalUpsertToRetractionConverter()
 }
