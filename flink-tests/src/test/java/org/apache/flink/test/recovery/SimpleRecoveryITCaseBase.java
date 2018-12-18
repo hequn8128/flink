@@ -48,6 +48,7 @@ public abstract class SimpleRecoveryITCaseBase {
 
 		try {
 			List<Long> resultCollection = new ArrayList<Long>();
+			FailingMapper1<Long> failingMapper1 = new FailingMapper1<Long>();
 
 			// attempt 1
 			{
@@ -59,7 +60,7 @@ public abstract class SimpleRecoveryITCaseBase {
 
 				env.generateSequence(1, 10)
 						.rebalance()
-						.map(new FailingMapper1<Long>())
+						.map(failingMapper1)
 						.reduce(new ReduceFunction<Long>() {
 							@Override
 							public Long reduce(Long value1, Long value2) {
@@ -88,7 +89,7 @@ public abstract class SimpleRecoveryITCaseBase {
 
 				env.generateSequence(1, 10)
 						.rebalance()
-						.map(new FailingMapper1<Long>())
+						.map(failingMapper1)
 						.reduce(new ReduceFunction<Long>() {
 							@Override
 							public Long reduce(Long value1, Long value2) {
@@ -203,6 +204,12 @@ public abstract class SimpleRecoveryITCaseBase {
 
 		private static volatile int failuresBeforeSuccess = 1;
 
+		// SimpleRecoveryITCaseBase contains multiple subclasses, the static variable will be
+		// changed if we run SimpleRecoveryITCaseBase in IDE.
+		public FailingMapper1() {
+			failuresBeforeSuccess = 1;
+		}
+
 		@Override
 		public T map(T value) throws Exception {
 			if (failuresBeforeSuccess > 0 && getRuntimeContext().getIndexOfThisSubtask() == 1) {
@@ -218,6 +225,10 @@ public abstract class SimpleRecoveryITCaseBase {
 
 		private static volatile int failuresBeforeSuccess = 1;
 
+		public FailingMapper2() {
+			failuresBeforeSuccess = 1;
+		}
+
 		@Override
 		public T map(T value) throws Exception {
 			if (failuresBeforeSuccess > 0 && getRuntimeContext().getIndexOfThisSubtask() == 1) {
@@ -232,6 +243,10 @@ public abstract class SimpleRecoveryITCaseBase {
 	private static class FailingMapper3<T> extends RichMapFunction<T, T> {
 
 		private static volatile int failuresBeforeSuccess = 3;
+
+		public FailingMapper3() {
+			failuresBeforeSuccess = 3;
+		}
 
 		@Override
 		public T map(T value) throws Exception {
