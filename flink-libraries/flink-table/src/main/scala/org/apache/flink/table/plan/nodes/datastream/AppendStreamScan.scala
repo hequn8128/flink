@@ -27,7 +27,7 @@ import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.table.api.{StreamQueryConfig, StreamTableEnvironment}
 import org.apache.flink.table.expressions.Cast
 import org.apache.flink.table.plan.schema.RowSchema
-import org.apache.flink.table.plan.schema.DataStreamTable
+import org.apache.flink.table.plan.schema.AppendStreamTable
 import org.apache.flink.table.runtime.types.CRow
 import org.apache.flink.table.typeutils.TimeIndicatorTypeInfo
 
@@ -36,7 +36,7 @@ import org.apache.flink.table.typeutils.TimeIndicatorTypeInfo
   * It ensures that types without deterministic field order (e.g. POJOs) are not part of
   * the plan translation.
   */
-class DataStreamScan(
+class AppendStreamScan(
     cluster: RelOptCluster,
     traitSet: RelTraitSet,
     table: RelOptTable,
@@ -44,12 +44,12 @@ class DataStreamScan(
   extends TableScan(cluster, traitSet, table)
   with StreamScan {
 
-  val dataStreamTable: DataStreamTable[Any] = getTable.unwrap(classOf[DataStreamTable[Any]])
+  val appendStreamTable: AppendStreamTable[Any] = getTable.unwrap(classOf[AppendStreamTable[Any]])
 
   override def deriveRowType(): RelDataType = schema.relDataType
 
   override def copy(traitSet: RelTraitSet, inputs: java.util.List[RelNode]): RelNode = {
-    new DataStreamScan(
+    new AppendStreamScan(
       cluster,
       traitSet,
       getTable,
@@ -62,8 +62,8 @@ class DataStreamScan(
       queryConfig: StreamQueryConfig): DataStream[CRow] = {
 
     val config = tableEnv.getConfig
-    val inputDataStream: DataStream[Any] = dataStreamTable.dataStream
-    val fieldIdxs = dataStreamTable.fieldIndexes
+    val inputDataStream: DataStream[Any] = appendStreamTable.dataStream
+    val fieldIdxs = appendStreamTable.fieldIndexes
 
     // get expression to extract timestamp
     val rowtimeExpr: Option[RexNode] =

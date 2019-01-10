@@ -47,6 +47,20 @@ class TableSinkValidationTest extends TableTestBase {
   }
 
   @Test(expected = classOf[TableException])
+  def testAppendSinkOnUpdatingTable2(): Unit = {
+    val env = StreamExecutionEnvironment.getExecutionEnvironment
+    val tEnv = TableEnvironment.getTableEnvironment(env)
+
+    val t = tEnv.fromUpsertStream(
+      StreamTestData.getSmall3TupleUpsertStream(env), 'id.key, 'num, 'text)
+
+    t.writeToSink(new TestAppendSink)
+
+    // must fail because table is not append-only
+    env.execute()
+  }
+
+  @Test(expected = classOf[TableException])
   def testUpsertSinkOnUpdatingTableWithoutFullKey(): Unit = {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)

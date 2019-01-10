@@ -18,9 +18,9 @@
 
 package org.apache.flink.table.api.stream
 
-import java.lang.{Integer => JInt, Long => JLong}
+import java.lang.{Boolean => JBool, Integer => JInt, Long => JLong}
 
-import org.apache.flink.api.java.tuple.{Tuple5 => JTuple5}
+import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2, Tuple5 => JTuple5}
 import org.apache.flink.api.java.typeutils.TupleTypeInfo
 import org.apache.flink.api.scala._
 import org.apache.flink.streaming.api.TimeCharacteristic
@@ -170,6 +170,19 @@ class StreamTableEnvironmentTest extends TableTestBase {
     jTEnv.fromAppendStream(ds, "rt.rowtime, b, c, d, e, pt.proctime")
   }
 
+  @Test
+  def testAddTableFromUpsert(): Unit = {
+    val util = streamTestUtil()
+    util.addTableFromUpsert[(Boolean, (Long, Int, String, Int, Long))](
+      'a.key, 'b, 'c, 'd, 'e, 'pt.proctime)
+  }
+
+  @Test
+  def testAddTableFromUpsertParsed(): Unit = {
+    val (jTEnv, ds) = prepareKeyedSchemaExpressionParser
+    jTEnv.fromUpsertStream(ds, "a.key, b, c, d, e, pt.proctime")
+  }
+
   private def prepareSchemaExpressionParser:
     (JStreamTableEnv, DataStream[JTuple5[JLong, JInt, String, JInt, JLong]]) = {
 
@@ -185,4 +198,20 @@ class StreamTableEnvironmentTest extends TableTestBase {
     (jTEnv, ds)
   }
 
+  private def prepareKeyedSchemaExpressionParser:
+    (JStreamTableEnv, DataStream[JTuple2[JBool, JTuple5[JLong, JInt, String, JInt, JLong]]]) = {
+
+    val jStreamExecEnv = mock(classOf[JStreamExecEnv])
+    when(jStreamExecEnv.getStreamTimeCharacteristic).thenReturn(TimeCharacteristic.EventTime)
+    val jTEnv = TableEnvironment.getTableEnvironment(jStreamExecEnv)
+
+    val sType = new TupleTypeInfo(Types.LONG, Types.INT, Types.STRING, Types.INT, Types.LONG)
+      .asInstanceOf[TupleTypeInfo[JTuple5[JLong, JInt, String, JInt, JLong]]]
+    val dsType = new TupleTypeInfo(Types.BOOLEAN, sType)
+      .asInstanceOf[TupleTypeInfo[JTuple2[JBool, JTuple5[JLong, JInt, String, JInt, JLong]]]]
+    val ds = mock(classOf[DataStream[JTuple2[JBool, JTuple5[JLong, JInt, String, JInt, JLong]]]])
+    when(ds.getType).thenReturn(dsType)
+
+    (jTEnv, ds)
+  }
 }
