@@ -79,7 +79,7 @@ class UpsertStreamScan(
       }
 
     // convert DataStream
-    convertToInternalRow(schema, inputDataStream, fieldIdxs, config, rowtimeExpr)
+    convertUpsertToInternalRow(schema, inputDataStream, fieldIdxs, config, rowtimeExpr)
   }
 
 }

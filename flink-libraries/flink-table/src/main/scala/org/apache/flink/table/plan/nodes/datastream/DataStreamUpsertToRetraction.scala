@@ -22,10 +22,13 @@ import java.util
 
 import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
 import org.apache.calcite.rel.{RelNode, RelWriter, SingleRel}
+import org.apache.flink.api.java.functions.NullByteKeySelector
+import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.table.api.{StreamQueryConfig, StreamTableEnvironment, TableException}
 import org.apache.flink.table.plan.rules.datastream.DataStreamRetractionRules
 import org.apache.flink.table.plan.schema.RowSchema
+import org.apache.flink.table.runtime.{CRowKeySelector, UpsertToRetractionProcessFunction}
 import org.apache.flink.table.runtime.types.{CRow, CRowTypeInfo}
 
 import scala.collection.JavaConversions._
@@ -90,7 +93,29 @@ class DataStreamUpsertToRetraction(
         "this should be a bug!")
     }
 
-    // todo: return inputDS for plan test. The detailed code will be ready in the next commit
-    inputDS
+    val processFunction = new UpsertToRetractionProcessFunction(
+      schema.typeInfo.asInstanceOf[RowTypeInfo],
+      queryConfig
+    )
+
+    if (keyIndexes.nonEmpty) {
+      // upsert with keys
+      inputDS
+        .keyBy(new CRowKeySelector(keyIndexes, inputSchema.projectedTypeInfo(keyIndexes)))
+        .process(processFunction)
+        .returns(outRowType)
+        .name(this.toString)
+        .asInstanceOf[DataStream[CRow]]
+    } else {
+      // upsert without key -> single row table
+      inputDS
+        .keyBy(new NullByteKeySelector[CRow])
+        .process(processFunction)
+        .setParallelism(1)
+        .setMaxParallelism(1)
+        .returns(outRowType)
+        .name(this.toString)
+        .asInstanceOf[DataStream[CRow]]
+    }
   }
 }
