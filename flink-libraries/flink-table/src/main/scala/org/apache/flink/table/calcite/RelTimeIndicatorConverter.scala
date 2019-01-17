@@ -29,8 +29,8 @@ import org.apache.flink.api.common.typeinfo.SqlTimeTypeInfo
 import org.apache.flink.table.api.{TableException, ValidationException}
 import org.apache.flink.table.calcite.FlinkTypeFactory.{isRowtimeIndicatorType, _}
 import org.apache.flink.table.functions.sql.ProctimeSqlFunction
-import org.apache.flink.table.plan.logical.rel.{LogicalTemporalTableJoin, LogicalWindowAggregate}
-import org.apache.flink.table.plan.schema.TimeIndicatorRelDataType
+import org.apache.flink.table.plan.logical.rel.{LogicalUpsertToRetraction, LogicalTemporalTableJoin, LogicalWindowAggregate}
+import org.apache.flink.table.plan.schema.{TimeIndicatorRelDataType}
 import org.apache.flink.table.validate.BasicOperatorTable
 
 import scala.collection.JavaConversions._
@@ -158,6 +158,8 @@ class RelTimeIndicatorConverter(rexBuilder: RexBuilder) extends RelShuttle {
     case temporalTableJoin: LogicalTemporalTableJoin =>
       visit(temporalTableJoin)
 
+    case upsertToRetraction: LogicalUpsertToRetraction => visit(upsertToRetraction)
+
     case _ =>
       throw new TableException(s"Unsupported logical operator: ${other.getClass.getSimpleName}")
   }
@@ -213,6 +215,19 @@ class RelTimeIndicatorConverter(rexBuilder: RexBuilder) extends RelShuttle {
     val indicesToMaterialize = gatherIndicesToMaterialize(rewrittenTemporalJoin, left, right)
 
     materializerUtils.projectAndMaterializeFields(rewrittenTemporalJoin, indicesToMaterialize)
+  }
+
+  def visit(upsertToRetraction: LogicalUpsertToRetraction): RelNode = {
+    val input = upsertToRetraction.getInput.accept(this)
+    val relTypes = input.getRowType.getFieldList.map(_.getType)
+    val timeIndicatorIndexes = relTypes.zipWithIndex
+      .filter(e => FlinkTypeFactory.isTimeIndicatorType(e._1))
+      .map(_._2).toSet
+
+    val rewrittenInput = input.copy(input.getTraitSet, input.getInputs)
+    val newInput =
+      materializerUtils.projectAndMaterializeFields(rewrittenInput, timeIndicatorIndexes)
+    upsertToRetraction.copy(upsertToRetraction.getTraitSet, Seq(newInput))
   }
 
   override def visit(correlate: LogicalCorrelate): RelNode = {
