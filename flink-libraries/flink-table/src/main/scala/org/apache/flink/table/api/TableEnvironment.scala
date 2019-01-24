@@ -18,55 +18,17 @@
 
 package org.apache.flink.table.api
 
-import _root_.java.util.concurrent.atomic.AtomicInteger
-
-import com.google.common.collect.ImmutableList
-import org.apache.calcite.config.Lex
-import org.apache.calcite.jdbc.CalciteSchema
-import org.apache.calcite.plan.RelOptPlanner.CannotPlanException
-import org.apache.calcite.plan.hep.{HepMatchOrder, HepPlanner, HepProgram, HepProgramBuilder}
-import org.apache.calcite.plan.{Convention, RelOptPlanner, RelOptUtil, RelTraitSet}
-import org.apache.calcite.rel.RelNode
-import org.apache.calcite.schema.SchemaPlus
-import org.apache.calcite.schema.impl.AbstractTable
-import org.apache.calcite.sql._
-import org.apache.calcite.sql.parser.SqlParser
-import org.apache.calcite.sql.util.ChainedSqlOperatorTable
-import org.apache.calcite.sql2rel.SqlToRelConverter
-import org.apache.calcite.tools._
-import org.apache.flink.api.common.functions.MapFunction
 import org.apache.flink.api.common.typeinfo.TypeInformation
-import org.apache.flink.api.common.typeutils.CompositeType
-import org.apache.flink.api.java.typeutils.{RowTypeInfo, _}
-import org.apache.flink.api.scala.typeutils.CaseClassTypeInfo
-import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
-import org.apache.flink.table.calcite.{FlinkPlannerImpl, FlinkRelBuilder, FlinkTypeFactory, FlinkTypeSystem}
-import org.apache.flink.table.catalog.{ExternalCatalog, ExternalCatalogSchema}
-import org.apache.flink.table.codegen.{ExpressionReducer, FunctionCodeGenerator, GeneratedFunction}
-import org.apache.flink.table.descriptors.{ConnectorDescriptor, TableDescriptor}
-import org.apache.flink.table.expressions._
-import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils._
+import org.apache.flink.table.catalog.{ExternalCatalog}
 import org.apache.flink.table.functions.{AggregateFunction, ScalarFunction, TableFunction}
-import org.apache.flink.table.plan.cost.DataSetCostFactory
-import org.apache.flink.table.plan.logical.{CatalogNode, LogicalRelNode}
-import org.apache.flink.table.plan.nodes.FlinkConventions
-import org.apache.flink.table.plan.rules.FlinkRuleSets
-import org.apache.flink.table.plan.schema.{RelTable, RowSchema, TableSourceSinkTable}
 import org.apache.flink.table.sinks.TableSink
 import org.apache.flink.table.sources.TableSource
-import org.apache.flink.table.typeutils.TimeIndicatorTypeInfo
-import org.apache.flink.table.validate.FunctionCatalog
-import org.apache.flink.types.Row
 
 import _root_.scala.annotation.varargs
-import _root_.scala.collection.JavaConverters._
-import _root_.scala.collection.mutable
 
-import org.apache.flink.streaming.api.environment.{StreamExecutionEnvironment => JavaStreamExecEnv}
 import org.apache.flink.api.scala.{ExecutionEnvironment => ScalaBatchExecEnv}
 import org.apache.flink.streaming.api.scala.{StreamExecutionEnvironment => ScalaStreamExecEnv}
-import org.apache.flink.table.api.scala.{BatchTableEnvironment => ScalaBatchTableEnv, StreamTableEnvironment => ScalaStreamTableEnv}
-import org.apache.flink.table.api.java.{StreamTablePlanner => JavaStreamTablePlanner}
+import org.apache.flink.table.api.scala.{BatchTableEnvironment => ScalaBatchTableEnv}
 import org.apache.flink.table.api.scala.{BatchTablePlanner => ScalaBatchTablePlanner, StreamTablePlanner => ScalaStreamTablePlanner}
 
 import org.apache.flink.table.api.scala.{StreamTableEnvironment => ScalaStreamTableEnv}
@@ -106,14 +68,6 @@ abstract class TableEnvironment(private[flink] val tablePlanner: TablePlanner) {
     */
   def getRegisteredExternalCatalog(name: String): ExternalCatalog = {
     tablePlanner.getRegisteredExternalCatalog(name)
-  }
-
-  /**
-    * Registers a [[ScalarFunction]] under a unique name. Replaces already existing
-    * user-defined functions under this name.
-    */
-  def registerFunction(name: String, function: ScalarFunction): Unit = {
-    tablePlanner.registerFunction(name, function)
   }
 
   /**
@@ -247,6 +201,42 @@ abstract class TableEnvironment(private[flink] val tablePlanner: TablePlanner) {
     tablePlanner.sqlUpdate(stmt, config)
   }
 
+  /**
+    * Registers a [[ScalarFunction]] under a unique name. Replaces already existing
+    * user-defined functions under this name.
+    */
+  def registerFunction(name: String, function: ScalarFunction): Unit = {
+
+    tablePlanner.registerFunction(name, function)
+  }
+
+  /**
+    * Registers a [[TableFunction]] under a unique name in the TableEnvironment's catalog.
+    * Registered functions can be referenced in SQL queries.
+    *
+    * @param name The name under which the function is registered.
+    * @param tf The TableFunction to register
+    */
+  def registerFunction[T: TypeInformation](name: String, tf: TableFunction[T]): Unit = {
+    tablePlanner.registerTableFunctionInternal(name, tf)
+  }
+
+  /**
+    * Registers an [[AggregateFunction]] under a unique name in the TableEnvironment's catalog.
+    * Registered functions can be referenced in Table API and SQL queries.
+    *
+    * @param name The name under which the function is registered.
+    * @param f The AggregateFunction to register.
+    * @tparam T The type of the output value.
+    * @tparam ACC The type of aggregate accumulator.
+    */
+  def registerFunction[T: TypeInformation, ACC: TypeInformation](
+      name: String,
+      f: AggregateFunction[T, ACC])
+  : Unit = {
+    tablePlanner.registerAggregateFunctionInternal(name, f)
+  }
+
   def execute()
 }
 
@@ -267,10 +257,6 @@ object TableEnvironment {
         val batchTablePlanner = new ScalaBatchTablePlanner(env, tableConfig)
         new ScalaBatchTableEnv(batchTablePlanner)
     }
-
-    // 2. StreamPlanner configures itself with the given TableConfig (e.g. watermark interval)
-
-    // 3. Table environment calls are forwarded to the planner
   }
 }
 

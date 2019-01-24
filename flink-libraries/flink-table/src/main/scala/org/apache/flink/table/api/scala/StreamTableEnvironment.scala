@@ -21,7 +21,6 @@ import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.streaming.api.scala.{DataStream, StreamExecutionEnvironment, asScalaStream}
 import org.apache.flink.table.api.{StreamQueryConfig, Table, TableConfig, TablePlanner}
 import org.apache.flink.table.expressions.Expression
-import org.apache.flink.table.functions.{AggregateFunction, TableFunction}
 
 /**
   * The [[TablePlanner]] for a Scala [[StreamExecutionEnvironment]].
@@ -183,33 +182,6 @@ class StreamTableEnvironment(tablePlanner: StreamTablePlanner)
       table: Table,
       queryConfig: StreamQueryConfig): DataStream[(Boolean, T)] = {
     tablePlanner.toRetractStream(table, queryConfig)
-  }
-
-  /**
-    * Registers a [[TableFunction]] under a unique name in the TableEnvironment's catalog.
-    * Registered functions can be referenced in SQL queries.
-    *
-    * @param name The name under which the function is registered.
-    * @param tf The TableFunction to register
-    */
-  def registerFunction[T: TypeInformation](name: String, tf: TableFunction[T]): Unit = {
-    tablePlanner.registerFunction(name, tf)
-  }
-
-  /**
-    * Registers an [[AggregateFunction]] under a unique name in the TableEnvironment's catalog.
-    * Registered functions can be referenced in Table API and SQL queries.
-    *
-    * @param name The name under which the function is registered.
-    * @param f The AggregateFunction to register.
-    * @tparam T The type of the output value.
-    * @tparam ACC The type of aggregate accumulator.
-    */
-  def registerFunction[T: TypeInformation, ACC: TypeInformation](
-      name: String,
-      f: AggregateFunction[T, ACC])
-  : Unit = {
-    tablePlanner.registerFunction(name, f)
   }
 
   override def execute(): Unit = {

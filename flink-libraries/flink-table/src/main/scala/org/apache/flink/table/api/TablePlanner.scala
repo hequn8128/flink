@@ -64,7 +64,7 @@ import org.apache.flink.table.typeutils.TimeIndicatorTypeInfo
 import org.apache.flink.table.validate.FunctionCatalog
 import org.apache.flink.types.Row
 
-import org.apache.flink.table.api.scala.{BatchTableEnvironment => ScalaBatchTableEnv, StreamTableEnvironment => ScalaStreamTableEnv}
+import org.apache.flink.table.api.scala.{StreamTableEnvironment => ScalaStreamTableEnv}
 
 
 import _root_.scala.annotation.varargs

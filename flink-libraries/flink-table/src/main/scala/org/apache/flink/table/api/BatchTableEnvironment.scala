@@ -18,41 +18,8 @@
 
 package org.apache.flink.table.api
 
-import _root_.java.lang.{Boolean => JBool}
-import _root_.java.util.concurrent.atomic.AtomicInteger
-
-import org.apache.calcite.plan.RelOptUtil
-import org.apache.calcite.plan.hep.HepMatchOrder
-import org.apache.calcite.rel.RelNode
-import org.apache.calcite.rel.`type`.{RelDataType, RelDataTypeField, RelDataTypeFieldImpl, RelRecordType}
-import org.apache.calcite.sql2rel.RelDecorrelator
-import org.apache.calcite.tools.{RuleSet, RuleSets}
-import org.apache.flink.api.common.functions.MapFunction
-import org.apache.flink.api.common.typeinfo.{SqlTimeTypeInfo, TypeInformation}
-import org.apache.flink.api.common.typeutils.CompositeType
-import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2}
-import org.apache.flink.api.java.typeutils.{RowTypeInfo, TupleTypeInfo}
-import org.apache.flink.api.scala.typeutils.CaseClassTypeInfo
-import org.apache.flink.streaming.api.TimeCharacteristic
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
-import org.apache.flink.table.calcite.{FlinkTypeFactory, RelTimeIndicatorConverter}
-import org.apache.flink.table.descriptors.{ConnectorDescriptor, StreamTableDescriptor}
-import org.apache.flink.table.explain.PlanJsonParser
-import org.apache.flink.table.expressions._
-import org.apache.flink.table.plan.nodes.FlinkConventions
-import org.apache.flink.table.plan.nodes.datastream.{DataStreamRel, UpdateAsRetractionTrait}
-import org.apache.flink.table.plan.rules.FlinkRuleSets
-import org.apache.flink.table.plan.schema._
-import org.apache.flink.table.plan.util.UpdatingPlanChecker
-import org.apache.flink.table.runtime.conversion._
-import org.apache.flink.table.runtime.types.{CRow, CRowTypeInfo}
-import org.apache.flink.table.runtime.{CRowMapRunner, OutputRowtimeProcessFunction}
-import org.apache.flink.table.sinks._
-import org.apache.flink.table.sources.{StreamTableSource, TableSource, TableSourceUtil}
-import org.apache.flink.table.typeutils.{TimeIndicatorTypeInfo, TypeCheckUtils}
-
-import _root_.scala.collection.JavaConverters._
 
 /**
   * The base class for stream TableEnvironments.
