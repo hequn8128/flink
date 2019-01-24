@@ -187,9 +187,9 @@ object TableTestUtil {
 
 case class BatchTableTestUtil() extends TableTestUtil {
   val javaEnv = new LocalEnvironment()
-  val javaTableEnv = TablePlanner.getTableEnvironment(javaEnv)
+  val javaTableEnv = TablePlanner.getTablePlanner(javaEnv)
   val env = new ExecutionEnvironment(javaEnv)
-  val tableEnv = TablePlanner.getTableEnvironment(env)
+  val tableEnv = TablePlanner.getTablePlanner(env)
 
   def addTable[T: TypeInformation](
       name: String,
@@ -273,9 +273,9 @@ case class StreamTableTestUtil() extends TableTestUtil {
   val javaEnv = new LocalStreamEnvironment()
   javaEnv.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
 
-  val javaTableEnv = TablePlanner.getTableEnvironment(javaEnv)
+  val javaTableEnv = TablePlanner.getTablePlanner(javaEnv)
   val env = new StreamExecutionEnvironment(javaEnv)
-  val tableEnv = TablePlanner.getTableEnvironment(env)
+  val tableEnv = TablePlanner.getTablePlanner(env)
 
   def addTable[T: TypeInformation](
       name: String,

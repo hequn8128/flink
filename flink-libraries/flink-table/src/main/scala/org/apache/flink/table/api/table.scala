@@ -58,12 +58,12 @@ import _root_.scala.collection.JavaConverters._
   * in a Scala DSL or as an expression String. Please refer to the documentation for the expression
   * syntax.
   *
-  * @param tableEnv    The [[TablePlanner]] to which the table is bound.
+  * @param tablePlanner    The [[TablePlanner]] to which the table is bound.
   * @param logicalPlan logical representation
   */
 class Table(
-             private[flink] val tableEnv: TablePlanner,
-             private[flink] val logicalPlan: LogicalNode) {
+    private[flink] val tablePlanner: TablePlanner,
+    private[flink] val logicalPlan: LogicalNode) {
 
   // Check if the plan has an unbounded TableFunctionCall as child node.
   //   A TableFunctionCall is tolerated as root node because the Table holds the initial call.
@@ -86,7 +86,7 @@ class Table(
     logicalPlan.output.map(_.name).toArray,
     logicalPlan.output.map(_.resultType).toArray)
 
-  def relBuilder: FlinkRelBuilder = tableEnv.getRelBuilder
+  def relBuilder: FlinkRelBuilder = tablePlanner.getRelBuilder
 
   def getRelNode: RelNode = if (containsUnboundedUDTFCall(logicalPlan)) {
     throw new ValidationException("Cannot translate a query with an unbounded table function call.")
@@ -115,27 +115,27 @@ class Table(
     * }}}
     */
   def select(fields: Expression*): Table = {
-    val expandedFields = expandProjectList(fields, logicalPlan, tableEnv)
-    val (aggNames, propNames) = extractAggregationsAndProperties(expandedFields, tableEnv)
+    val expandedFields = expandProjectList(fields, logicalPlan, tablePlanner)
+    val (aggNames, propNames) = extractAggregationsAndProperties(expandedFields, tablePlanner)
     if (propNames.nonEmpty) {
       throw new ValidationException("Window properties can only be used on windowed tables.")
     }
 
     if (aggNames.nonEmpty) {
       val projectsOnAgg = replaceAggregationsAndProperties(
-        expandedFields, tableEnv, aggNames, propNames)
+        expandedFields, tablePlanner, aggNames, propNames)
       val projectFields = extractFieldReferences(expandedFields)
 
-      new Table(tableEnv,
+      new Table(tablePlanner,
         Project(projectsOnAgg,
           Aggregate(Nil, aggNames.map(a => Alias(a._1, a._2)).toSeq,
-            Project(projectFields, logicalPlan).validate(tableEnv)
-          ).validate(tableEnv)
-        ).validate(tableEnv)
+            Project(projectFields, logicalPlan).validate(tablePlanner)
+          ).validate(tablePlanner)
+        ).validate(tablePlanner)
       )
     } else {
-      new Table(tableEnv,
-        Project(expandedFields.map(UnresolvedAlias), logicalPlan).validate(tableEnv))
+      new Table(tablePlanner,
+        Project(expandedFields.map(UnresolvedAlias), logicalPlan).validate(tablePlanner))
     }
   }
 
@@ -152,7 +152,7 @@ class Table(
   def select(fields: String): Table = {
     val fieldExprs = ExpressionParser.parseExpressionList(fields)
     //get the correct expression for AggFunctionCall
-    val withResolvedAggFunctionCall = fieldExprs.map(replaceAggFunctionCall(_, tableEnv))
+    val withResolvedAggFunctionCall = fieldExprs.map(replaceAggFunctionCall(_, tablePlanner))
     select(withResolvedAggFunctionCall: _*)
   }
 
@@ -206,7 +206,7 @@ class Table(
       timeAttribute: Expression,
       primaryKey: Expression): TemporalTableFunction = {
     val temporalTable = TemporalTable(timeAttribute, primaryKey, logicalPlan)
-      .validate(tableEnv)
+      .validate(tablePlanner)
       .asInstanceOf[TemporalTable]
 
     TemporalTableFunction.create(
@@ -251,7 +251,7 @@ class Table(
           )
         }
         new Table(
-          tableEnv,
+          tablePlanner,
           LogicalTableFunctionCall(
             functionCall.functionName,
             functionCall.tableFunction,
@@ -262,7 +262,7 @@ class Table(
         )
       case _ =>
         // prepend an AliasNode
-        new Table(tableEnv, AliasNode(fields, logicalPlan).validate(tableEnv))
+        new Table(tablePlanner, AliasNode(fields, logicalPlan).validate(tablePlanner))
     }
   }
 
@@ -292,7 +292,7 @@ class Table(
     * }}}
     */
   def filter(predicate: Expression): Table = {
-    new Table(tableEnv, Filter(predicate, logicalPlan).validate(tableEnv))
+    new Table(tablePlanner, Filter(predicate, logicalPlan).validate(tablePlanner))
   }
 
   /**
@@ -377,7 +377,7 @@ class Table(
     * }}}
     */
   def distinct(): Table = {
-    new Table(tableEnv, Distinct(logicalPlan).validate(tableEnv))
+    new Table(tablePlanner, Distinct(logicalPlan).validate(tablePlanner))
   }
 
   /**
@@ -579,14 +579,14 @@ class Table(
 
       // check that the TableEnvironment of right table is not null
       // and right table belongs to the same TableEnvironment
-      if (right.tableEnv != this.tableEnv) {
+      if (right.tablePlanner != this.tablePlanner) {
         throw new ValidationException("Only tables from the same TableEnvironment can be joined.")
       }
 
       new Table(
-        tableEnv,
+        tablePlanner,
         Join(this.logicalPlan, right.logicalPlan, joinType, joinPredicate, correlated = false)
-          .validate(tableEnv))
+          .validate(tablePlanner))
 
     } else {
       // join with a table function
@@ -605,12 +605,12 @@ class Table(
         udtf.resultType,
         udtf.fieldNames,
         this.logicalPlan
-      ).validate(tableEnv)
+      ).validate(tablePlanner)
 
       new Table(
-        tableEnv,
+        tablePlanner,
         Join(this.logicalPlan, udtfCall, joinType, joinPredicate, correlated = true)
-          .validate(tableEnv))
+          .validate(tablePlanner))
     }
   }
 
@@ -630,12 +630,12 @@ class Table(
     */
   def minus(right: Table): Table = {
     // check that right table belongs to the same TableEnvironment
-    if (right.tableEnv != this.tableEnv) {
+    if (right.tablePlanner != this.tablePlanner) {
       throw new ValidationException("Only tables from the same TableEnvironment can be " +
         "subtracted.")
     }
-    new Table(tableEnv, Minus(logicalPlan, right.logicalPlan, all = false)
-      .validate(tableEnv))
+    new Table(tablePlanner, Minus(logicalPlan, right.logicalPlan, all = false)
+      .validate(tablePlanner))
   }
 
   /**
@@ -655,12 +655,12 @@ class Table(
     */
   def minusAll(right: Table): Table = {
     // check that right table belongs to the same TableEnvironment
-    if (right.tableEnv != this.tableEnv) {
+    if (right.tablePlanner != this.tablePlanner) {
       throw new ValidationException("Only tables from the same TableEnvironment can be " +
         "subtracted.")
     }
-    new Table(tableEnv, Minus(logicalPlan, right.logicalPlan, all = true)
-      .validate(tableEnv))
+    new Table(tablePlanner, Minus(logicalPlan, right.logicalPlan, all = true)
+      .validate(tablePlanner))
   }
 
   /**
@@ -677,10 +677,10 @@ class Table(
     */
   def union(right: Table): Table = {
     // check that right table belongs to the same TableEnvironment
-    if (right.tableEnv != this.tableEnv) {
+    if (right.tablePlanner != this.tablePlanner) {
       throw new ValidationException("Only tables from the same TableEnvironment can be unioned.")
     }
-    new Table(tableEnv, Union(logicalPlan, right.logicalPlan, all = false).validate(tableEnv))
+    new Table(tablePlanner, Union(logicalPlan, right.logicalPlan, all = false).validate(tablePlanner))
   }
 
   /**
@@ -697,10 +697,10 @@ class Table(
     */
   def unionAll(right: Table): Table = {
     // check that right table belongs to the same TableEnvironment
-    if (right.tableEnv != this.tableEnv) {
+    if (right.tablePlanner != this.tablePlanner) {
       throw new ValidationException("Only tables from the same TableEnvironment can be unioned.")
     }
-    new Table(tableEnv, Union(logicalPlan, right.logicalPlan, all = true).validate(tableEnv))
+    new Table(tablePlanner, Union(logicalPlan, right.logicalPlan, all = true).validate(tablePlanner))
   }
 
   /**
@@ -719,11 +719,11 @@ class Table(
     */
   def intersect(right: Table): Table = {
     // check that right table belongs to the same TableEnvironment
-    if (right.tableEnv != this.tableEnv) {
+    if (right.tablePlanner != this.tablePlanner) {
       throw new ValidationException(
         "Only tables from the same TableEnvironment can be intersected.")
     }
-    new Table(tableEnv, Intersect(logicalPlan, right.logicalPlan, all = false).validate(tableEnv))
+    new Table(tablePlanner, Intersect(logicalPlan, right.logicalPlan, all = false).validate(tablePlanner))
   }
 
   /**
@@ -742,11 +742,11 @@ class Table(
     */
   def intersectAll(right: Table): Table = {
     // check that right table belongs to the same TableEnvironment
-    if (right.tableEnv != this.tableEnv) {
+    if (right.tablePlanner != this.tablePlanner) {
       throw new ValidationException(
         "Only tables from the same TableEnvironment can be intersected.")
     }
-    new Table(tableEnv, Intersect(logicalPlan, right.logicalPlan, all = true).validate(tableEnv))
+    new Table(tablePlanner, Intersect(logicalPlan, right.logicalPlan, all = true).validate(tablePlanner))
   }
 
   /**
@@ -764,7 +764,7 @@ class Table(
       case o: Ordering => o
       case e => Asc(e)
     }
-    new Table(tableEnv, Sort(order, logicalPlan).validate(tableEnv))
+    new Table(tablePlanner, Sort(order, logicalPlan).validate(tablePlanner))
   }
 
   /**
@@ -800,7 +800,7 @@ class Table(
     * @param offset number of records to skip
     */
   def offset(offset: Int): Table = {
-    new Table(tableEnv, Limit(offset, -1, logicalPlan).validate(tableEnv))
+    new Table(tablePlanner, Limit(offset, -1, logicalPlan).validate(tablePlanner))
   }
 
   /**
@@ -827,11 +827,11 @@ class Table(
     this.logicalPlan match {
       case Limit(o, -1, c) =>
         // replace LIMIT without FETCH by LIMIT with FETCH
-        new Table(tableEnv, Limit(o, fetch, c).validate(tableEnv))
+        new Table(tablePlanner, Limit(o, fetch, c).validate(tablePlanner))
       case Limit(_, _, _) =>
         throw new ValidationException("FETCH is already defined.")
       case _ =>
-        new Table(tableEnv, Limit(0, fetch, logicalPlan).validate(tableEnv))
+        new Table(tablePlanner, Limit(0, fetch, logicalPlan).validate(tablePlanner))
     }
   }
 
@@ -854,9 +854,9 @@ class Table(
     "Table.insertInto().", "1.7.0")
   @Deprecated
   def writeToSink[T](sink: TableSink[T]): Unit = {
-    val queryConfig = Option(this.tableEnv) match {
+    val queryConfig = Option(this.tablePlanner) match {
       case None => null
-      case _ => this.tableEnv.queryConfig
+      case _ => this.tablePlanner.queryConfig
     }
     writeToSink(sink, queryConfig)
   }
@@ -896,7 +896,7 @@ class Table(
     val configuredSink = sink.configure(fieldNames, fieldTypes)
 
     // emit the table to the configured table sink
-    tableEnv.writeToSink(this, configuredSink, conf)
+    tablePlanner.writeToSink(this, configuredSink, conf)
   }
 
   /**
@@ -915,7 +915,7 @@ class Table(
       case _: LogicalTableFunctionCall =>
         throw new ValidationException("TableFunction can only be used in join and leftOuterJoin.")
       case _ =>
-        tableEnv.insertInto(this, tableName, this.tableEnv.queryConfig)
+        tablePlanner.insertInto(this, tableName, this.tablePlanner.queryConfig)
     }
   }
 
@@ -936,7 +936,7 @@ class Table(
       case _: LogicalTableFunctionCall =>
         throw new ValidationException("TableFunction can only be used in join and leftOuterJoin.")
       case _ =>
-        tableEnv.insertInto(this, tableName, conf)
+        tablePlanner.insertInto(this, tableName, conf)
     }
   }
 
@@ -988,7 +988,7 @@ class Table(
   @varargs
   def window(overWindows: OverWindow*): OverWindowedTable = {
 
-    if (tableEnv.isInstanceOf[BatchTablePlanner]) {
+    if (tablePlanner.isInstanceOf[BatchTablePlanner]) {
       throw new TableException("Over-windows for batch tables are currently not supported.")
     }
 
@@ -1007,8 +1007,8 @@ class Table(
     */
   override def toString: String = {
     if (tableName == null) {
-      tableName = "UnnamedTable$" + tableEnv.attrNameCntr.getAndIncrement()
-      tableEnv.registerTable(tableName, this)
+      tableName = "UnnamedTable$" + tablePlanner.attrNameCntr.getAndIncrement()
+      tablePlanner.registerTable(tableName, this)
     }
     tableName
   }
@@ -1046,22 +1046,22 @@ class GroupedTable(
     * }}}
     */
   def select(fields: Expression*): Table = {
-    val expandedFields = expandProjectList(fields, table.logicalPlan, table.tableEnv)
-    val (aggNames, propNames) = extractAggregationsAndProperties(expandedFields, table.tableEnv)
+    val expandedFields = expandProjectList(fields, table.logicalPlan, table.tablePlanner)
+    val (aggNames, propNames) = extractAggregationsAndProperties(expandedFields, table.tablePlanner)
     if (propNames.nonEmpty) {
       throw new ValidationException("Window properties can only be used on windowed tables.")
     }
 
     val projectsOnAgg = replaceAggregationsAndProperties(
-      expandedFields, table.tableEnv, aggNames, propNames)
+      expandedFields, table.tablePlanner, aggNames, propNames)
     val projectFields = extractFieldReferences(expandedFields ++ groupKey)
 
-    new Table(table.tableEnv,
+    new Table(table.tablePlanner,
       Project(projectsOnAgg,
         Aggregate(groupKey, aggNames.map(a => Alias(a._1, a._2)).toSeq,
-          Project(projectFields, table.logicalPlan).validate(table.tableEnv)
-        ).validate(table.tableEnv)
-      ).validate(table.tableEnv))
+          Project(projectFields, table.logicalPlan).validate(table.tablePlanner)
+        ).validate(table.tablePlanner)
+      ).validate(table.tablePlanner))
   }
 
   /**
@@ -1077,7 +1077,7 @@ class GroupedTable(
   def select(fields: String): Table = {
     val fieldExprs = ExpressionParser.parseExpressionList(fields)
     //get the correct expression for AggFunctionCall
-    val withResolvedAggFunctionCall = fieldExprs.map(replaceAggFunctionCall(_, table.tableEnv))
+    val withResolvedAggFunctionCall = fieldExprs.map(replaceAggFunctionCall(_, table.tablePlanner))
     select(withResolvedAggFunctionCall: _*)
   }
 }
@@ -1142,30 +1142,30 @@ class OverWindowedTable(
     val expandedFields = expandProjectList(
       fields,
       table.logicalPlan,
-      table.tableEnv)
+      table.tablePlanner)
 
     if(fields.exists(_.isInstanceOf[WindowProperty])){
       throw new ValidationException(
         "Window start and end properties are not available for Over windows.")
     }
 
-    val expandedOverFields = resolveOverWindows(expandedFields, overWindows, table.tableEnv)
+    val expandedOverFields = resolveOverWindows(expandedFields, overWindows, table.tablePlanner)
 
     new Table(
-      table.tableEnv,
+      table.tablePlanner,
       Project(
         expandedOverFields.map(UnresolvedAlias),
         table.logicalPlan,
         // required for proper projection push down
         explicitAlias = true)
-        .validate(table.tableEnv)
+        .validate(table.tablePlanner)
     )
   }
 
   def select(fields: String): Table = {
     val fieldExprs = ExpressionParser.parseExpressionList(fields)
     //get the correct expression for AggFunctionCall
-    val withResolvedAggFunctionCall = fieldExprs.map(replaceAggFunctionCall(_, table.tableEnv))
+    val withResolvedAggFunctionCall = fieldExprs.map(replaceAggFunctionCall(_, table.tablePlanner))
     select(withResolvedAggFunctionCall: _*)
   }
 }
@@ -1186,15 +1186,15 @@ class WindowGroupedTable(
     * }}}
     */
   def select(fields: Expression*): Table = {
-    val expandedFields = expandProjectList(fields, table.logicalPlan, table.tableEnv)
-    val (aggNames, propNames) = extractAggregationsAndProperties(expandedFields, table.tableEnv)
+    val expandedFields = expandProjectList(fields, table.logicalPlan, table.tablePlanner)
+    val (aggNames, propNames) = extractAggregationsAndProperties(expandedFields, table.tablePlanner)
 
     val projectsOnAgg = replaceAggregationsAndProperties(
-      expandedFields, table.tableEnv, aggNames, propNames)
+      expandedFields, table.tablePlanner, aggNames, propNames)
 
     val projectFields = extractFieldReferences(expandedFields ++ groupKeys :+ window.timeField)
 
-    new Table(table.tableEnv,
+    new Table(table.tablePlanner,
       Project(
         projectsOnAgg,
         WindowAggregate(
@@ -1202,11 +1202,11 @@ class WindowGroupedTable(
           window.toLogicalWindow,
           propNames.map(a => Alias(a._1, a._2)).toSeq,
           aggNames.map(a => Alias(a._1, a._2)).toSeq,
-          Project(projectFields, table.logicalPlan).validate(table.tableEnv)
-        ).validate(table.tableEnv),
+          Project(projectFields, table.logicalPlan).validate(table.tablePlanner)
+        ).validate(table.tablePlanner),
         // required for proper resolution of the time attribute in multi-windows
         explicitAlias = true
-      ).validate(table.tableEnv))
+      ).validate(table.tablePlanner))
   }
 
   /**
@@ -1222,7 +1222,7 @@ class WindowGroupedTable(
   def select(fields: String): Table = {
     val fieldExprs = ExpressionParser.parseExpressionList(fields)
     //get the correct expression for AggFunctionCall
-    val withResolvedAggFunctionCall = fieldExprs.map(replaceAggFunctionCall(_, table.tableEnv))
+    val withResolvedAggFunctionCall = fieldExprs.map(replaceAggFunctionCall(_, table.tablePlanner))
     select(withResolvedAggFunctionCall: _*)
   }
 }

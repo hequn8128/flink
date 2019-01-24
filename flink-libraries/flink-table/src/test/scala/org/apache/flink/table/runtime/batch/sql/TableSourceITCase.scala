@@ -41,7 +41,7 @@ class TableSourceITCase(
     val csvTable = CommonTestData.getCsvTableSource
 
     val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env, config)
+    val tEnv = TablePlanner.getTablePlanner(env, config)
 
     tEnv.registerTableSource("csvTable", csvTable)
     val results = tEnv.sqlQuery(
@@ -62,7 +62,7 @@ class TableSourceITCase(
   @Test
   def testNested(): Unit = {
     val env = ExecutionEnvironment.getExecutionEnvironment
-    val tableEnv = TablePlanner.getTableEnvironment(env, config)
+    val tableEnv = TablePlanner.getTablePlanner(env, config)
     val nestedTable = CommonTestData.getNestedTableSource
 
     tableEnv.registerTableSource("NestedPersons", nestedTable)

@@ -50,7 +50,7 @@ class RetractionITCase extends StreamingWithStateTestBase {
   @Test
   def testWordCount(): Unit = {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTablePlanner(env)
     StreamITCase.clear
     env.setStateBackend(getStateBackend)
 
@@ -74,7 +74,7 @@ class RetractionITCase extends StreamingWithStateTestBase {
   @Test
   def testGroupByAndNonKeyedGroupBy(): Unit = {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTablePlanner(env)
     StreamITCase.clear
     env.setStateBackend(getStateBackend)
 
@@ -99,7 +99,7 @@ class RetractionITCase extends StreamingWithStateTestBase {
   def testNonKeyedGroupByAndGroupBy(): Unit = {
 
     val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTablePlanner(env)
     StreamITCase.clear
     env.setStateBackend(getStateBackend)
 
@@ -139,7 +139,7 @@ class RetractionITCase extends StreamingWithStateTestBase {
       (7, 8L)
     )
     val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTablePlanner(env)
     StreamITCase.clear
     env.setStateBackend(getStateBackend)
     env.setParallelism(1)
@@ -166,7 +166,7 @@ class RetractionITCase extends StreamingWithStateTestBase {
   @Test
   def testCorrelate(): Unit = {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTablePlanner(env)
     StreamITCase.clear
     env.setStateBackend(getStateBackend)
 

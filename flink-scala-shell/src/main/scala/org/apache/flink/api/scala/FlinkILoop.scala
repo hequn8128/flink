@@ -100,8 +100,8 @@ class FlinkILoop(
     ) = {
     val scalaBenv = new ExecutionEnvironment(remoteBenv)
     val scalaSenv = new StreamExecutionEnvironment(remoteSenv)
-    val scalaBTEnv = TablePlanner.getTableEnvironment(scalaBenv)
-    val scalaSTEnv = TablePlanner.getTableEnvironment(scalaSenv)
+    val scalaBTEnv = TablePlanner.getTablePlanner(scalaBenv)
+    val scalaSTEnv = TablePlanner.getTablePlanner(scalaSenv)
     (scalaBenv,scalaSenv,scalaBTEnv,scalaSTEnv)
   }
 

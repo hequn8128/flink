@@ -41,7 +41,7 @@ class JoinITCase(
   @Test
   def testInnerJoin(): Unit = {
     val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env, config)
+    val tEnv = TablePlanner.getTablePlanner(env, config)
     val sqlQuery = "SELECT c, g FROM Table3, Table5 WHERE b = e"
 
     val ds1 = CollectionDataSets.getSmall3TupleDataSet(env).toTable(tEnv).as('a, 'b, 'c)
@@ -60,7 +60,7 @@ class JoinITCase(
   def testInnerJoinWithFilter(): Unit = {
 
     val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env, config)
+    val tEnv = TablePlanner.getTablePlanner(env, config)
 
     val sqlQuery = "SELECT c, g FROM Table3, Table5 WHERE b = e AND b < 2"
 
@@ -80,7 +80,7 @@ class JoinITCase(
   def testInnerJoinWithNonEquiJoinPredicate(): Unit = {
 
     val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env, config)
+    val tEnv = TablePlanner.getTablePlanner(env, config)
 
     val sqlQuery = "SELECT c, g FROM Table3, Table5 WHERE b = e AND a < 6 AND h < b"
 
@@ -100,7 +100,7 @@ class JoinITCase(
   def testInnerJoinWithMultipleKeys(): Unit = {
 
     val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env, config)
+    val tEnv = TablePlanner.getTablePlanner(env, config)
 
     val sqlQuery = "SELECT c, g FROM Table3, Table5 WHERE a = d AND b = h"
 
@@ -121,7 +121,7 @@ class JoinITCase(
   def testInnerJoinWithAlias(): Unit = {
 
     val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env, config)
+    val tEnv = TablePlanner.getTablePlanner(env, config)
 
     val sqlQuery =
       "SELECT Table5.c, T.`1-_./Ü` FROM (SELECT a, b, c AS `1-_./Ü` FROM Table3) AS T, Table5 " +
@@ -143,7 +143,7 @@ class JoinITCase(
   def testInnerJoinWithAggregation(): Unit = {
 
     val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env, config)
+    val tEnv = TablePlanner.getTablePlanner(env, config)
 
     val sqlQuery = "SELECT COUNT(g), COUNT(b) FROM Table3, Table5 WHERE a = d"
 
@@ -163,7 +163,7 @@ class JoinITCase(
   def testInnerJoinWithAggregation2(): Unit = {
 
     val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env, config)
+    val tEnv = TablePlanner.getTablePlanner(env, config)
 
     val sqlQuery = "SELECT COUNT(b), COUNT(g) FROM Table3, Table5 WHERE a = d"
 
@@ -183,7 +183,7 @@ class JoinITCase(
   def testFullOuterJoin(): Unit = {
 
     val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env, config)
+    val tEnv = TablePlanner.getTablePlanner(env, config)
     tEnv.getConfig.setNullCheck(true)
 
     val sqlQuery = "SELECT c, g FROM Table3 FULL OUTER JOIN Table5 ON b = e"
@@ -206,7 +206,7 @@ class JoinITCase(
   def testLeftOuterJoin(): Unit = {
 
     val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env, config)
+    val tEnv = TablePlanner.getTablePlanner(env, config)
     tEnv.getConfig.setNullCheck(true)
 
     val sqlQuery = "SELECT c, g FROM Table5 LEFT OUTER JOIN Table3 ON b = e"
@@ -228,7 +228,7 @@ class JoinITCase(
   def testRightOuterJoin(): Unit = {
 
     val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env, config)
+    val tEnv = TablePlanner.getTablePlanner(env, config)
     tEnv.getConfig.setNullCheck(true)
 
     val sqlQuery = "SELECT c, g FROM Table3 RIGHT OUTER JOIN Table5 ON b = e"
@@ -249,7 +249,7 @@ class JoinITCase(
   @Test
   def testCrossJoinWithLeftSingleRowInput(): Unit = {
     val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env, config)
+    val tEnv = TablePlanner.getTablePlanner(env, config)
 
     val table = CollectionDataSets.getSmall3TupleDataSet(env).toTable(tEnv).as('a1, 'a2, 'a3)
     tEnv.registerTable("A", table)
@@ -266,7 +266,7 @@ class JoinITCase(
   @Test
   def testCrossJoinWithRightSingleRowInput(): Unit = {
     val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env, config)
+    val tEnv = TablePlanner.getTablePlanner(env, config)
 
     val table = CollectionDataSets.getSmall3TupleDataSet(env).toTable(tEnv).as('a1, 'a2, 'a3)
     tEnv.registerTable("A", table)
@@ -283,7 +283,7 @@ class JoinITCase(
   @Test
   def testCrossJoinWithEmptySingleRowInput(): Unit = {
     val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env, config)
+    val tEnv = TablePlanner.getTablePlanner(env, config)
 
     val table = CollectionDataSets.getSmall3TupleDataSet(env).toTable(tEnv).as('a1, 'a2, 'a3)
     tEnv.registerTable("A", table)
@@ -296,7 +296,7 @@ class JoinITCase(
   @Test
   def testLeftNullRightJoin(): Unit = {
     val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env, config)
+    val tEnv = TablePlanner.getTablePlanner(env, config)
     val sqlQuery =
       "SELECT a, cnt " +
       "FROM (SELECT cnt FROM (SELECT COUNT(*) AS cnt FROM B) WHERE cnt < 0) RIGHT JOIN A ON a < cnt"
@@ -324,7 +324,7 @@ class JoinITCase(
   @Test
   def testLeftSingleRightJoinEqualPredicate(): Unit = {
     val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env, config)
+    val tEnv = TablePlanner.getTablePlanner(env, config)
     val sqlQuery =
       "SELECT a, cnt FROM (SELECT COUNT(*) AS cnt FROM B) RIGHT JOIN A ON cnt = a"
 
@@ -348,7 +348,7 @@ class JoinITCase(
   @Test
   def testLeftSingleRightJoinNotEqualPredicate(): Unit = {
     val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env, config)
+    val tEnv = TablePlanner.getTablePlanner(env, config)
     val sqlQuery =
       "SELECT a, cnt FROM (SELECT COUNT(*) AS cnt FROM B) RIGHT JOIN A ON cnt > a"
 
@@ -372,7 +372,7 @@ class JoinITCase(
   @Test
   def testRightNullLeftJoin(): Unit = {
     val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env, config)
+    val tEnv = TablePlanner.getTablePlanner(env, config)
     val sqlQuery =
       "SELECT a, cnt " +
       "FROM A LEFT JOIN (SELECT cnt FROM (SELECT COUNT(*) AS cnt FROM B) WHERE cnt < 0) ON cnt > a"
@@ -395,7 +395,7 @@ class JoinITCase(
   @Test
   def testRightSingleLeftJoinEqualPredicate(): Unit = {
     val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env, config)
+    val tEnv = TablePlanner.getTablePlanner(env, config)
     val sqlQuery =
       "SELECT a, cnt FROM A LEFT JOIN (SELECT COUNT(*) AS cnt FROM B) ON cnt = a"
 
@@ -420,7 +420,7 @@ class JoinITCase(
   @Test
   def testRightSingleLeftJoinNotEqualPredicate(): Unit = {
     val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env, config)
+    val tEnv = TablePlanner.getTablePlanner(env, config)
     val sqlQuery =
       "SELECT a, cnt FROM A LEFT JOIN (SELECT COUNT(*) AS cnt FROM B) ON cnt < a"
 
@@ -445,7 +445,7 @@ class JoinITCase(
   @Test
   def testRightSingleLeftJoinTwoFields(): Unit = {
     val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env, config)
+    val tEnv = TablePlanner.getTablePlanner(env, config)
     val sqlQuery =
       "SELECT a, cnt, cnt2 " +
       "FROM t1 LEFT JOIN (SELECT COUNT(*) AS cnt,COUNT(*) AS cnt2 FROM t2 ) AS x ON a = cnt"
@@ -471,7 +471,7 @@ class JoinITCase(
   def testCrossWithUnnest(): Unit = {
 
     val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env, config)
+    val tEnv = TablePlanner.getTablePlanner(env, config)
 
     val data = List(
       (1, 1L, Array("Hi", "w")),
@@ -493,7 +493,7 @@ class JoinITCase(
   @Test
   def testJoinWithUnnestOfTuple(): Unit = {
     val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env, config)
+    val tEnv = TablePlanner.getTablePlanner(env, config)
 
     val data = List(
       (1, Array((12, "45.6"), (2, "45.612"))),

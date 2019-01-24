@@ -128,7 +128,7 @@ class StreamTablePlannerValidationTest extends TableTestBase {
   def testInvalidTimeCharacteristicByPosition(): Unit = {
     val data = List((1L, 1, 1d, 1f, new BigDecimal("1"), "Hi"))
     val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTablePlanner(env)
     val stream = env
       .fromCollection(data)
       .assignTimestampsAndWatermarks(new TimestampWithEqualWatermark())

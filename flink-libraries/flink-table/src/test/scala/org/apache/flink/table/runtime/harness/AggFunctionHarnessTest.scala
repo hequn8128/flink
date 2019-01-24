@@ -46,7 +46,7 @@ class AggFunctionHarnessTest extends HarnessTestBase {
   @Test
   def testCollectAggregate(): Unit = {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTablePlanner(env)
 
     val data = new mutable.MutableList[(JInt, String)]
     val t = env.fromCollection(data).toTable(tEnv, 'a, 'b)
@@ -111,7 +111,7 @@ class AggFunctionHarnessTest extends HarnessTestBase {
   @Test
   def testMinMaxAggFunctionWithRetract(): Unit = {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTablePlanner(env)
 
     val data = new mutable.MutableList[(JInt, JInt, String)]
     val t = env.fromCollection(data).toTable(tEnv, 'a, 'b, 'c)

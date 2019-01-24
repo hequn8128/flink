@@ -50,7 +50,7 @@ class SortITCase(mode: TestExecutionMode, configMode: TableConfigMode)
   @Test
   def testOrderByDesc(): Unit = {
     val env = getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env, config)
+    val tEnv = TablePlanner.getTablePlanner(env, config)
 
     val ds = CollectionDataSets.get3TupleDataSet(env)
     val t = ds.toTable(tEnv).orderBy('_1.desc)
@@ -78,7 +78,7 @@ class SortITCase(mode: TestExecutionMode, configMode: TableConfigMode)
   @Test
   def testOrderByAsc(): Unit = {
     val env = getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env, config)
+    val tEnv = TablePlanner.getTablePlanner(env, config)
 
     val ds = CollectionDataSets.get3TupleDataSet(env)
     val t = ds.toTable(tEnv).orderBy('_1.asc)
@@ -106,7 +106,7 @@ class SortITCase(mode: TestExecutionMode, configMode: TableConfigMode)
   @Test
   def testOrderByMultipleFieldsDifferentDirections(): Unit = {
     val env = getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env, config)
+    val tEnv = TablePlanner.getTablePlanner(env, config)
 
     val ds = CollectionDataSets.get3TupleDataSet(env)
     val t = ds.toTable(tEnv).orderBy('_2.asc, '_1.desc)
@@ -140,7 +140,7 @@ class SortITCase(mode: TestExecutionMode, configMode: TableConfigMode)
   @Test
   def testOrderByOffset(): Unit = {
     val env = getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env, config)
+    val tEnv = TablePlanner.getTablePlanner(env, config)
 
     val ds = CollectionDataSets.get3TupleDataSet(env)
     val t = ds.toTable(tEnv).orderBy('_1.asc).offset(3)
@@ -168,7 +168,7 @@ class SortITCase(mode: TestExecutionMode, configMode: TableConfigMode)
   @Test
   def testOrderByOffsetAndFetch(): Unit = {
     val env = getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env, config)
+    val tEnv = TablePlanner.getTablePlanner(env, config)
 
     val ds = CollectionDataSets.get3TupleDataSet(env)
     val t = ds.toTable(tEnv).orderBy('_1.desc).offset(3).fetch(5)
@@ -196,7 +196,7 @@ class SortITCase(mode: TestExecutionMode, configMode: TableConfigMode)
   @Test
   def testOrderByFetch(): Unit = {
     val env = getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env, config)
+    val tEnv = TablePlanner.getTablePlanner(env, config)
 
     val ds = CollectionDataSets.get3TupleDataSet(env)
     val t = ds.toTable(tEnv).orderBy('_1.asc).fetch(5)

@@ -20,6 +20,7 @@ package org.apache.flink.table.api
 import _root_.java.util.TimeZone
 import _root_.java.math.MathContext
 
+import org.apache.flink.table.api.ExecutionMode.ExecutionMode
 import org.apache.flink.table.calcite.CalciteConfig
 
 /**
@@ -53,6 +54,21 @@ class TableConfig {
     * maximum method length of 64 KB. This setting allows for finer granularity if necessary.
     */
   private var maxGeneratedCodeLength: Int = 64000 // just an estimate
+
+  private var executionMode: ExecutionMode = ExecutionMode.UnifyMode
+  private var watermarkInterval: Long = 0
+
+  def setExecutionMode(executionMode: ExecutionMode): Unit = {
+    this.executionMode = executionMode
+  }
+
+  def getExecutionMode: ExecutionMode = executionMode
+
+  def setWatermarkInterval(interval: Long): Unit = {
+    this.watermarkInterval = interval
+  }
+
+  def getWatermarkInterval: Long = watermarkInterval
 
   /**
    * Sets the timezone for date/time/timestamp conversions.
@@ -127,5 +143,48 @@ class TableConfig {
 }
 
 object TableConfig {
+
+
+  class Builder {
+
+    private var executionMode: ExecutionMode = ExecutionMode.UnifyMode
+    private var watermarkInterval: Long = 0
+
+    def asStreamingExecution(): Builder = {
+      this.executionMode = ExecutionMode.StreamingMode
+      this
+    }
+
+    def asBatchExecution(): Builder = {
+      this.executionMode = ExecutionMode.BatchMode
+      this
+    }
+
+    def watermarkInterval(interval: Long): Builder = {
+      this.watermarkInterval = interval
+      this
+    }
+
+    def build(): TableConfig = {
+      val tableConfig: TableConfig = new TableConfig()
+      tableConfig.setExecutionMode(this.executionMode)
+      tableConfig.setWatermarkInterval(this.watermarkInterval)
+      tableConfig
+    }
+  }
+
+  def builder(): Builder = {
+    new Builder
+  }
+
   def DEFAULT = new TableConfig()
 }
+
+object ExecutionMode extends Enumeration {
+  type ExecutionMode = Value
+
+  val StreamingMode = Value
+  val BatchMode = Value
+  val UnifyMode = Value
+}
+

@@ -33,7 +33,7 @@ class ExplainTest extends AbstractTestBase {
   @Test
   def testFilter(): Unit = {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTablePlanner(env)
 
     val table = env.fromElements((1, "hello"))
       .toTable(tEnv, 'a, 'b)
@@ -50,7 +50,7 @@ class ExplainTest extends AbstractTestBase {
   @Test
   def testUnion(): Unit = {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTablePlanner(env)
 
     val table1 = env.fromElements((1, "hello")).toTable(tEnv, 'count, 'word)
     val table2 = env.fromElements((1, "hello")).toTable(tEnv, 'count, 'word)

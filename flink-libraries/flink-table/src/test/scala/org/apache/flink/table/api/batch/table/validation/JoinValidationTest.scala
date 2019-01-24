@@ -121,8 +121,8 @@ class JoinValidationTest extends TableTestBase {
   @Test(expected = classOf[ValidationException])
   def testJoinTablesFromDifferentEnvs(): Unit = {
     val env: ExecutionEnvironment = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv1 = TablePlanner.getTableEnvironment(env)
-    val tEnv2 = TablePlanner.getTableEnvironment(env)
+    val tEnv1 = TablePlanner.getTablePlanner(env)
+    val tEnv2 = TablePlanner.getTablePlanner(env)
     val ds1 = CollectionDataSets.getSmall3TupleDataSet(env)
     val ds2 = CollectionDataSets.get5TupleDataSet(env)
     val in1 = tEnv1.fromDataSet(ds1, 'a, 'b, 'c)
@@ -135,8 +135,8 @@ class JoinValidationTest extends TableTestBase {
   @Test(expected = classOf[ValidationException])
   def testJoinTablesFromDifferentEnvsJava() {
     val env: ExecutionEnvironment = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv1 = TablePlanner.getTableEnvironment(env)
-    val tEnv2 = TablePlanner.getTableEnvironment(env)
+    val tEnv1 = TablePlanner.getTablePlanner(env)
+    val tEnv2 = TablePlanner.getTablePlanner(env)
     val ds1 = CollectionDataSets.getSmall3TupleDataSet(env)
     val ds2 = CollectionDataSets.get5TupleDataSet(env)
     val in1 = tEnv1.fromDataSet(ds1, 'a, 'b, 'c)

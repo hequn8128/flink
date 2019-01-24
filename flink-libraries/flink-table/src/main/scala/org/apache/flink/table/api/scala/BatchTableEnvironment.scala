@@ -18,33 +18,29 @@
 package org.apache.flink.table.api.scala
 
 import org.apache.flink.api.common.typeinfo.TypeInformation
-import org.apache.flink.api.scala._
-import org.apache.flink.table.api._
+import org.apache.flink.api.scala.{DataSet, wrap}
+import org.apache.flink.streaming.api.scala.{DataStream, StreamExecutionEnvironment}
+import org.apache.flink.table.api.{BatchQueryConfig, StreamQueryConfig, Table, TablePlanner}
 import org.apache.flink.table.expressions.Expression
 import org.apache.flink.table.functions.{AggregateFunction, TableFunction}
 
-import _root_.scala.reflect.ClassTag
-
 /**
-  * The [[TablePlanner]] for a Scala batch [[DataSet]]
-  * [[ExecutionEnvironment]].
+  * The [[TablePlanner]] for a Scala [[StreamExecutionEnvironment]].
   *
   * A TableEnvironment can be used to:
-  * - convert a [[DataSet]] to a [[Table]]
-  * - register a [[DataSet]] in the [[TablePlanner]]'s catalog
+  * - convert a [[DataStream]] to a [[Table]]
+  * - register a [[DataStream]] in the [[TablePlanner]]'s catalog
   * - register a [[Table]] in the [[TablePlanner]]'s catalog
   * - scan a registered table to obtain a [[Table]]
   * - specify a SQL query on registered tables to obtain a [[Table]]
-  * - convert a [[Table]] into a [[DataSet]]
+  * - convert a [[Table]] into a [[DataStream]]
   * - explain the AST and execution plan of a [[Table]]
   *
-  * @param execEnv The Scala batch [[ExecutionEnvironment]] of the TableEnvironment.
+  * @param execEnv The Scala [[StreamExecutionEnvironment]] of the TableEnvironment.
   * @param config The configuration of the TableEnvironment.
   */
-class BatchTablePlanner(
-    execEnv: ExecutionEnvironment,
-    config: TableConfig)
-  extends org.apache.flink.table.api.BatchTablePlanner(execEnv.getJavaEnv, config) {
+class BatchTableEnvironment(tablePlanner: BatchTablePlanner)
+  extends org.apache.flink.table.api.BatchTableEnvironment(tablePlanner) {
 
   /**
     * Converts the given [[DataSet]] into a [[Table]].
@@ -55,11 +51,8 @@ class BatchTablePlanner(
     * @tparam T The type of the [[DataSet]].
     * @return The converted [[Table]].
     */
-  private[flink] def fromDataSet[T](dataSet: DataSet[T]): Table = {
-
-    val name = createUniqueTableName()
-    registerDataSetInternal(name, dataSet.javaSet)
-    scan(name)
+  def fromDataSet[T](dataSet: DataSet[T]): Table = {
+    tablePlanner.fromDataSet(dataSet)
   }
 
   /**
@@ -77,11 +70,8 @@ class BatchTablePlanner(
     * @tparam T The type of the [[DataSet]].
     * @return The converted [[Table]].
     */
-  private[flink] def fromDataSet[T](dataSet: DataSet[T], fields: Expression*): Table = {
-
-    val name = createUniqueTableName()
-    registerDataSetInternal(name, dataSet.javaSet, fields.toArray)
-    scan(name)
+  def fromDataSet[T](dataSet: DataSet[T], fields: Expression*): Table = {
+    tablePlanner.fromDataSet(dataSet, fields: _*)
   }
 
   /**
@@ -95,10 +85,8 @@ class BatchTablePlanner(
     * @param dataSet The [[DataSet]] to register.
     * @tparam T The type of the [[DataSet]] to register.
     */
-  private[flink] def registerDataSet[T](name: String, dataSet: DataSet[T]): Unit = {
-
-    checkValidTableName(name)
-    registerDataSetInternal(name, dataSet.javaSet)
+  def registerDataSet[T](name: String, dataSet: DataSet[T]): Unit = {
+    tablePlanner.registerDataSet(name, dataSet)
   }
 
   /**
@@ -118,10 +106,8 @@ class BatchTablePlanner(
     * @param fields The field names of the registered table.
     * @tparam T The type of the [[DataSet]] to register.
     */
-  private[flink] def registerDataSet[T](name: String, dataSet: DataSet[T], fields: Expression*): Unit = {
-
-    checkValidTableName(name)
-    registerDataSetInternal(name, dataSet.javaSet, fields.toArray)
+  def registerDataSet[T](name: String, dataSet: DataSet[T], fields: Expression*): Unit = {
+    tablePlanner.registerDataSet(name, dataSet)
   }
 
   /**
@@ -136,9 +122,8 @@ class BatchTablePlanner(
     * @tparam T The type of the resulting [[DataSet]].
     * @return The converted [[DataSet]].
     */
-  private[flink] def toDataSet[T: TypeInformation](table: Table): DataSet[T] = {
-    // Use the default batch query config.
-    wrap[T](translate(table, queryConfig))(ClassTag.AnyRef.asInstanceOf[ClassTag[T]])
+  def toDataSet[T: TypeInformation](table: Table): DataSet[T] = {
+    tablePlanner.toDataSet(table)
   }
 
   /**
@@ -154,20 +139,19 @@ class BatchTablePlanner(
     * @tparam T The type of the resulting [[DataSet]].
     * @return The converted [[DataSet]].
     */
-  private[flink] def toDataSet[T: TypeInformation](table: Table, queryConfig: BatchQueryConfig): DataSet[T] = {
-    wrap[T](translate(table, queryConfig))(ClassTag.AnyRef.asInstanceOf[ClassTag[T]])
+  def toDataSet[T: TypeInformation](table: Table, queryConfig: BatchQueryConfig): DataSet[T] = {
+    tablePlanner.toDataSet(table, queryConfig)
   }
 
   /**
     * Registers a [[TableFunction]] under a unique name in the TableEnvironment's catalog.
-    * Registered functions can be referenced in Table API and SQL queries.
+    * Registered functions can be referenced in SQL queries.
     *
     * @param name The name under which the function is registered.
-    * @param tf The TableFunction to register.
-    * @tparam T The type of the output row.
+    * @param tf The TableFunction to register
     */
-  private[flink] def registerFunction[T: TypeInformation](name: String, tf: TableFunction[T]): Unit = {
-    registerTableFunctionInternal(name, tf)
+  def registerFunction[T: TypeInformation](name: String, tf: TableFunction[T]): Unit = {
+    tablePlanner.registerFunction(name, tf)
   }
 
   /**
@@ -179,10 +163,17 @@ class BatchTablePlanner(
     * @tparam T The type of the output value.
     * @tparam ACC The type of aggregate accumulator.
     */
-  private[flink] def registerFunction[T: TypeInformation, ACC: TypeInformation](
+  def registerFunction[T: TypeInformation, ACC: TypeInformation](
       name: String,
       f: AggregateFunction[T, ACC])
   : Unit = {
-    registerAggregateFunctionInternal[T, ACC](name, f)
+    tablePlanner.registerFunction(name, f)
+  }
+
+  override def execute(): Unit = {
+    tablePlanner.execEnv.execute()
   }
 }
+
+
+

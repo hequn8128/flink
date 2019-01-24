@@ -57,7 +57,7 @@ class OverWindowITCase extends StreamingWithStateTestBase {
 
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     env.setParallelism(1)
-    val tEnv = TablePlanner.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTablePlanner(env)
     StreamITCase.testResults = mutable.MutableList()
     StreamITCase.clear
     val stream = env.fromCollection(data)
@@ -103,7 +103,7 @@ class OverWindowITCase extends StreamingWithStateTestBase {
 
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     env.setParallelism(1)
-    val tEnv = TablePlanner.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTablePlanner(env)
     StreamITCase.testResults = mutable.MutableList()
     StreamITCase.clear
     val stream = env.fromCollection(data)
@@ -128,7 +128,7 @@ class OverWindowITCase extends StreamingWithStateTestBase {
   @Test
   def testRowTimeUnBoundedPartitionedRangeOver(): Unit = {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTablePlanner(env)
     env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
     env.setStateBackend(getStateBackend)
     StreamITCase.testResults = mutable.MutableList()
@@ -223,7 +223,7 @@ class OverWindowITCase extends StreamingWithStateTestBase {
 
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     env.setStateBackend(getStateBackend)
-    val tEnv = TablePlanner.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTablePlanner(env)
     env.setParallelism(1)
     StreamITCase.testResults = mutable.MutableList()
 
@@ -286,7 +286,7 @@ class OverWindowITCase extends StreamingWithStateTestBase {
     env.setParallelism(1)
     env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
     env.setStateBackend(getStateBackend)
-    val tEnv = TablePlanner.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTablePlanner(env)
     StreamITCase.clear
 
     val countDist = new CountDistinctWithRetractAndReset
@@ -350,7 +350,7 @@ class OverWindowITCase extends StreamingWithStateTestBase {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
     env.setStateBackend(getStateBackend)
-    val tEnv = TablePlanner.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTablePlanner(env)
     StreamITCase.clear
 
     val countDist = new CountDistinctWithRetractAndReset

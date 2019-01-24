@@ -36,7 +36,7 @@ import scala.collection.mutable
 class CorrelateITCase extends AbstractTestBase {
 
   val env: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment
-  val tEnv: StreamTablePlanner = TablePlanner.getTableEnvironment(env)
+  val tEnv: StreamTablePlanner = TablePlanner.getTablePlanner(env)
 
   @Before
   def clear(): Unit = {

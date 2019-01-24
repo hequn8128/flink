@@ -32,7 +32,7 @@ class SetOperatorsITCase extends StreamingWithStateTestBase {
   @Test
   def testInUncorrelatedWithConditionAndAgg(): Unit = {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTablePlanner(env)
     StreamITCase.clear
 
     val sqlQuery =
@@ -77,7 +77,7 @@ class SetOperatorsITCase extends StreamingWithStateTestBase {
   @Test
   def testInWithMultiUncorrelatedCondition(): Unit = {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTablePlanner(env)
     StreamITCase.clear
 
     val sqlQuery =
@@ -129,7 +129,7 @@ class SetOperatorsITCase extends StreamingWithStateTestBase {
   @Test
   def testNotInUncorrelated(): Unit = {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTablePlanner(env)
     StreamITCase.clear
 
     val sqlQuery =

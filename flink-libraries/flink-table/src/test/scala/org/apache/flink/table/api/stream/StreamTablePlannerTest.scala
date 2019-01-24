@@ -175,7 +175,7 @@ class StreamTablePlannerTest extends TableTestBase {
 
     val jStreamExecEnv = mock(classOf[JStreamExecEnv])
     when(jStreamExecEnv.getStreamTimeCharacteristic).thenReturn(TimeCharacteristic.EventTime)
-    val jTEnv = TablePlanner.getTableEnvironment(jStreamExecEnv)
+    val jTEnv = TablePlanner.getTablePlanner(jStreamExecEnv)
 
     val sType = new TupleTypeInfo(Types.LONG, Types.INT, Types.STRING, Types.INT, Types.LONG)
       .asInstanceOf[TupleTypeInfo[JTuple5[JLong, JInt, String, JInt, JLong]]]

@@ -51,8 +51,8 @@ class SetOperatorsValidationTest extends TableTestBase {
   @Test(expected = classOf[ValidationException])
   def testUnionTablesFromDifferentEnvs(): Unit = {
     val env: ExecutionEnvironment = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv1 = TablePlanner.getTableEnvironment(env)
-    val tEnv2 = TablePlanner.getTableEnvironment(env)
+    val tEnv1 = TablePlanner.getTablePlanner(env)
+    val tEnv2 = TablePlanner.getTablePlanner(env)
 
     val ds1 = CollectionDataSets.getSmall3TupleDataSet(env).toTable(tEnv1, 'a, 'b, 'c)
     val ds2 = CollectionDataSets.getSmall3TupleDataSet(env).toTable(tEnv2, 'a, 'b, 'c)
@@ -75,8 +75,8 @@ class SetOperatorsValidationTest extends TableTestBase {
   @Test(expected = classOf[ValidationException])
   def testMinusAllTablesFromDifferentEnvs(): Unit = {
     val env: ExecutionEnvironment = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv1 = TablePlanner.getTableEnvironment(env)
-    val tEnv2 = TablePlanner.getTableEnvironment(env)
+    val tEnv1 = TablePlanner.getTablePlanner(env)
+    val tEnv2 = TablePlanner.getTablePlanner(env)
 
     val ds1 = CollectionDataSets.getSmall3TupleDataSet(env).toTable(tEnv1, 'a, 'b, 'c)
     val ds2 = CollectionDataSets.getSmall3TupleDataSet(env).toTable(tEnv2, 'a, 'b, 'c)
@@ -99,8 +99,8 @@ class SetOperatorsValidationTest extends TableTestBase {
   @Test(expected = classOf[ValidationException])
   def testIntersectTablesFromDifferentEnvs(): Unit = {
     val env: ExecutionEnvironment = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv1 = TablePlanner.getTableEnvironment(env)
-    val tEnv2 = TablePlanner.getTableEnvironment(env)
+    val tEnv1 = TablePlanner.getTablePlanner(env)
+    val tEnv2 = TablePlanner.getTablePlanner(env)
 
     val ds1 = CollectionDataSets.getSmall3TupleDataSet(env).toTable(tEnv1, 'a, 'b, 'c)
     val ds2 = CollectionDataSets.getSmall3TupleDataSet(env).toTable(tEnv2, 'a, 'b, 'c)

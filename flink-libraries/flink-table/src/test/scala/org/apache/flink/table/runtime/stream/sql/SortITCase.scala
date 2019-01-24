@@ -78,7 +78,7 @@ class SortITCase extends StreamingWithStateTestBase {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     env.setStateBackend(getStateBackend)
     env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
-    val tEnv = TablePlanner.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTablePlanner(env)
     StreamITCase.clear
 
     val t1 = env.addSource(new EventTimeSourceFunction[(Long, Int, String)](data))
@@ -112,7 +112,7 @@ class SortITCase extends StreamingWithStateTestBase {
   def testInsertIntoMemoryTableOrderBy(): Unit = {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
-    val tEnv = TablePlanner.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTablePlanner(env)
     MemoryTableSourceSinkUtil.clear()
 
     val t = StreamTestData.getSmall3TupleDataStream(env)

@@ -42,7 +42,7 @@ class SetOperatorsITCase(
   @Test
   def testUnionAll(): Unit = {
     val env: ExecutionEnvironment = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env, config)
+    val tEnv = TablePlanner.getTablePlanner(env, config)
 
     val ds1 = CollectionDataSets.getSmall3TupleDataSet(env).toTable(tEnv, 'a, 'b, 'c)
     val ds2 = CollectionDataSets.getSmall3TupleDataSet(env).toTable(tEnv, 'd, 'e, 'f)
@@ -57,7 +57,7 @@ class SetOperatorsITCase(
   @Test
   def testUnion(): Unit = {
     val env: ExecutionEnvironment = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env, config)
+    val tEnv = TablePlanner.getTablePlanner(env, config)
 
     val ds1 = CollectionDataSets.getSmall3TupleDataSet(env).toTable(tEnv, 'a, 'b, 'c)
     val ds2 = CollectionDataSets.getSmall3TupleDataSet(env).toTable(tEnv, 'd, 'e, 'f)
@@ -72,7 +72,7 @@ class SetOperatorsITCase(
   @Test
   def testTernaryUnionAll(): Unit = {
     val env: ExecutionEnvironment = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env, config)
+    val tEnv = TablePlanner.getTablePlanner(env, config)
 
     val ds1 = CollectionDataSets.getSmall3TupleDataSet(env).toTable(tEnv, 'a, 'b, 'c)
     val ds2 = CollectionDataSets.getSmall3TupleDataSet(env).toTable(tEnv, 'a, 'b, 'c)
@@ -90,7 +90,7 @@ class SetOperatorsITCase(
   @Test
   def testTernaryUnion(): Unit = {
     val env: ExecutionEnvironment = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env, config)
+    val tEnv = TablePlanner.getTablePlanner(env, config)
 
     val ds1 = CollectionDataSets.getSmall3TupleDataSet(env).toTable(tEnv, 'a, 'b, 'c)
     val ds2 = CollectionDataSets.getSmall3TupleDataSet(env).toTable(tEnv, 'a, 'b, 'c)
@@ -106,7 +106,7 @@ class SetOperatorsITCase(
   @Test
   def testMinusAll(): Unit = {
     val env: ExecutionEnvironment = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env, config)
+    val tEnv = TablePlanner.getTablePlanner(env, config)
 
     val ds1 = CollectionDataSets.getSmall3TupleDataSet(env).toTable(tEnv, 'a, 'b, 'c)
     val ds2 = env.fromElements((1, 1L, "Hi")).toTable(tEnv, 'a, 'b, 'c)
@@ -125,7 +125,7 @@ class SetOperatorsITCase(
   @Test
   def testMinus(): Unit = {
     val env: ExecutionEnvironment = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env, config)
+    val tEnv = TablePlanner.getTablePlanner(env, config)
 
     val ds1 = CollectionDataSets.getSmall3TupleDataSet(env).toTable(tEnv, 'a, 'b, 'c)
     val ds2 = env.fromElements((1, 1L, "Hi")).toTable(tEnv, 'a, 'b, 'c)
@@ -141,7 +141,7 @@ class SetOperatorsITCase(
   @Test
   def testMinusDifferentFieldNames(): Unit = {
     val env: ExecutionEnvironment = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env, config)
+    val tEnv = TablePlanner.getTablePlanner(env, config)
 
     val ds1 = CollectionDataSets.getSmall3TupleDataSet(env).toTable(tEnv, 'a, 'b, 'c)
     val ds2 = env.fromElements((1, 1L, "Hi")).toTable(tEnv, 'd, 'e, 'f)
@@ -157,7 +157,7 @@ class SetOperatorsITCase(
   @Test
   def testIntersect(): Unit = {
     val env: ExecutionEnvironment = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env, config)
+    val tEnv = TablePlanner.getTablePlanner(env, config)
 
     val ds1 = CollectionDataSets.getSmall3TupleDataSet(env).toTable(tEnv, 'a, 'b, 'c)
     val data = new mutable.MutableList[(Int, Long, String)]
@@ -178,7 +178,7 @@ class SetOperatorsITCase(
   @Test
   def testIntersectAll(): Unit = {
     val env: ExecutionEnvironment = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env, config)
+    val tEnv = TablePlanner.getTablePlanner(env, config)
 
     val data1 = new mutable.MutableList[Int]
     data1 += (1, 1, 1, 2, 2)
@@ -197,7 +197,7 @@ class SetOperatorsITCase(
   @Test
   def testIntersectWithDifferentFieldNames(): Unit = {
     val env: ExecutionEnvironment = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env, config)
+    val tEnv = TablePlanner.getTablePlanner(env, config)
 
     val ds1 = CollectionDataSets.getSmall3TupleDataSet(env).toTable(tEnv, 'a, 'b, 'c)
     val ds2 = CollectionDataSets.get3TupleDataSet(env).toTable(tEnv, 'e, 'f, 'g)
@@ -212,7 +212,7 @@ class SetOperatorsITCase(
   @Test
   def testIntersectWithScalarExpression(): Unit = {
     val env: ExecutionEnvironment = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env, config)
+    val tEnv = TablePlanner.getTablePlanner(env, config)
 
     val ds1 = CollectionDataSets.getSmall3TupleDataSet(env).toTable(tEnv, 'a, 'b, 'c)
       .select('a + 1, 'b, 'c)

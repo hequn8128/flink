@@ -75,7 +75,7 @@ public class JavaTablePlannerITCase extends TableProgramsCollectionTestBase {
 	public void testSimpleRegister() throws Exception {
 		final String tableName = "MyTable";
 		ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
-		BatchTablePlanner tableEnv = TablePlanner.getTableEnvironment(env, config());
+		BatchTablePlanner tableEnv = TablePlanner.getTablePlanner(env, config());
 
 		DataSet<Tuple3<Integer, Long, String>> ds = CollectionDataSets.get3TupleDataSet(env);
 		tableEnv.registerDataSet(tableName, ds);
@@ -95,7 +95,7 @@ public class JavaTablePlannerITCase extends TableProgramsCollectionTestBase {
 	public void testRegisterWithFields() throws Exception {
 		final String tableName = "MyTable";
 		ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
-		BatchTablePlanner tableEnv = TablePlanner.getTableEnvironment(env, config());
+		BatchTablePlanner tableEnv = TablePlanner.getTablePlanner(env, config());
 
 		DataSet<Tuple3<Integer, Long, String>> ds = CollectionDataSets.get3TupleDataSet(env);
 		tableEnv.registerDataSet(tableName, ds, "a, b, c");
@@ -118,7 +118,7 @@ public class JavaTablePlannerITCase extends TableProgramsCollectionTestBase {
 	@Test(expected = TableException.class)
 	public void testRegisterExistingDatasetTable() throws Exception {
 		ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
-		BatchTablePlanner tableEnv = TablePlanner.getTableEnvironment(env, config());
+		BatchTablePlanner tableEnv = TablePlanner.getTablePlanner(env, config());
 
 		DataSet<Tuple3<Integer, Long, String>> ds = CollectionDataSets.get3TupleDataSet(env);
 		tableEnv.registerDataSet("MyTable", ds);
@@ -131,7 +131,7 @@ public class JavaTablePlannerITCase extends TableProgramsCollectionTestBase {
 	@Test(expected = TableException.class)
 	public void testScanUnregisteredTable() throws Exception {
 		ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
-		BatchTablePlanner tableEnv = TablePlanner.getTableEnvironment(env, config());
+		BatchTablePlanner tableEnv = TablePlanner.getTablePlanner(env, config());
 
 		// Must fail. No table registered under that name.
 		tableEnv.scan("nonRegisteredTable");
@@ -141,7 +141,7 @@ public class JavaTablePlannerITCase extends TableProgramsCollectionTestBase {
 	public void testTableRegister() throws Exception {
 		final String tableName = "MyTable";
 		ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
-		BatchTablePlanner tableEnv = TablePlanner.getTableEnvironment(env, config());
+		BatchTablePlanner tableEnv = TablePlanner.getTablePlanner(env, config());
 
 		DataSet<Tuple3<Integer, Long, String>> ds = CollectionDataSets.get3TupleDataSet(env);
 		Table t = tableEnv.fromDataSet(ds);
@@ -159,7 +159,7 @@ public class JavaTablePlannerITCase extends TableProgramsCollectionTestBase {
 	@Test(expected = TableException.class)
 	public void testIllegalName() throws Exception {
 		ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
-		BatchTablePlanner tableEnv = TablePlanner.getTableEnvironment(env, config());
+		BatchTablePlanner tableEnv = TablePlanner.getTablePlanner(env, config());
 
 		DataSet<Tuple3<Integer, Long, String>> ds = CollectionDataSets.get3TupleDataSet(env);
 		Table t = tableEnv.fromDataSet(ds);
@@ -170,8 +170,8 @@ public class JavaTablePlannerITCase extends TableProgramsCollectionTestBase {
 	@Test(expected = TableException.class)
 	public void testRegisterTableFromOtherEnv() throws Exception {
 		ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
-		BatchTablePlanner tableEnv1 = TablePlanner.getTableEnvironment(env, config());
-		BatchTablePlanner tableEnv2 = TablePlanner.getTableEnvironment(env, config());
+		BatchTablePlanner tableEnv1 = TablePlanner.getTablePlanner(env, config());
+		BatchTablePlanner tableEnv2 = TablePlanner.getTablePlanner(env, config());
 
 		Table t = tableEnv1.fromDataSet(CollectionDataSets.get3TupleDataSet(env));
 		// Must fail. Table is bound to different TableEnvironment.
@@ -181,7 +181,7 @@ public class JavaTablePlannerITCase extends TableProgramsCollectionTestBase {
 	@Test
 	public void testAsFromTupleByPosition() throws Exception {
 		ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
-		BatchTablePlanner tableEnv = TablePlanner.getTableEnvironment(env, config());
+		BatchTablePlanner tableEnv = TablePlanner.getTablePlanner(env, config());
 
 		Table table = tableEnv
 			.fromDataSet(CollectionDataSets.get3TupleDataSet(env), "a, b, c")
@@ -202,7 +202,7 @@ public class JavaTablePlannerITCase extends TableProgramsCollectionTestBase {
 	@Test
 	public void testAsFromTupleByName() throws Exception {
 		ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
-		BatchTablePlanner tableEnv = TablePlanner.getTableEnvironment(env, config());
+		BatchTablePlanner tableEnv = TablePlanner.getTablePlanner(env, config());
 
 		Table table = tableEnv.fromDataSet(CollectionDataSets.get3TupleDataSet(env), "f2");
 
@@ -221,7 +221,7 @@ public class JavaTablePlannerITCase extends TableProgramsCollectionTestBase {
 	@Test
 	public void testAsFromAndToTuple() throws Exception {
 		ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
-		BatchTablePlanner tableEnv = TablePlanner.getTableEnvironment(env, config());
+		BatchTablePlanner tableEnv = TablePlanner.getTablePlanner(env, config());
 
 		Table table = tableEnv
 			.fromDataSet(CollectionDataSets.get3TupleDataSet(env), "a, b, c")
@@ -248,7 +248,7 @@ public class JavaTablePlannerITCase extends TableProgramsCollectionTestBase {
 	@Test
 	public void testAsFromTupleToPojo() throws Exception {
 		ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
-		BatchTablePlanner tableEnv = TablePlanner.getTableEnvironment(env, config());
+		BatchTablePlanner tableEnv = TablePlanner.getTablePlanner(env, config());
 
 		List<Tuple4<String, Integer, Double, String>> data = new ArrayList<>();
 		data.add(new Tuple4<>("Rofl", 1, 1.0, "Hi"));
@@ -268,7 +268,7 @@ public class JavaTablePlannerITCase extends TableProgramsCollectionTestBase {
 	@Test
 	public void testAsFromPojo() throws Exception {
 		ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
-		BatchTablePlanner tableEnv = TablePlanner.getTableEnvironment(env, config());
+		BatchTablePlanner tableEnv = TablePlanner.getTablePlanner(env, config());
 
 		List<SmallPojo> data = new ArrayList<>();
 		data.add(new SmallPojo("Peter", 28, 4000.00, "Sales", new Integer[] {42}));
@@ -296,7 +296,7 @@ public class JavaTablePlannerITCase extends TableProgramsCollectionTestBase {
 	@Test
 	public void testFromNonAtomicAndNonComposite() throws Exception {
 		ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
-		BatchTablePlanner tableEnv = TablePlanner.getTableEnvironment(env, config());
+		BatchTablePlanner tableEnv = TablePlanner.getTablePlanner(env, config());
 
 		List<Either<String, Integer>> data = new ArrayList<>();
 		data.add(new Either.Left<>("Hello"));
@@ -324,7 +324,7 @@ public class JavaTablePlannerITCase extends TableProgramsCollectionTestBase {
 	@Test
 	public void testAsFromPojoProjected() throws Exception {
 		ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
-		BatchTablePlanner tableEnv = TablePlanner.getTableEnvironment(env, config());
+		BatchTablePlanner tableEnv = TablePlanner.getTablePlanner(env, config());
 
 		List<SmallPojo> data = new ArrayList<>();
 		data.add(new SmallPojo("Peter", 28, 4000.00, "Sales", new Integer[] {42}));
@@ -347,7 +347,7 @@ public class JavaTablePlannerITCase extends TableProgramsCollectionTestBase {
 	@Test
 	public void testAsFromPrivateFieldsPojo() throws Exception {
 		ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
-		BatchTablePlanner tableEnv = TablePlanner.getTableEnvironment(env, config());
+		BatchTablePlanner tableEnv = TablePlanner.getTablePlanner(env, config());
 
 		List<PrivateSmallPojo> data = new ArrayList<>();
 		data.add(new PrivateSmallPojo("Peter", 28, 4000.00, "Sales"));
@@ -374,7 +374,7 @@ public class JavaTablePlannerITCase extends TableProgramsCollectionTestBase {
 	@Test
 	public void testAsFromAndToPojo() throws Exception {
 		ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
-		BatchTablePlanner tableEnv = TablePlanner.getTableEnvironment(env, config());
+		BatchTablePlanner tableEnv = TablePlanner.getTablePlanner(env, config());
 
 		List<SmallPojo> data = new ArrayList<>();
 		data.add(new SmallPojo("Peter", 28, 4000.00, "Sales", new Integer[] {42}));
@@ -402,7 +402,7 @@ public class JavaTablePlannerITCase extends TableProgramsCollectionTestBase {
 	@Test
 	public void testAsFromAndToPrivateFieldPojo() throws Exception {
 		ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
-		BatchTablePlanner tableEnv = TablePlanner.getTableEnvironment(env, config());
+		BatchTablePlanner tableEnv = TablePlanner.getTablePlanner(env, config());
 
 		List<PrivateSmallPojo> data = new ArrayList<>();
 		data.add(new PrivateSmallPojo("Peter", 28, 4000.00, "Sales"));
@@ -429,7 +429,7 @@ public class JavaTablePlannerITCase extends TableProgramsCollectionTestBase {
 	@Test
 	public void testAsWithPojoAndGenericTypes() throws Exception {
 		ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
-		BatchTablePlanner tableEnv = TablePlanner.getTableEnvironment(env, config());
+		BatchTablePlanner tableEnv = TablePlanner.getTablePlanner(env, config());
 
 		List<PojoWithGeneric> data = new ArrayList<>();
 		data.add(new PojoWithGeneric("Peter", 28, new HashMap<String, String>(), new ArrayList<String>()));
@@ -461,7 +461,7 @@ public class JavaTablePlannerITCase extends TableProgramsCollectionTestBase {
 	@Test(expected = TableException.class)
 	public void testGenericRow() throws Exception {
 		ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
-		BatchTablePlanner tableEnv = TablePlanner.getTableEnvironment(env, config());
+		BatchTablePlanner tableEnv = TablePlanner.getTablePlanner(env, config());
 
 		// use null value the enforce GenericType
 		DataSet<Row> dataSet = env.fromElements(Row.of(1, 2L, "Hello", null));
@@ -475,7 +475,7 @@ public class JavaTablePlannerITCase extends TableProgramsCollectionTestBase {
 	@Test(expected = TableException.class)
 	public void testGenericRowWithAlias() throws Exception {
 		ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
-		BatchTablePlanner tableEnv = TablePlanner.getTableEnvironment(env, config());
+		BatchTablePlanner tableEnv = TablePlanner.getTablePlanner(env, config());
 
 		// use null value the enforce GenericType
 		DataSet<Row> dataSet = env.fromElements(Row.of((Integer) null));
@@ -489,7 +489,7 @@ public class JavaTablePlannerITCase extends TableProgramsCollectionTestBase {
 	@Test(expected = TableException.class)
 	public void testAsWithToManyFields() throws Exception {
 		ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
-		BatchTablePlanner tableEnv = TablePlanner.getTableEnvironment(env, config());
+		BatchTablePlanner tableEnv = TablePlanner.getTablePlanner(env, config());
 
 		// Must fail. Too many field names specified.
 		tableEnv.fromDataSet(CollectionDataSets.get3TupleDataSet(env), "a, b, c, d");
@@ -498,7 +498,7 @@ public class JavaTablePlannerITCase extends TableProgramsCollectionTestBase {
 	@Test(expected = TableException.class)
 	public void testAsWithAmbiguousFields() throws Exception {
 		ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
-		BatchTablePlanner tableEnv = TablePlanner.getTableEnvironment(env, config());
+		BatchTablePlanner tableEnv = TablePlanner.getTablePlanner(env, config());
 
 		// Must fail. Specified field names are not unique.
 		tableEnv.fromDataSet(CollectionDataSets.get3TupleDataSet(env), "a, b, b");
@@ -507,7 +507,7 @@ public class JavaTablePlannerITCase extends TableProgramsCollectionTestBase {
 	@Test(expected = TableException.class)
 	public void testAsWithNonFieldReference1() throws Exception {
 		ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
-		BatchTablePlanner tableEnv = TablePlanner.getTableEnvironment(env, config());
+		BatchTablePlanner tableEnv = TablePlanner.getTablePlanner(env, config());
 
 		// Must fail. as() does only allow field name expressions
 		tableEnv.fromDataSet(CollectionDataSets.get3TupleDataSet(env), "a + 1, b, c");
@@ -516,7 +516,7 @@ public class JavaTablePlannerITCase extends TableProgramsCollectionTestBase {
 	@Test(expected = TableException.class)
 	public void testAsWithNonFieldReference2() throws Exception {
 		ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
-		BatchTablePlanner tableEnv = TablePlanner.getTableEnvironment(env, config());
+		BatchTablePlanner tableEnv = TablePlanner.getTablePlanner(env, config());
 
 		// Must fail. as() does only allow field name expressions
 		tableEnv.fromDataSet(CollectionDataSets.get3TupleDataSet(env), "a as foo, b,  c");
@@ -525,7 +525,7 @@ public class JavaTablePlannerITCase extends TableProgramsCollectionTestBase {
 	@Test(expected = TableException.class)
 	public void testNonStaticClassInput() throws Exception {
 		ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
-		BatchTablePlanner tableEnv = TablePlanner.getTableEnvironment(env, config());
+		BatchTablePlanner tableEnv = TablePlanner.getTablePlanner(env, config());
 
 		// Must fail since class is not static
 		tableEnv.fromDataSet(env.fromElements(new MyNonStatic()), "name");
@@ -534,7 +534,7 @@ public class JavaTablePlannerITCase extends TableProgramsCollectionTestBase {
 	@Test(expected = TableException.class)
 	public void testNonStaticClassOutput() throws Exception {
 		ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
-		BatchTablePlanner tableEnv = TablePlanner.getTableEnvironment(env, config());
+		BatchTablePlanner tableEnv = TablePlanner.getTablePlanner(env, config());
 
 		// Must fail since class is not static
 		Table t = tableEnv.fromDataSet(env.fromElements(1, 2, 3), "number");
@@ -544,7 +544,7 @@ public class JavaTablePlannerITCase extends TableProgramsCollectionTestBase {
 	@Test(expected = TableException.class)
 	public void testCustomCalciteConfig() {
 		ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
-		BatchTablePlanner tableEnv = TablePlanner.getTableEnvironment(env, config());
+		BatchTablePlanner tableEnv = TablePlanner.getTablePlanner(env, config());
 
 		CalciteConfig cc = new CalciteConfigBuilder()
 				.replaceLogicalOptRuleSet(RuleSets.ofList())

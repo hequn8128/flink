@@ -41,7 +41,7 @@ object StreamSQLExample {
 
     // set up execution environment
     val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTablePlanner(env)
 
     val orderA: DataStream[Order] = env.fromCollection(Seq(
       Order(1L, "beer", 3),

@@ -39,7 +39,7 @@ public class WordCountTable {
 
 	public static void main(String[] args) throws Exception {
 		ExecutionEnvironment env = ExecutionEnvironment.createCollectionsEnvironment();
-		BatchTablePlanner tEnv = TablePlanner.getTableEnvironment(env);
+		BatchTablePlanner tEnv = TablePlanner.getTablePlanner(env);
 
 		DataSet<WC> input = env.fromElements(
 				new WC("Hello", 1),

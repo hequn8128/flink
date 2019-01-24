@@ -44,7 +44,7 @@ class TemporalJoinITCase extends StreamingWithStateTestBase {
   @Test
   def testProcessTimeInnerJoin(): Unit = {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTablePlanner(env)
     env.setStateBackend(getStateBackend)
     StreamITCase.clear
     env.setParallelism(1)
@@ -95,7 +95,7 @@ class TemporalJoinITCase extends StreamingWithStateTestBase {
   @Test
   def testEventTimeInnerJoin(): Unit = {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTablePlanner(env)
     env.setStateBackend(getStateBackend)
     StreamITCase.clear
     env.setParallelism(1)

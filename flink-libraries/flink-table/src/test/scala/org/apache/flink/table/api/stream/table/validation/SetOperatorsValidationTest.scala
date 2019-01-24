@@ -35,7 +35,7 @@ class SetOperatorsValidationTest extends TableTestBase {
   @Test(expected = classOf[ValidationException])
   def testUnionFieldsNameNotOverlap1(): Unit = {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTablePlanner(env)
 
     StreamITCase.testResults = mutable.MutableList()
     val ds1 = StreamTestData.getSmall3TupleDataStream(env).toTable(tEnv, 'a, 'b, 'c)
@@ -53,7 +53,7 @@ class SetOperatorsValidationTest extends TableTestBase {
   @Test(expected = classOf[ValidationException])
   def testUnionFieldsNameNotOverlap2(): Unit = {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTablePlanner(env)
 
     StreamITCase.testResults = mutable.MutableList()
     val ds1 = StreamTestData.getSmall3TupleDataStream(env).toTable(tEnv, 'a, 'b, 'c)
@@ -72,8 +72,8 @@ class SetOperatorsValidationTest extends TableTestBase {
   @Test(expected = classOf[ValidationException])
   def testUnionTablesFromDifferentEnv(): Unit = {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv1 = TablePlanner.getTableEnvironment(env)
-    val tEnv2 = TablePlanner.getTableEnvironment(env)
+    val tEnv1 = TablePlanner.getTablePlanner(env)
+    val tEnv2 = TablePlanner.getTablePlanner(env)
 
     val ds1 = StreamTestData.getSmall3TupleDataStream(env).toTable(tEnv1, 'a, 'b, 'c)
     val ds2 = StreamTestData.getSmall3TupleDataStream(env).toTable(tEnv2, 'a, 'b, 'c)

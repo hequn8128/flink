@@ -46,7 +46,7 @@ public class JavaSqlITCase extends AbstractTestBase {
 	@Test
 	public void testRowRegisterRowWithNames() throws Exception {
 		StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-		StreamTablePlanner tableEnv = TablePlanner.getTableEnvironment(env);
+		StreamTablePlanner tableEnv = TablePlanner.getTablePlanner(env);
 		StreamITCase.clear();
 
 		List<Row> data = new ArrayList<>();
@@ -85,7 +85,7 @@ public class JavaSqlITCase extends AbstractTestBase {
 	@Test
 	public void testSelect() throws Exception {
 		StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-		StreamTablePlanner tableEnv = TablePlanner.getTableEnvironment(env);
+		StreamTablePlanner tableEnv = TablePlanner.getTablePlanner(env);
 		StreamITCase.clear();
 
 		DataStream<Tuple3<Integer, Long, String>> ds = JavaStreamTestData.getSmall3TupleDataSet(env);
@@ -110,7 +110,7 @@ public class JavaSqlITCase extends AbstractTestBase {
 	@Test
 	public void testFilter() throws Exception {
 		StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-		StreamTablePlanner tableEnv = TablePlanner.getTableEnvironment(env);
+		StreamTablePlanner tableEnv = TablePlanner.getTablePlanner(env);
 		StreamITCase.clear();
 
 		DataStream<Tuple5<Integer, Long, Integer, String, Long>> ds = JavaStreamTestData.get5TupleDataStream(env);
@@ -135,7 +135,7 @@ public class JavaSqlITCase extends AbstractTestBase {
 	@Test
 	public void testUnion() throws Exception {
 		StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-		StreamTablePlanner tableEnv = TablePlanner.getTableEnvironment(env);
+		StreamTablePlanner tableEnv = TablePlanner.getTablePlanner(env);
 		StreamITCase.clear();
 
 		DataStream<Tuple3<Integer, Long, String>> ds1 = JavaStreamTestData.getSmall3TupleDataSet(env);

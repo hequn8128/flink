@@ -49,7 +49,7 @@ public class OrcTableSourceITCase extends MultipleProgramsTestBase {
 	public void testFullScan() throws Exception {
 
 		ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
-		BatchTablePlanner tEnv = TablePlanner.getTableEnvironment(env);
+		BatchTablePlanner tEnv = TablePlanner.getTablePlanner(env);
 
 		OrcTableSource orc = OrcTableSource.builder()
 			.path(getPath(TEST_FILE_FLAT))
@@ -84,7 +84,7 @@ public class OrcTableSourceITCase extends MultipleProgramsTestBase {
 	public void testScanWithProjectionAndFilter() throws Exception {
 
 		ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
-		BatchTablePlanner tEnv = TablePlanner.getTableEnvironment(env);
+		BatchTablePlanner tEnv = TablePlanner.getTablePlanner(env);
 
 		OrcTableSource orc = OrcTableSource.builder()
 			.path(getPath(TEST_FILE_FLAT))

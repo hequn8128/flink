@@ -90,7 +90,7 @@ abstract class ExpressionTestBase {
     when(jDataSetMock.getType).thenReturn(typeInfo)
 
     val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTablePlanner(env)
     tEnv.registerDataSet(tableName, dataSetMock)
     functions.foreach(f => tEnv.registerFunction(f._1, f._2))
 

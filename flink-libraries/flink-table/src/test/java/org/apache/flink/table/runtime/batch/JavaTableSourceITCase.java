@@ -48,7 +48,7 @@ public class JavaTableSourceITCase extends TableProgramsCollectionTestBase {
 	public void testBatchTableSourceTableAPI() throws Exception {
 
 		ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
-		BatchTablePlanner tableEnv = TablePlanner.getTableEnvironment(env, config());
+		BatchTablePlanner tableEnv = TablePlanner.getTablePlanner(env, config());
 		BatchTableSource csvTable = CommonTestData.getCsvTableSource();
 
 		tableEnv.registerTableSource("persons", csvTable);
@@ -74,7 +74,7 @@ public class JavaTableSourceITCase extends TableProgramsCollectionTestBase {
 	@Test
 	public void testBatchTableSourceSQL() throws Exception {
 		ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
-		BatchTablePlanner tableEnv = TablePlanner.getTableEnvironment(env, config());
+		BatchTablePlanner tableEnv = TablePlanner.getTablePlanner(env, config());
 		BatchTableSource csvTable = CommonTestData.getCsvTableSource();
 
 		tableEnv.registerTableSource("persons", csvTable);

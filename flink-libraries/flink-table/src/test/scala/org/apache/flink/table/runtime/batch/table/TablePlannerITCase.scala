@@ -46,7 +46,7 @@ class TablePlannerITCase(
 
     val tableName = "MyTable"
     val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env, config)
+    val tEnv = TablePlanner.getTablePlanner(env, config)
 
     val ds = CollectionDataSets.get3TupleDataSet(env)
     tEnv.registerDataSet(tableName, ds)
@@ -67,7 +67,7 @@ class TablePlannerITCase(
 
     val tableName = "MyTable"
     val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env, config)
+    val tEnv = TablePlanner.getTablePlanner(env, config)
 
     val ds = CollectionDataSets.get3TupleDataSet(env)
     tEnv.registerDataSet(tableName, ds, 'a, 'b, 'c) // new alias
@@ -85,7 +85,7 @@ class TablePlannerITCase(
 
     val tableName = "MyTable"
     val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env, config)
+    val tEnv = TablePlanner.getTablePlanner(env, config)
 
     val ds = CollectionDataSets.get3TupleDataSet(env)
     tEnv.registerDataSet(tableName, ds, '_3, '_1, '_2) // new order
@@ -103,7 +103,7 @@ class TablePlannerITCase(
 
     val tableName = "MyTable"
     val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env, config)
+    val tEnv = TablePlanner.getTablePlanner(env, config)
 
     val t = CollectionDataSets.get3TupleDataSet(env).toTable(tEnv, 'a, 'b, 'c)
     tEnv.registerTable(tableName, t)
@@ -122,7 +122,7 @@ class TablePlannerITCase(
   @Test
   def testToTable(): Unit = {
     val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env, config)
+    val tEnv = TablePlanner.getTablePlanner(env, config)
 
     val t = CollectionDataSets.get3TupleDataSet(env)
       .toTable(tEnv, 'a, 'b, 'c)
@@ -141,7 +141,7 @@ class TablePlannerITCase(
   @Test
   def testToTableFromCaseClass(): Unit = {
     val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env, config)
+    val tEnv = TablePlanner.getTablePlanner(env, config)
 
     val data = List(
       SomeCaseClass("Peter", 28, 4000.00, "Sales"),
@@ -163,7 +163,7 @@ class TablePlannerITCase(
   @Test
   def testToTableFromAndToCaseClass(): Unit = {
     val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env, config)
+    val tEnv = TablePlanner.getTablePlanner(env, config)
 
     val data = List(
       SomeCaseClass("Peter", 28, 4000.00, "Sales"),
@@ -185,7 +185,7 @@ class TablePlannerITCase(
   @Test
   def testInsertIntoMemoryTable(): Unit = {
     val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTablePlanner(env)
     MemoryTableSourceSinkUtil.clear()
 
     val t = CollectionDataSets.getSmall3TupleDataSet(env).toTable(tEnv).as('a, 'b, 'c)

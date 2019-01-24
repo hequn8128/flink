@@ -30,14 +30,14 @@ class UnsupportedOpsValidationTest extends AbstractTestBase {
   @Test(expected = classOf[ValidationException])
   def testSort(): Unit = {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTablePlanner(env)
     StreamTestData.getSmall3TupleDataStream(env).toTable(tEnv).orderBy('_1.desc)
   }
 
   @Test(expected = classOf[ValidationException])
   def testJoin(): Unit = {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTablePlanner(env)
     val t1 = StreamTestData.getSmall3TupleDataStream(env).toTable(tEnv)
     val t2 = StreamTestData.getSmall3TupleDataStream(env).toTable(tEnv)
     t1.join(t2)
@@ -46,7 +46,7 @@ class UnsupportedOpsValidationTest extends AbstractTestBase {
   @Test(expected = classOf[ValidationException])
   def testUnion(): Unit = {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTablePlanner(env)
     val t1 = StreamTestData.getSmall3TupleDataStream(env).toTable(tEnv)
     val t2 = StreamTestData.getSmall3TupleDataStream(env).toTable(tEnv)
     t1.union(t2)
@@ -55,7 +55,7 @@ class UnsupportedOpsValidationTest extends AbstractTestBase {
   @Test(expected = classOf[ValidationException])
   def testIntersect(): Unit = {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTablePlanner(env)
     val t1 = StreamTestData.getSmall3TupleDataStream(env).toTable(tEnv)
     val t2 = StreamTestData.getSmall3TupleDataStream(env).toTable(tEnv)
     t1.intersect(t2)
@@ -64,7 +64,7 @@ class UnsupportedOpsValidationTest extends AbstractTestBase {
   @Test(expected = classOf[ValidationException])
   def testIntersectAll(): Unit = {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTablePlanner(env)
     val t1 = StreamTestData.getSmall3TupleDataStream(env).toTable(tEnv)
     val t2 = StreamTestData.getSmall3TupleDataStream(env).toTable(tEnv)
     t1.intersectAll(t2)
@@ -73,7 +73,7 @@ class UnsupportedOpsValidationTest extends AbstractTestBase {
   @Test(expected = classOf[ValidationException])
   def testMinus(): Unit = {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTablePlanner(env)
     val t1 = StreamTestData.getSmall3TupleDataStream(env).toTable(tEnv)
     val t2 = StreamTestData.getSmall3TupleDataStream(env).toTable(tEnv)
     t1.minus(t2)
@@ -82,7 +82,7 @@ class UnsupportedOpsValidationTest extends AbstractTestBase {
   @Test(expected = classOf[ValidationException])
   def testMinusAll(): Unit = {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTablePlanner(env)
     val t1 = StreamTestData.getSmall3TupleDataStream(env).toTable(tEnv)
     val t2 = StreamTestData.getSmall3TupleDataStream(env).toTable(tEnv)
     t1.minusAll(t2)
@@ -91,7 +91,7 @@ class UnsupportedOpsValidationTest extends AbstractTestBase {
   @Test(expected = classOf[ValidationException])
   def testOffset(): Unit = {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTablePlanner(env)
     val t1 = StreamTestData.getSmall3TupleDataStream(env).toTable(tEnv)
     t1.offset(5)
   }
@@ -99,7 +99,7 @@ class UnsupportedOpsValidationTest extends AbstractTestBase {
   @Test(expected = classOf[ValidationException])
   def testFetch(): Unit = {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTablePlanner(env)
     val t1 = StreamTestData.getSmall3TupleDataStream(env).toTable(tEnv)
     t1.fetch(5)
   }

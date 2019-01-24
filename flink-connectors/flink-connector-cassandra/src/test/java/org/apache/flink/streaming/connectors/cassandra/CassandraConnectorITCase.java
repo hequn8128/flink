@@ -454,7 +454,7 @@ public class CassandraConnectorITCase extends WriteAheadSinkTestBase<Tuple3<Stri
 	public void testCassandraTableSink() throws Exception {
 		StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
 		env.setParallelism(4);
-		StreamTablePlanner tEnv = StreamTablePlanner.getTableEnvironment(env);
+		StreamTablePlanner tEnv = StreamTablePlanner.getTablePlanner(env);
 
 		DataStreamSource<Row> source = env.fromCollection(rowCollection);
 

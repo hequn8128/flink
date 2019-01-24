@@ -84,7 +84,7 @@ object TPCHQuery3Table {
 
     // get execution environment
     val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTablePlanner(env)
 
     val lineitems = getLineitemDataSet(env)
       .toTable(tEnv, 'id, 'extdPrice, 'discount, 'shipDate)

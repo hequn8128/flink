@@ -150,7 +150,7 @@ public class AvroTypesITCase extends TableProgramsClusterTestBase {
 		ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
 		env.getConfig().registerTypeWithKryoSerializer(LocalDate.class, AvroKryoSerializerUtils.JodaLocalDateSerializer.class);
 		env.getConfig().registerTypeWithKryoSerializer(LocalTime.class, AvroKryoSerializerUtils.JodaLocalTimeSerializer.class);
-		BatchTablePlanner tEnv = TablePlanner.getTableEnvironment(env, config());
+		BatchTablePlanner tEnv = TablePlanner.getTablePlanner(env, config());
 
 		Table t = tEnv.fromDataSet(testData(env));
 		Table result = t.select("*");
@@ -177,7 +177,7 @@ public class AvroTypesITCase extends TableProgramsClusterTestBase {
 	@Test
 	public void testAvroStringAccess() throws Exception {
 		ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
-		BatchTablePlanner tEnv = TablePlanner.getTableEnvironment(env, config());
+		BatchTablePlanner tEnv = TablePlanner.getTablePlanner(env, config());
 
 		Table t = tEnv.fromDataSet(testData(env));
 		Table result = t.select("name");
@@ -191,7 +191,7 @@ public class AvroTypesITCase extends TableProgramsClusterTestBase {
 	@Test
 	public void testAvroObjectAccess() throws Exception {
 		ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
-		BatchTablePlanner tEnv = TablePlanner.getTableEnvironment(env, config());
+		BatchTablePlanner tEnv = TablePlanner.getTablePlanner(env, config());
 
 		Table t = tEnv.fromDataSet(testData(env));
 		Table result = t
@@ -206,7 +206,7 @@ public class AvroTypesITCase extends TableProgramsClusterTestBase {
 	@Test
 	public void testAvroToAvro() throws Exception {
 		ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
-		BatchTablePlanner tEnv = TablePlanner.getTableEnvironment(env, config());
+		BatchTablePlanner tEnv = TablePlanner.getTablePlanner(env, config());
 
 		Table t = tEnv.fromDataSet(testData(env));
 		Table result = t.select("*");

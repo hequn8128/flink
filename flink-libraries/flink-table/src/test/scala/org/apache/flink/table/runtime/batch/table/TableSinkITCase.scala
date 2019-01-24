@@ -46,7 +46,7 @@ class TableSinkITCase(
     val path = tmpFile.toURI.toString
 
     val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env, config)
+    val tEnv = TablePlanner.getTablePlanner(env, config)
     env.setParallelism(4)
 
     tEnv.registerTableSink(

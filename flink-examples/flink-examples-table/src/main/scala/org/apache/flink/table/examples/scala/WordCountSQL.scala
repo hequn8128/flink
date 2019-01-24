@@ -40,7 +40,7 @@ object WordCountSQL {
 
     // set up execution environment
     val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTablePlanner(env)
 
     val input = env.fromElements(WC("hello", 1), WC("hello", 1), WC("ciao", 1))
 

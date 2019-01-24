@@ -64,6 +64,9 @@ import org.apache.flink.table.typeutils.TimeIndicatorTypeInfo
 import org.apache.flink.table.validate.FunctionCatalog
 import org.apache.flink.types.Row
 
+import org.apache.flink.table.api.scala.{BatchTableEnvironment => ScalaBatchTableEnv, StreamTableEnvironment => ScalaStreamTableEnv}
+
+
 import _root_.scala.annotation.varargs
 import _root_.scala.collection.JavaConverters._
 import _root_.scala.collection.mutable
@@ -519,7 +522,7 @@ abstract class TablePlanner(val config: TableConfig) {
   def registerTable(name: String, table: Table): Unit = {
 
     // check that table belongs to this table environment
-    if (table.tableEnv != this) {
+    if (table.tablePlanner != this) {
       throw new TableException(
         "Only tables that belong to this TableEnvironment can be registered.")
     }
@@ -1258,7 +1261,7 @@ object TablePlanner {
     *
     * @param executionEnvironment The Java batch ExecutionEnvironment.
     */
-  def getTableEnvironment(executionEnvironment: JavaBatchExecEnv): JavaBatchTablePlanner = {
+  def getTablePlanner(executionEnvironment: JavaBatchExecEnv): JavaBatchTablePlanner = {
     new JavaBatchTablePlanner(executionEnvironment, new TableConfig())
   }
 
@@ -1268,7 +1271,7 @@ object TablePlanner {
     * @param executionEnvironment The Java batch ExecutionEnvironment.
     * @param tableConfig The TableConfig for the new TableEnvironment.
     */
-  def getTableEnvironment(
+  def getTablePlanner(
     executionEnvironment: JavaBatchExecEnv,
     tableConfig: TableConfig): JavaBatchTablePlanner = {
 
@@ -1280,7 +1283,7 @@ object TablePlanner {
     *
     * @param executionEnvironment The Scala batch ExecutionEnvironment.
     */
-  def getTableEnvironment(executionEnvironment: ScalaBatchExecEnv): ScalaBatchTablePlanner = {
+  def getTablePlanner(executionEnvironment: ScalaBatchExecEnv): ScalaBatchTablePlanner = {
     new ScalaBatchTablePlanner(executionEnvironment, new TableConfig())
   }
 
@@ -1291,7 +1294,7 @@ object TablePlanner {
     * @param executionEnvironment The Scala batch ExecutionEnvironment.
     * @param tableConfig The TableConfig for the new TableEnvironment.
     */
-  def getTableEnvironment(
+  def getTablePlanner(
     executionEnvironment: ScalaBatchExecEnv,
     tableConfig: TableConfig): ScalaBatchTablePlanner = {
 
@@ -1303,7 +1306,7 @@ object TablePlanner {
     *
     * @param executionEnvironment The Java StreamExecutionEnvironment.
     */
-  def getTableEnvironment(executionEnvironment: JavaStreamExecEnv): JavaStreamTablePlanner = {
+  def getTablePlanner(executionEnvironment: JavaStreamExecEnv): JavaStreamTablePlanner = {
     new JavaStreamTablePlanner(executionEnvironment, new TableConfig())
   }
 
@@ -1313,7 +1316,7 @@ object TablePlanner {
     * @param executionEnvironment The Java StreamExecutionEnvironment.
     * @param tableConfig The TableConfig for the new TableEnvironment.
     */
-  def getTableEnvironment(
+  def getTablePlanner(
     executionEnvironment: JavaStreamExecEnv,
     tableConfig: TableConfig): JavaStreamTablePlanner = {
 
@@ -1325,7 +1328,19 @@ object TablePlanner {
     *
     * @param executionEnvironment The Scala StreamExecutionEnvironment.
     */
-  def getTableEnvironment(executionEnvironment: ScalaStreamExecEnv): ScalaStreamTablePlanner = {
+  def createTableEnvironment(executionEnvironment: ScalaStreamExecEnv): ScalaStreamTableEnv = {
+
+    val tablePlanner = new ScalaStreamTablePlanner(executionEnvironment, new TableConfig())
+    new ScalaStreamTableEnv(tablePlanner)
+  }
+
+  /**
+    * Returns a [[ScalaStreamTablePlanner]] for a Scala stream [[ScalaStreamExecEnv]].
+    *
+    * @param executionEnvironment The Scala StreamExecutionEnvironment.
+    */
+  def getTablePlanner(executionEnvironment: ScalaStreamExecEnv): ScalaStreamTablePlanner = {
+
     new ScalaStreamTablePlanner(executionEnvironment, new TableConfig())
   }
 
@@ -1335,7 +1350,7 @@ object TablePlanner {
     * @param executionEnvironment The Scala StreamExecutionEnvironment.
     * @param tableConfig The TableConfig for the new TableEnvironment.
     */
-  def getTableEnvironment(
+  def getTablePlanner(
     executionEnvironment: ScalaStreamExecEnv,
     tableConfig: TableConfig): ScalaStreamTablePlanner = {
 

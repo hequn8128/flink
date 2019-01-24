@@ -17,13 +17,11 @@
  */
 package org.apache.flink.table.api.scala
 
-import org.apache.flink.api.scala._
 import org.apache.flink.api.common.typeinfo.TypeInformation
+import org.apache.flink.streaming.api.scala.{DataStream, StreamExecutionEnvironment, asScalaStream}
 import org.apache.flink.table.api.{StreamQueryConfig, Table, TableConfig, TablePlanner}
 import org.apache.flink.table.expressions.Expression
 import org.apache.flink.table.functions.{AggregateFunction, TableFunction}
-import org.apache.flink.streaming.api.scala.{DataStream, StreamExecutionEnvironment}
-import org.apache.flink.streaming.api.scala.asScalaStream
 
 /**
   * The [[TablePlanner]] for a Scala [[StreamExecutionEnvironment]].
@@ -40,12 +38,8 @@ import org.apache.flink.streaming.api.scala.asScalaStream
   * @param execEnv The Scala [[StreamExecutionEnvironment]] of the TableEnvironment.
   * @param config The configuration of the TableEnvironment.
   */
-class StreamTablePlanner(
-    execEnv: StreamExecutionEnvironment,
-    config: TableConfig)
-  extends org.apache.flink.table.api.StreamTablePlanner(
-    execEnv.getWrappedStreamExecutionEnvironment,
-    config) {
+class StreamTableEnvironment(tablePlanner: StreamTablePlanner)
+  extends org.apache.flink.table.api.StreamTableEnvironment(tablePlanner) {
 
   /**
     * Converts the given [[DataStream]] into a [[Table]].
@@ -57,11 +51,8 @@ class StreamTablePlanner(
     * @tparam T The type of the [[DataStream]].
     * @return The converted [[Table]].
     */
-  private[flink] def fromDataStream[T](dataStream: DataStream[T]): Table = {
-
-    val name = createUniqueTableName()
-    registerDataStreamInternal(name, dataStream.javaStream)
-    scan(name)
+  def fromDataStream[T](dataStream: DataStream[T]): Table = {
+    tablePlanner.fromDataStream(dataStream)
   }
 
   /**
@@ -79,11 +70,8 @@ class StreamTablePlanner(
     * @tparam T The type of the [[DataStream]].
     * @return The converted [[Table]].
     */
-  private[flink] def fromDataStream[T](dataStream: DataStream[T], fields: Expression*): Table = {
-
-    val name = createUniqueTableName()
-    registerDataStreamInternal(name, dataStream.javaStream, fields.toArray)
-    scan(name)
+  def fromDataStream[T](dataStream: DataStream[T], fields: Expression*): Table = {
+    tablePlanner.fromDataStream(dataStream, fields: _*)
   }
 
   /**
@@ -98,10 +86,8 @@ class StreamTablePlanner(
     * @param dataStream The [[DataStream]] to register.
     * @tparam T The type of the [[DataStream]] to register.
     */
-  private[flink] def registerDataStream[T](name: String, dataStream: DataStream[T]): Unit = {
-
-    checkValidTableName(name)
-    registerDataStreamInternal(name, dataStream.javaStream)
+  def registerDataStream[T](name: String, dataStream: DataStream[T]): Unit = {
+    tablePlanner.registerDataStream(name, dataStream)
   }
 
   /**
@@ -121,10 +107,8 @@ class StreamTablePlanner(
     * @param fields The field names of the registered table.
     * @tparam T The type of the [[DataStream]] to register.
     */
-  private[flink] def registerDataStream[T](name: String, dataStream: DataStream[T], fields: Expression*): Unit = {
-
-    checkValidTableName(name)
-    registerDataStreamInternal(name, dataStream.javaStream, fields.toArray)
+  def registerDataStream[T](name: String, dataStream: DataStream[T], fields: Expression*): Unit = {
+    tablePlanner.registerDataStream(name, dataStream)
   }
 
   /**
@@ -142,8 +126,8 @@ class StreamTablePlanner(
     * @tparam T The type of the resulting [[DataStream]].
     * @return The converted [[DataStream]].
     */
-  private[flink] def toAppendStream[T: TypeInformation](table: Table): DataStream[T] = {
-    toAppendStream(table, queryConfig)
+  def toAppendStream[T: TypeInformation](table: Table): DataStream[T] = {
+    tablePlanner.toAppendStream(table)
   }
 
   /**
@@ -162,27 +146,25 @@ class StreamTablePlanner(
     * @tparam T The type of the resulting [[DataStream]].
     * @return The converted [[DataStream]].
     */
-  private[flink] def toAppendStream[T: TypeInformation](
-    table: Table,
-    queryConfig: StreamQueryConfig): DataStream[T] = {
-    val returnType = createTypeInformation[T]
-    asScalaStream(translate(
-      table, queryConfig, updatesAsRetraction = false, withChangeFlag = false)(returnType))
+  def toAppendStream[T: TypeInformation](
+      table: Table,
+      queryConfig: StreamQueryConfig): DataStream[T] = {
+    tablePlanner.toAppendStream(table, queryConfig)
   }
 
-/**
-  * Converts the given [[Table]] into a [[DataStream]] of add and retract messages.
-  * The message will be encoded as [[Tuple2]]. The first field is a [[Boolean]] flag,
-  * the second field holds the record of the specified type [[T]].
-  *
-  * A true [[Boolean]] flag indicates an add message, a false flag indicates a retract message.
-  *
-  * @param table The [[Table]] to convert.
-  * @tparam T The type of the requested data type.
-  * @return The converted [[DataStream]].
-  */
-  private[flink] def toRetractStream[T: TypeInformation](table: Table): DataStream[(Boolean, T)] = {
-    toRetractStream(table, queryConfig)
+  /**
+    * Converts the given [[Table]] into a [[DataStream]] of add and retract messages.
+    * The message will be encoded as [[Tuple2]]. The first field is a [[Boolean]] flag,
+    * the second field holds the record of the specified type [[T]].
+    *
+    * A true [[Boolean]] flag indicates an add message, a false flag indicates a retract message.
+    *
+    * @param table The [[Table]] to convert.
+    * @tparam T The type of the requested data type.
+    * @return The converted [[DataStream]].
+    */
+  def toRetractStream[T: TypeInformation](table: Table): DataStream[(Boolean, T)] = {
+    tablePlanner.toRetractStream(table)
   }
 
   /**
@@ -197,12 +179,10 @@ class StreamTablePlanner(
     * @tparam T The type of the requested data type.
     * @return The converted [[DataStream]].
     */
-  private[flink] def toRetractStream[T: TypeInformation](
+  def toRetractStream[T: TypeInformation](
       table: Table,
       queryConfig: StreamQueryConfig): DataStream[(Boolean, T)] = {
-    val returnType = createTypeInformation[(Boolean, T)]
-    asScalaStream(
-      translate(table, queryConfig, updatesAsRetraction = true, withChangeFlag = true)(returnType))
+    tablePlanner.toRetractStream(table, queryConfig)
   }
 
   /**
@@ -212,8 +192,8 @@ class StreamTablePlanner(
     * @param name The name under which the function is registered.
     * @param tf The TableFunction to register
     */
-  private[flink] def registerFunction[T: TypeInformation](name: String, tf: TableFunction[T]): Unit = {
-    registerTableFunctionInternal(name, tf)
+  def registerFunction[T: TypeInformation](name: String, tf: TableFunction[T]): Unit = {
+    tablePlanner.registerFunction(name, tf)
   }
 
   /**
@@ -225,10 +205,21 @@ class StreamTablePlanner(
     * @tparam T The type of the output value.
     * @tparam ACC The type of aggregate accumulator.
     */
-  private[flink] def registerFunction[T: TypeInformation, ACC: TypeInformation](
+  def registerFunction[T: TypeInformation, ACC: TypeInformation](
       name: String,
       f: AggregateFunction[T, ACC])
   : Unit = {
-    registerAggregateFunctionInternal[T, ACC](name, f)
+    tablePlanner.registerFunction(name, f)
+  }
+
+  override def execute(): Unit = {
+    tablePlanner.execEnv.execute()
   }
 }
+
+object StreamTableEnvironment {
+  def create(execEnv: StreamExecutionEnvironment): StreamTableEnvironment = {
+    new StreamTableEnvironment(new StreamTablePlanner(execEnv, new TableConfig))
+  }
+}
+

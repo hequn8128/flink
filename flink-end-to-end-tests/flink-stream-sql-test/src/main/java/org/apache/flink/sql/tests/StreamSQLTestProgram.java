@@ -88,7 +88,7 @@ public class StreamSQLTestProgram {
 		sEnv.enableCheckpointing(4000);
 		sEnv.getConfig().setAutoWatermarkInterval(1000);
 
-		StreamTablePlanner tEnv = TablePlanner.getTableEnvironment(sEnv);
+		StreamTablePlanner tEnv = TablePlanner.getTablePlanner(sEnv);
 
 		tEnv.registerTableSource("table1", new GeneratorTableSource(10, 100, 60, 0));
 		tEnv.registerTableSource("table2", new GeneratorTableSource(5, 0.2f, 60, 5));

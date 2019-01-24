@@ -38,7 +38,7 @@ class TableSourceITCase extends AbstractTestBase {
     val csvTable = CommonTestData.getCsvTableSource
 
     val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTablePlanner(env)
     StreamITCase.testResults = mutable.MutableList()
 
     tEnv.registerTableSource("persons", csvTable)

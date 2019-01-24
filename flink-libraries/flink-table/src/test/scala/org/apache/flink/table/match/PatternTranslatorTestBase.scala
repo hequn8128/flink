@@ -60,7 +60,7 @@ abstract class PatternTranslatorTestBase extends TestLogger{
     when(jDataStreamMock.getType).thenReturn(typeInfo)
 
     val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTablePlanner(env)
     tEnv.registerDataStream(tableName, dataStreamMock, 'f0, 'proctime.proctime)
 
     // prepare RelBuilder

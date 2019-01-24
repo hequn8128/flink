@@ -42,7 +42,7 @@ class TableFunctionConversions[T](tf: TableFunction[T]) {
     val resultType = if (tf.getResultType == null) typeInfo else tf.getResultType
 
     new Table(
-      tableEnv = null, // Table environment will be set later.
+      tablePlanner = null, // Table environment will be set later.
       LogicalTableFunctionCall(
         tf.getClass.getCanonicalName,
         tf,

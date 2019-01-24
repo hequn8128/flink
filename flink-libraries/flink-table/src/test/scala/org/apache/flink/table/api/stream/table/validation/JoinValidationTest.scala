@@ -36,7 +36,7 @@ class JoinValidationTest extends TableTestBase {
   @Test(expected = classOf[ValidationException])
   def testInvalidStateTypes(): Unit = {
     val env: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment
-    val tenv = TablePlanner.getTableEnvironment(env)
+    val tenv = TablePlanner.getTablePlanner(env)
     val ds = env.fromElements(new WithoutEqualsHashCode) // no equals/hashCode
     val t = tenv.fromDataStream(ds)
 
@@ -205,8 +205,8 @@ class JoinValidationTest extends TableTestBase {
   @Test(expected = classOf[ValidationException])
   def testJoinTablesFromDifferentEnvs(): Unit = {
     val env: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv1 = TablePlanner.getTableEnvironment(env)
-    val tEnv2 = TablePlanner.getTableEnvironment(env)
+    val tEnv1 = TablePlanner.getTablePlanner(env)
+    val tEnv2 = TablePlanner.getTablePlanner(env)
     val ds1 = StreamTestData.get3TupleDataStream(env)
     val ds2 = StreamTestData.get5TupleDataStream(env)
     val in1 = tEnv1.fromDataStream(ds1, 'a, 'b, 'c)
@@ -219,8 +219,8 @@ class JoinValidationTest extends TableTestBase {
   @Test(expected = classOf[ValidationException])
   def testJoinTablesFromDifferentEnvsJava() {
     val env: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv1 = TablePlanner.getTableEnvironment(env)
-    val tEnv2 = TablePlanner.getTableEnvironment(env)
+    val tEnv1 = TablePlanner.getTablePlanner(env)
+    val tEnv2 = TablePlanner.getTablePlanner(env)
     val ds1 = StreamTestData.get3TupleDataStream(env)
     val ds2 = StreamTestData.get5TupleDataStream(env)
     val in1 = tEnv1.fromDataStream(ds1, 'a, 'b, 'c)

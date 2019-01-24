@@ -49,7 +49,7 @@ class JoinITCase(
   @Test
   def testInnerJoin(): Unit = {
     val env: ExecutionEnvironment = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env, config)
+    val tEnv = TablePlanner.getTablePlanner(env, config)
 
     val ds1 = CollectionDataSets.getSmall3TupleDataSet(env).toTable(tEnv, 'a, 'b, 'c)
     val ds2 = CollectionDataSets.get5TupleDataSet(env).toTable(tEnv, 'd, 'e, 'f, 'g, 'h)
@@ -70,7 +70,7 @@ class JoinITCase(
   def testInnerJoinWithFilter(): Unit = {
 
     val env: ExecutionEnvironment = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env, config)
+    val tEnv = TablePlanner.getTablePlanner(env, config)
 
     val ds1 = CollectionDataSets.getSmall3TupleDataSet(env).toTable(tEnv).as('a, 'b, 'c)
     val ds2 = CollectionDataSets.get5TupleDataSet(env).toTable(tEnv).as('d, 'e, 'f, 'g, 'h)
@@ -85,7 +85,7 @@ class JoinITCase(
   @Test
   def testInnerJoinWithJoinFilter(): Unit = {
     val env: ExecutionEnvironment = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env, config)
+    val tEnv = TablePlanner.getTablePlanner(env, config)
 
     val ds1 = CollectionDataSets.get3TupleDataSet(env).toTable(tEnv, 'a, 'b, 'c)
     val ds2 = CollectionDataSets.get5TupleDataSet(env).toTable(tEnv, 'd, 'e, 'f, 'g, 'h)
@@ -101,7 +101,7 @@ class JoinITCase(
   @Test
   def testInnerJoinWithNonEquiJoinPredicate(): Unit = {
     val env: ExecutionEnvironment = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env, config)
+    val tEnv = TablePlanner.getTablePlanner(env, config)
 
     val ds1 = CollectionDataSets.get3TupleDataSet(env).toTable(tEnv, 'a, 'b, 'c)
     val ds2 = CollectionDataSets.get5TupleDataSet(env).toTable(tEnv, 'd, 'e, 'f, 'g, 'h)
@@ -116,7 +116,7 @@ class JoinITCase(
   @Test
   def testInnerJoinWithMultipleKeys(): Unit = {
     val env: ExecutionEnvironment = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env, config)
+    val tEnv = TablePlanner.getTablePlanner(env, config)
 
     val ds1 = addNullKey3Tuples(
       CollectionDataSets.get3TupleDataSet(env)).toTable(tEnv, 'a, 'b, 'c)
@@ -134,9 +134,9 @@ class JoinITCase(
   @Test
   def testInnerJoinWithAggregation(): Unit = {
     val env: ExecutionEnvironment = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env, config)
+    val tEnv = TablePlanner.getTablePlanner(env, config)
     // use different table env in order to let tmp table ids are the same
-    val tEnv2 = TablePlanner.getTableEnvironment(env, config)
+    val tEnv2 = TablePlanner.getTablePlanner(env, config)
 
     val ds1 = CollectionDataSets.getSmall3TupleDataSet(env).toTable(tEnv, 'a, 'b, 'c)
     val ds2 = CollectionDataSets.get5TupleDataSet(env).toTable(tEnv, 'd, 'e, 'f, 'g, 'h)
@@ -151,7 +151,7 @@ class JoinITCase(
   @Test
   def testInnerJoinWithGroupedAggregation(): Unit = {
     val env: ExecutionEnvironment = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env, config)
+    val tEnv = TablePlanner.getTablePlanner(env, config)
 
     val ds1 = CollectionDataSets.getSmall3TupleDataSet(env).toTable(tEnv, 'a, 'b, 'c)
     val ds2 = CollectionDataSets.get5TupleDataSet(env).toTable(tEnv, 'd, 'e, 'f, 'g, 'h)
@@ -169,7 +169,7 @@ class JoinITCase(
   @Test
   def testInnerJoinPushThroughJoin(): Unit = {
     val env: ExecutionEnvironment = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env, config)
+    val tEnv = TablePlanner.getTablePlanner(env, config)
 
     val ds1 = CollectionDataSets.getSmall3TupleDataSet(env).toTable(tEnv, 'a, 'b, 'c)
     val ds2 = CollectionDataSets.get5TupleDataSet(env).toTable(tEnv, 'd, 'e, 'f, 'g, 'h)
@@ -189,7 +189,7 @@ class JoinITCase(
   @Test
   def testInnerJoinWithDisjunctivePred(): Unit = {
     val env: ExecutionEnvironment = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env, config)
+    val tEnv = TablePlanner.getTablePlanner(env, config)
 
     val ds1 = CollectionDataSets.get3TupleDataSet(env).toTable(tEnv, 'a, 'b, 'c)
     val ds2 = CollectionDataSets.get5TupleDataSet(env).toTable(tEnv, 'd, 'e, 'f, 'g, 'h)
@@ -206,7 +206,7 @@ class JoinITCase(
   @Test
   def testInnerJoinWithExpressionPreds(): Unit = {
     val env: ExecutionEnvironment = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env, config)
+    val tEnv = TablePlanner.getTablePlanner(env, config)
 
     val ds1 = CollectionDataSets.get3TupleDataSet(env).toTable(tEnv, 'a, 'b, 'c)
     val ds2 = CollectionDataSets.get5TupleDataSet(env).toTable(tEnv, 'd, 'e, 'f, 'g, 'h)
@@ -225,7 +225,7 @@ class JoinITCase(
   @Test
   def testLeftJoinWithMultipleKeys(): Unit = {
     val env: ExecutionEnvironment = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env, config)
+    val tEnv = TablePlanner.getTablePlanner(env, config)
     tEnv.getConfig.setNullCheck(true)
 
     val ds1 = addNullKey3Tuples(
@@ -250,7 +250,7 @@ class JoinITCase(
   @Test
   def testLeftJoinWithNonEquiJoinPred(): Unit = {
     val env: ExecutionEnvironment = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env, config)
+    val tEnv = TablePlanner.getTablePlanner(env, config)
     tEnv.getConfig.setNullCheck(true)
 
     val ds1 = addNullKey3Tuples(
@@ -275,7 +275,7 @@ class JoinITCase(
   @Test
   def testLeftJoinWithLeftLocalPred(): Unit = {
     val env: ExecutionEnvironment = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env, config)
+    val tEnv = TablePlanner.getTablePlanner(env, config)
     tEnv.getConfig.setNullCheck(true)
 
     val ds1 = addNullKey3Tuples(
@@ -300,7 +300,7 @@ class JoinITCase(
   @Test
   def testRightJoinWithMultipleKeys(): Unit = {
     val env: ExecutionEnvironment = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env, config)
+    val tEnv = TablePlanner.getTablePlanner(env, config)
     tEnv.getConfig.setNullCheck(true)
 
     val ds1 = addNullKey3Tuples(
@@ -322,7 +322,7 @@ class JoinITCase(
   @Test
   def testRightJoinWithNonEquiJoinPred(): Unit = {
     val env: ExecutionEnvironment = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env, config)
+    val tEnv = TablePlanner.getTablePlanner(env, config)
     tEnv.getConfig.setNullCheck(true)
 
     val ds1 = addNullKey5Tuples(
@@ -347,7 +347,7 @@ class JoinITCase(
   @Test
   def testRightJoinWithLeftLocalPred(): Unit = {
     val env: ExecutionEnvironment = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env, config)
+    val tEnv = TablePlanner.getTablePlanner(env, config)
     tEnv.getConfig.setNullCheck(true)
 
     val ds1 = addNullKey5Tuples(
@@ -372,7 +372,7 @@ class JoinITCase(
   @Test
   def testFullOuterJoinWithMultipleKeys(): Unit = {
     val env: ExecutionEnvironment = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env, config)
+    val tEnv = TablePlanner.getTablePlanner(env, config)
     tEnv.getConfig.setNullCheck(true)
 
     val ds1 = addNullKey3Tuples(
@@ -399,7 +399,7 @@ class JoinITCase(
   @Test
   def testFullJoinWithNonEquiJoinPred(): Unit = {
     val env: ExecutionEnvironment = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env, config)
+    val tEnv = TablePlanner.getTablePlanner(env, config)
     tEnv.getConfig.setNullCheck(true)
 
     val ds1 = addNullKey3Tuples(
@@ -428,7 +428,7 @@ class JoinITCase(
   @Test
   def testFullJoinWithLeftLocalPred(): Unit = {
     val env: ExecutionEnvironment = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env, config)
+    val tEnv = TablePlanner.getTablePlanner(env, config)
     tEnv.getConfig.setNullCheck(true)
 
     val ds1 = addNullKey3Tuples(
@@ -460,7 +460,7 @@ class JoinITCase(
   @Test
   def testUDTFJoinOnTuples(): Unit = {
     val env: ExecutionEnvironment = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env, config)
+    val tEnv = TablePlanner.getTablePlanner(env, config)
 
     val data = List("hi#world", "how#are#you")
 

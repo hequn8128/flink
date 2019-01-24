@@ -44,7 +44,7 @@ class MatchRecognizeITCase extends StreamingWithStateTestBase {
   def testSimplePattern(): Unit = {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     env.setParallelism(1)
-    val tEnv = TablePlanner.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTablePlanner(env)
     StreamITCase.clear
 
     val data = new mutable.MutableList[(Int, String)]
@@ -91,7 +91,7 @@ class MatchRecognizeITCase extends StreamingWithStateTestBase {
   def testSimplePatternWithNulls(): Unit = {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     env.setParallelism(1)
-    val tEnv = TablePlanner.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTablePlanner(env)
     StreamITCase.clear
 
     val data = new mutable.MutableList[(Int, String, String)]
@@ -141,7 +141,7 @@ class MatchRecognizeITCase extends StreamingWithStateTestBase {
     env.setParallelism(1)
     val tableConfig = new TableConfig
     tableConfig.setMaxGeneratedCodeLength(1)
-    val tEnv = TablePlanner.getTableEnvironment(env, tableConfig)
+    val tEnv = TablePlanner.getTablePlanner(env, tableConfig)
     StreamITCase.clear
 
     val data = new mutable.MutableList[(Int, String, String, String)]
@@ -195,7 +195,7 @@ class MatchRecognizeITCase extends StreamingWithStateTestBase {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
     env.setParallelism(1)
-    val tEnv = TablePlanner.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTablePlanner(env)
     StreamITCase.clear
 
     val data = Seq(
@@ -254,7 +254,7 @@ class MatchRecognizeITCase extends StreamingWithStateTestBase {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     env.setParallelism(1)
     env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
-    val tEnv = TablePlanner.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTablePlanner(env)
     StreamITCase.clear
 
     val data = new mutable.MutableList[(String, Long, Int, Int)]
@@ -315,7 +315,7 @@ class MatchRecognizeITCase extends StreamingWithStateTestBase {
   def testLogicalOffsets(): Unit = {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     env.setParallelism(1)
-    val tEnv = TablePlanner.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTablePlanner(env)
     StreamITCase.clear
 
     val data = new mutable.MutableList[(String, Long, Int, Int)]
@@ -365,7 +365,7 @@ class MatchRecognizeITCase extends StreamingWithStateTestBase {
   def testLogicalOffsetsWithStarVariable(): Unit = {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     env.setParallelism(1)
-    val tEnv = TablePlanner.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTablePlanner(env)
     StreamITCase.clear
 
     val data = new mutable.MutableList[(Int, String, Long, Int)]
@@ -426,7 +426,7 @@ class MatchRecognizeITCase extends StreamingWithStateTestBase {
   def testLogicalOffsetOutsideOfRangeInMeasures(): Unit = {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     env.setParallelism(1)
-    val tEnv = TablePlanner.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTablePlanner(env)
     StreamITCase.clear
 
     val data = new mutable.MutableList[(String, Long, Int, Int)]
@@ -478,7 +478,7 @@ class MatchRecognizeITCase extends StreamingWithStateTestBase {
   def testAggregates(): Unit = {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     env.setParallelism(1)
-    val tEnv = TablePlanner.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTablePlanner(env)
     tEnv.getConfig.setMaxGeneratedCodeLength(1)
     StreamITCase.clear
 
@@ -540,7 +540,7 @@ class MatchRecognizeITCase extends StreamingWithStateTestBase {
   def testAggregatesWithNullInputs(): Unit = {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     env.setParallelism(1)
-    val tEnv = TablePlanner.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTablePlanner(env)
     tEnv.getConfig.setMaxGeneratedCodeLength(1)
     StreamITCase.clear
 
@@ -596,7 +596,7 @@ class MatchRecognizeITCase extends StreamingWithStateTestBase {
   def testAccessingProctime(): Unit = {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     env.setParallelism(1)
-    val tEnv = TablePlanner.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTablePlanner(env)
     StreamITCase.clear
 
     val data = new mutable.MutableList[(Int, String)]
@@ -636,7 +636,7 @@ class MatchRecognizeITCase extends StreamingWithStateTestBase {
   def testPartitioningByTimeIndicator(): Unit = {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     env.setParallelism(1)
-    val tEnv = TablePlanner.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTablePlanner(env)
     StreamITCase.clear
 
     val data = new mutable.MutableList[(Int, String)]
@@ -676,7 +676,7 @@ class MatchRecognizeITCase extends StreamingWithStateTestBase {
   def testUserDefinedFunctions(): Unit = {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     env.setParallelism(1)
-    val tEnv = TablePlanner.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTablePlanner(env)
     tEnv.getConfig.setMaxGeneratedCodeLength(1)
     StreamITCase.clear
 

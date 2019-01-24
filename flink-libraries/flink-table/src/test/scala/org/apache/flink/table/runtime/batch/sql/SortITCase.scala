@@ -50,7 +50,7 @@ class SortITCase(mode: TestExecutionMode, configMode: TableConfigMode)
   @Test
   def testOrderByMultipleFieldsWithSql(): Unit = {
     val env = getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env, config)
+    val tEnv = TablePlanner.getTablePlanner(env, config)
 
     val sqlQuery = "SELECT * FROM MyTable ORDER BY _1 DESC, _2 DESC"
 
@@ -87,7 +87,7 @@ class SortITCase(mode: TestExecutionMode, configMode: TableConfigMode)
   @Test
   def testOrderByWithOffset(): Unit = {
     val env = getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env, config)
+    val tEnv = TablePlanner.getTablePlanner(env, config)
 
     val sqlQuery = "SELECT * FROM MyTable ORDER BY _1 DESC OFFSET 2 ROWS"
 
@@ -118,7 +118,7 @@ class SortITCase(mode: TestExecutionMode, configMode: TableConfigMode)
   @Test
   def testOrderByWithOffsetAndFetch(): Unit = {
     val env = getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env, config)
+    val tEnv = TablePlanner.getTablePlanner(env, config)
 
     val sqlQuery = "SELECT * FROM MyTable ORDER BY _1 OFFSET 2 ROWS FETCH NEXT 5 ROWS ONLY"
 
@@ -149,7 +149,7 @@ class SortITCase(mode: TestExecutionMode, configMode: TableConfigMode)
   @Test
   def testOrderByLimit(): Unit = {
     val env = getExecutionEnvironment
-    val tEnv = TablePlanner.getTableEnvironment(env, config)
+    val tEnv = TablePlanner.getTablePlanner(env, config)
 
     val sqlQuery = "SELECT * FROM MyTable ORDER BY _2, _1 LIMIT 5"
 

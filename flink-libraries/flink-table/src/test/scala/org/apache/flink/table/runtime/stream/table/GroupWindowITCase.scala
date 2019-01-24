@@ -68,7 +68,7 @@ class GroupWindowITCase extends AbstractTestBase {
   def testProcessingTimeSlidingGroupWindowOverCount(): Unit = {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     env.setParallelism(1)
-    val tEnv = TablePlanner.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTablePlanner(env)
     StreamITCase.testResults = mutable.MutableList()
 
     val stream = env.fromCollection(data)
@@ -110,7 +110,7 @@ class GroupWindowITCase extends AbstractTestBase {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
     env.setParallelism(1)
-    val tEnv = TablePlanner.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTablePlanner(env)
     StreamITCase.testResults = mutable.MutableList()
 
     val countFun = new CountAggFunction
@@ -141,7 +141,7 @@ class GroupWindowITCase extends AbstractTestBase {
   def testAllProcessingTimeTumblingGroupWindowOverCount(): Unit = {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     env.setParallelism(1)
-    val tEnv = TablePlanner.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTablePlanner(env)
     StreamITCase.testResults = mutable.MutableList()
 
     val stream = env.fromCollection(data)
@@ -170,7 +170,7 @@ class GroupWindowITCase extends AbstractTestBase {
   def testEventTimeTumblingWindow(): Unit = {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
-    val tEnv = TablePlanner.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTablePlanner(env)
     StreamITCase.testResults = mutable.MutableList()
 
     val stream = env
@@ -211,7 +211,7 @@ class GroupWindowITCase extends AbstractTestBase {
 
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     env.setParallelism(1)
-    val tEnv = TablePlanner.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTablePlanner(env)
     StreamITCase.testResults = mutable.MutableList()
 
     val stream = env.fromCollection(data)
@@ -242,7 +242,7 @@ class GroupWindowITCase extends AbstractTestBase {
     // please keep this test in sync with the DataSet variant
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
-    val tEnv = TablePlanner.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTablePlanner(env)
     StreamITCase.testResults = mutable.MutableList()
 
     val stream = env
@@ -281,7 +281,7 @@ class GroupWindowITCase extends AbstractTestBase {
     // please keep this test in sync with the DataSet variant
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
-    val tEnv = TablePlanner.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTablePlanner(env)
     StreamITCase.testResults = mutable.MutableList()
 
     val stream = env
@@ -321,7 +321,7 @@ class GroupWindowITCase extends AbstractTestBase {
     // please keep this test in sync with the DataSet variant
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
-    val tEnv = TablePlanner.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTablePlanner(env)
     StreamITCase.testResults = mutable.MutableList()
 
     val stream = env
@@ -358,7 +358,7 @@ class GroupWindowITCase extends AbstractTestBase {
     // please keep this test in sync with the DataSet variant
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
-    val tEnv = TablePlanner.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTablePlanner(env)
     StreamITCase.testResults = mutable.MutableList()
 
     val stream = env
@@ -389,7 +389,7 @@ class GroupWindowITCase extends AbstractTestBase {
     // please keep this test in sync with the DataSet variant
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
-    val tEnv = TablePlanner.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTablePlanner(env)
     StreamITCase.testResults = mutable.MutableList()
 
     val stream = env
@@ -418,7 +418,7 @@ class GroupWindowITCase extends AbstractTestBase {
   def testEventTimeGroupWindowWithoutExplicitTimeField(): Unit = {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
-    val tEnv = TablePlanner.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTablePlanner(env)
     StreamITCase.testResults = mutable.MutableList()
 
     val stream = env

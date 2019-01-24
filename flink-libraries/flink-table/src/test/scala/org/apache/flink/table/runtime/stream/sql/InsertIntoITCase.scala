@@ -40,7 +40,7 @@ class InsertIntoITCase extends StreamingWithStateTestBase {
     env.getConfig.enableObjectReuse()
     env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
 
-    val tEnv = TablePlanner.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTablePlanner(env)
     MemoryTableSourceSinkUtil.clear()
 
     val input = StreamTestData.get3TupleDataStream(env)
@@ -77,7 +77,7 @@ class InsertIntoITCase extends StreamingWithStateTestBase {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     env.getConfig.enableObjectReuse()
     env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
-    val tEnv = TablePlanner.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTablePlanner(env)
 
     val t = StreamTestData.get3TupleDataStream(env)
       .assignAscendingTimestamps(_._1.toLong)
@@ -117,7 +117,7 @@ class InsertIntoITCase extends StreamingWithStateTestBase {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     env.getConfig.enableObjectReuse()
     env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
-    val tEnv = TablePlanner.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTablePlanner(env)
 
     val t = StreamTestData.get3TupleDataStream(env)
       .assignAscendingTimestamps(_._1.toLong)
@@ -164,7 +164,7 @@ class InsertIntoITCase extends StreamingWithStateTestBase {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     env.getConfig.enableObjectReuse()
     env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
-    val tEnv = TablePlanner.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTablePlanner(env)
 
     val t = StreamTestData.get3TupleDataStream(env)
       .assignAscendingTimestamps(_._1.toLong)
@@ -210,7 +210,7 @@ class InsertIntoITCase extends StreamingWithStateTestBase {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     env.getConfig.enableObjectReuse()
     env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
-    val tEnv = TablePlanner.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTablePlanner(env)
 
     val t = StreamTestData.get3TupleDataStream(env)
       .assignAscendingTimestamps(_._1.toLong)
@@ -260,7 +260,7 @@ class InsertIntoITCase extends StreamingWithStateTestBase {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     env.getConfig.enableObjectReuse()
     env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
-    val tEnv = TablePlanner.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTablePlanner(env)
 
     val t = StreamTestData.get3TupleDataStream(env)
       .assignAscendingTimestamps(_._1.toLong)
@@ -311,7 +311,7 @@ class InsertIntoITCase extends StreamingWithStateTestBase {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     env.getConfig.enableObjectReuse()
     env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
-    val tEnv = TablePlanner.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTablePlanner(env)
 
     val t = StreamTestData.get3TupleDataStream(env)
       .assignAscendingTimestamps(_._1.toLong)
@@ -360,7 +360,7 @@ class InsertIntoITCase extends StreamingWithStateTestBase {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     env.getConfig.enableObjectReuse()
     env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
-    val tEnv = TablePlanner.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTablePlanner(env)
 
     val t = StreamTestData.get3TupleDataStream(env)
       .assignAscendingTimestamps(_._1.toLong)
