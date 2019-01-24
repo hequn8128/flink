@@ -21,8 +21,8 @@ package org.apache.flink.table.runtime.batch;
 import org.apache.flink.api.java.DataSet;
 import org.apache.flink.api.java.ExecutionEnvironment;
 import org.apache.flink.table.api.Table;
-import org.apache.flink.table.api.TableEnvironment;
-import org.apache.flink.table.api.java.BatchTableEnvironment;
+import org.apache.flink.table.api.TablePlanner;
+import org.apache.flink.table.api.java.BatchTablePlanner;
 import org.apache.flink.table.runtime.utils.CommonTestData;
 import org.apache.flink.table.runtime.utils.TableProgramsCollectionTestBase;
 import org.apache.flink.table.sources.BatchTableSource;
@@ -48,7 +48,7 @@ public class JavaTableSourceITCase extends TableProgramsCollectionTestBase {
 	public void testBatchTableSourceTableAPI() throws Exception {
 
 		ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
-		BatchTableEnvironment tableEnv = TableEnvironment.getTableEnvironment(env, config());
+		BatchTablePlanner tableEnv = TablePlanner.getTableEnvironment(env, config());
 		BatchTableSource csvTable = CommonTestData.getCsvTableSource();
 
 		tableEnv.registerTableSource("persons", csvTable);
@@ -74,7 +74,7 @@ public class JavaTableSourceITCase extends TableProgramsCollectionTestBase {
 	@Test
 	public void testBatchTableSourceSQL() throws Exception {
 		ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
-		BatchTableEnvironment tableEnv = TableEnvironment.getTableEnvironment(env, config());
+		BatchTablePlanner tableEnv = TablePlanner.getTableEnvironment(env, config());
 		BatchTableSource csvTable = CommonTestData.getCsvTableSource();
 
 		tableEnv.registerTableSource("persons", csvTable);

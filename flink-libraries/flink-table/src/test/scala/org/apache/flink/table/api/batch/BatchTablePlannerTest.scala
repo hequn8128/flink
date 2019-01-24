@@ -24,7 +24,7 @@ import org.apache.flink.table.utils.TableTestUtil._
 import org.apache.flink.table.utils.TableTestBase
 import org.junit.Test
 
-class BatchTableEnvironmentTest extends TableTestBase {
+class BatchTablePlannerTest extends TableTestBase {
 
   @Test
   def testSqlWithoutRegistering(): Unit = {

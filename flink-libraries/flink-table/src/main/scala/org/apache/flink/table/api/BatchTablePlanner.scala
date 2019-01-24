@@ -48,20 +48,20 @@ import org.apache.flink.types.Row
   *
   * A TableEnvironment can be used to:
   * - convert a [[DataSet]] to a [[Table]]
-  * - register a [[DataSet]] in the [[TableEnvironment]]'s catalog
-  * - register a [[Table]] in the [[TableEnvironment]]'s catalog
+  * - register a [[DataSet]] in the [[TablePlanner]]'s catalog
+  * - register a [[Table]] in the [[TablePlanner]]'s catalog
   * - scan a registered table to obtain a [[Table]]
   * - specify a SQL query on registered tables to obtain a [[Table]]
   * - convert a [[Table]] into a [[DataSet]]
   * - explain the AST and execution plan of a [[Table]]
   *
-  * @param execEnv The [[ExecutionEnvironment]] which is wrapped in this [[BatchTableEnvironment]].
-  * @param config The [[TableConfig]] of this [[BatchTableEnvironment]].
+  * @param execEnv The [[ExecutionEnvironment]] which is wrapped in this [[BatchTablePlanner]].
+  * @param config  The [[TableConfig]] of this [[BatchTablePlanner]].
   */
-abstract class BatchTableEnvironment(
+abstract class BatchTablePlanner(
     private[flink] val execEnv: ExecutionEnvironment,
     config: TableConfig)
-  extends TableEnvironment(config) {
+  extends TablePlanner(config) {
 
   // a counter for unique table names.
   private val nameCntr: AtomicInteger = new AtomicInteger(0)
@@ -91,7 +91,7 @@ abstract class BatchTableEnvironment(
     "_DataSetTable_" + nameCntr.getAndIncrement()
 
   /**
-    * Registers an internal [[BatchTableSource]] in this [[TableEnvironment]]'s catalog without
+    * Registers an internal [[BatchTableSource]] in this [[TablePlanner]]'s catalog without
     * name checking. Registered tables can be referenced in SQL queries.
     *
     * @param name        The name under which the [[TableSource]] is registered.
@@ -175,7 +175,7 @@ abstract class BatchTableEnvironment(
 
   /**
     * Registers an external [[TableSink]] with given field names and types in this
-    * [[TableEnvironment]]'s catalog.
+    * [[TablePlanner]]'s catalog.
     * Registered sink tables can be referenced in SQL DML statements.
     *
     * Example:
@@ -219,7 +219,7 @@ abstract class BatchTableEnvironment(
 
   /**
     * Registers an external [[TableSink]] with already configured field names and field types in
-    * this [[TableEnvironment]]'s catalog.
+    * this [[TablePlanner]]'s catalog.
     * Registered sink tables can be referenced in SQL DML statements.
     *
     * @param name The name under which the [[TableSink]] is registered.
@@ -387,7 +387,7 @@ abstract class BatchTableEnvironment(
   def explain(table: Table): String = explain(table: Table, extended = false)
 
   /**
-    * Registers a [[DataSet]] as a table under a given name in the [[TableEnvironment]]'s catalog.
+    * Registers a [[DataSet]] as a table under a given name in the [[TablePlanner]]'s catalog.
     *
     * @param name The name under which the table is registered in the catalog.
     * @param dataSet The [[DataSet]] to register as table in the catalog.
@@ -406,7 +406,7 @@ abstract class BatchTableEnvironment(
 
   /**
     * Registers a [[DataSet]] as a table under a given name with field names as specified by
-    * field expressions in the [[TableEnvironment]]'s catalog.
+    * field expressions in the [[TablePlanner]]'s catalog.
     *
     * @param name The name under which the table is registered in the catalog.
     * @param dataSet The [[DataSet]] to register as table in the catalog.
@@ -491,7 +491,7 @@ abstract class BatchTableEnvironment(
       logicalPlan: RelNode,
       logicalType: RelDataType,
       queryConfig: BatchQueryConfig)(implicit tpe: TypeInformation[A]): DataSet[A] = {
-    TableEnvironment.validateType(tpe)
+    TablePlanner.validateType(tpe)
 
     logicalPlan match {
       case node: DataSetRel =>

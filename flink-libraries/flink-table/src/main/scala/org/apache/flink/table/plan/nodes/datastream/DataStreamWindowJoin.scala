@@ -32,7 +32,7 @@ import org.apache.flink.api.java.typeutils.ResultTypeQueryable
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.functions.co.CoProcessFunction
-import org.apache.flink.table.api.{StreamQueryConfig, StreamTableEnvironment, TableException}
+import org.apache.flink.table.api.{StreamQueryConfig, StreamTablePlanner, TableException}
 import org.apache.flink.table.plan.nodes.CommonJoin
 import org.apache.flink.table.plan.schema.RowSchema
 import org.apache.flink.table.plan.util.UpdatingPlanChecker
@@ -108,8 +108,8 @@ class DataStreamWindowJoin(
   }
 
   override def translateToPlan(
-      tableEnv: StreamTableEnvironment,
-      queryConfig: StreamQueryConfig): DataStream[CRow] = {
+                                tableEnv: StreamTablePlanner,
+                                queryConfig: StreamQueryConfig): DataStream[CRow] = {
 
     val config = tableEnv.getConfig
 

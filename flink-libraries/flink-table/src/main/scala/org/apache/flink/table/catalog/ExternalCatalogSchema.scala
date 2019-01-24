@@ -24,7 +24,7 @@ import java.util.{Collection => JCollection, Collections => JCollections, Linked
 import org.apache.calcite.linq4j.tree.Expression
 import org.apache.calcite.rel.`type`.RelProtoDataType
 import org.apache.calcite.schema._
-import org.apache.flink.table.api.{CatalogNotExistException, TableEnvironment, TableNotExistException}
+import org.apache.flink.table.api.{CatalogNotExistException, TablePlanner, TableNotExistException}
 import org.apache.flink.table.util.Logging
 
 import scala.collection.JavaConverters._
@@ -40,9 +40,9 @@ import scala.collection.JavaConverters._
   * @param catalog           external catalog
   */
 class ExternalCatalogSchema(
-    tableEnv: TableEnvironment,
-    catalogIdentifier: String,
-    catalog: ExternalCatalog) extends Schema with Logging {
+                             tableEnv: TablePlanner,
+                             catalogIdentifier: String,
+                             catalog: ExternalCatalog) extends Schema with Logging {
 
   /**
     * Looks up a sub-schema by the given sub-schema name in the external catalog.
@@ -125,10 +125,10 @@ object ExternalCatalogSchema {
     * @param externalCatalog           The external catalog to register
     */
   def registerCatalog(
-      tableEnv: TableEnvironment,
-      parentSchema: SchemaPlus,
-      externalCatalogIdentifier: String,
-      externalCatalog: ExternalCatalog): Unit = {
+                       tableEnv: TablePlanner,
+                       parentSchema: SchemaPlus,
+                       externalCatalogIdentifier: String,
+                       externalCatalog: ExternalCatalog): Unit = {
     val newSchema = new ExternalCatalogSchema(tableEnv, externalCatalogIdentifier, externalCatalog)
     val schemaPlusOfNewSchema = parentSchema.add(externalCatalogIdentifier, newSchema)
     newSchema.registerSubSchemas(schemaPlusOfNewSchema)

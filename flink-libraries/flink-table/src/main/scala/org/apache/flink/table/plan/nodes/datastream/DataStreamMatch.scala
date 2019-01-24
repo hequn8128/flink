@@ -124,8 +124,8 @@ class DataStreamMatch(
   }
 
   override def translateToPlan(
-      tableEnv: StreamTableEnvironment,
-      queryConfig: StreamQueryConfig)
+                                tableEnv: StreamTablePlanner,
+                                queryConfig: StreamQueryConfig)
     : DataStream[CRow] = {
 
     val inputIsAccRetract = DataStreamRetractionRules.isAccRetract(getInput)
@@ -198,9 +198,9 @@ class DataStreamMatch(
   }
 
   private def translateOrder(
-      tableEnv: StreamTableEnvironment,
-      crowInput: DataStream[CRow],
-      orderKeys: RelCollation)
+                              tableEnv: StreamTablePlanner,
+                              crowInput: DataStream[CRow],
+                              orderKeys: RelCollation)
     : (DataStream[CRow], Option[RowComparator]) = {
 
     if (orderKeys.getFieldCollations.size() == 0) {

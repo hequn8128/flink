@@ -26,7 +26,7 @@ import org.apache.calcite.rel.{RelNode, RelWriter, SingleRel}
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.DataSet
 import org.apache.flink.api.java.typeutils.RowTypeInfo
-import org.apache.flink.table.api.{BatchQueryConfig, BatchTableEnvironment}
+import org.apache.flink.table.api.{BatchQueryConfig, BatchTablePlanner}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.AggregationCodeGenerator
 import org.apache.flink.table.plan.nodes.CommonAggregate
@@ -86,8 +86,8 @@ class DataSetAggregate(
   }
 
   override def translateToPlan(
-      tableEnv: BatchTableEnvironment,
-      queryConfig: BatchQueryConfig): DataSet[Row] = {
+                                tableEnv: BatchTablePlanner,
+                                queryConfig: BatchQueryConfig): DataSet[Row] = {
 
     val input = inputNode.asInstanceOf[DataSetRel]
     val inputDS = input.translateToPlan(tableEnv, queryConfig)

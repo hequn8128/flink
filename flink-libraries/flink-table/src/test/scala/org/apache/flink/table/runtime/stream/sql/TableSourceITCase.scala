@@ -20,7 +20,7 @@ package org.apache.flink.table.runtime.stream.sql
 
 import org.apache.flink.api.scala._
 import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
-import org.apache.flink.table.api.TableEnvironment
+import org.apache.flink.table.api.TablePlanner
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.runtime.utils.{CommonTestData, StreamITCase}
 import org.apache.flink.test.util.AbstractTestBase
@@ -38,7 +38,7 @@ class TableSourceITCase extends AbstractTestBase {
     val csvTable = CommonTestData.getCsvTableSource
 
     val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTableEnvironment(env)
     StreamITCase.testResults = mutable.MutableList()
 
     tEnv.registerTableSource("persons", csvTable)

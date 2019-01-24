@@ -39,7 +39,7 @@ import org.apache.flink.api.java.{DataSet => JDataSet}
 import org.apache.flink.api.scala.{DataSet, ExecutionEnvironment}
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.core.fs.Path
-import org.apache.flink.table.api.{BatchTableEnvironment, TableConfig, TableEnvironment}
+import org.apache.flink.table.api.{BatchTablePlanner, TableConfig, TablePlanner}
 import org.apache.flink.table.calcite.FlinkPlannerImpl
 import org.apache.flink.table.codegen.{Compiler, FunctionCodeGenerator, GeneratedFunction}
 import org.apache.flink.table.expressions.{Expression, ExpressionParser}
@@ -82,7 +82,7 @@ abstract class ExpressionTestBase {
   }
 
   private def prepareContext(typeInfo: TypeInformation[Any])
-    : (RelBuilder, TableEnvironment, ExecutionEnvironment) = {
+    : (RelBuilder, TablePlanner, ExecutionEnvironment) = {
     // create DataSetTable
     val dataSetMock = mock(classOf[DataSet[Any]])
     val jDataSetMock = mock(classOf[JDataSet[Any]])
@@ -90,7 +90,7 @@ abstract class ExpressionTestBase {
     when(jDataSetMock.getType).thenReturn(typeInfo)
 
     val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTableEnvironment(env)
     tEnv.registerDataSet(tableName, dataSetMock)
     functions.foreach(f => tEnv.registerFunction(f._1, f._2))
 
@@ -186,7 +186,7 @@ abstract class ExpressionTestBase {
     val validated = planner.validate(parsed)
     val converted = planner.rel(validated).rel
 
-    val env = context._2.asInstanceOf[BatchTableEnvironment]
+    val env = context._2.asInstanceOf[BatchTablePlanner]
     val optimized = env.optimize(converted)
 
     // throw exception if plan contains more than a calc
@@ -199,7 +199,7 @@ abstract class ExpressionTestBase {
 
   private def addTableApiTestExpr(tableApiExpr: Expression, expected: String): Unit = {
     // create RelNode from Table API expression
-    val env = context._2.asInstanceOf[BatchTableEnvironment]
+    val env = context._2.asInstanceOf[BatchTablePlanner]
     val converted = env
       .scan(tableName)
       .select(tableApiExpr)

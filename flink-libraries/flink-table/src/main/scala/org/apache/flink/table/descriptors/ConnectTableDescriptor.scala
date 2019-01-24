@@ -20,15 +20,15 @@ package org.apache.flink.table.descriptors
 
 import java.util
 
-import org.apache.flink.table.api.{TableEnvironment, ValidationException}
+import org.apache.flink.table.api.{TablePlanner, ValidationException}
 import org.apache.flink.table.factories.TableFactoryUtil
 
 /**
-  * Common class for table's created with [[TableEnvironment.connect(ConnectorDescriptor)]].
+  * Common class for table's created with [[TablePlanner.connect(ConnectorDescriptor)]].
   */
 abstract class ConnectTableDescriptor[D <: ConnectTableDescriptor[D]](
-    private val tableEnv: TableEnvironment,
-    private val connectorDescriptor: ConnectorDescriptor)
+                                                                       private val tableEnv: TablePlanner,
+                                                                       private val connectorDescriptor: ConnectorDescriptor)
   extends TableDescriptor
   with SchematicDescriptor[D]
   with RegistrableDescriptor { this: D =>

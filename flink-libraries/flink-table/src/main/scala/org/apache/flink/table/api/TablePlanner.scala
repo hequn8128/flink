@@ -44,8 +44,8 @@ import org.apache.flink.api.scala.typeutils.CaseClassTypeInfo
 import org.apache.flink.api.scala.{ExecutionEnvironment => ScalaBatchExecEnv}
 import org.apache.flink.streaming.api.environment.{StreamExecutionEnvironment => JavaStreamExecEnv}
 import org.apache.flink.streaming.api.scala.{StreamExecutionEnvironment => ScalaStreamExecEnv}
-import org.apache.flink.table.api.java.{BatchTableEnvironment => JavaBatchTableEnv, StreamTableEnvironment => JavaStreamTableEnv}
-import org.apache.flink.table.api.scala.{BatchTableEnvironment => ScalaBatchTableEnv, StreamTableEnvironment => ScalaStreamTableEnv}
+import org.apache.flink.table.api.java.{BatchTablePlanner => JavaBatchTablePlanner, StreamTablePlanner => JavaStreamTablePlanner}
+import org.apache.flink.table.api.scala.{BatchTablePlanner => ScalaBatchTablePlanner, StreamTablePlanner => ScalaStreamTablePlanner}
 import org.apache.flink.table.calcite.{FlinkPlannerImpl, FlinkRelBuilder, FlinkTypeFactory, FlinkTypeSystem}
 import org.apache.flink.table.catalog.{ExternalCatalog, ExternalCatalogSchema}
 import org.apache.flink.table.codegen.{ExpressionReducer, FunctionCodeGenerator, GeneratedFunction}
@@ -73,7 +73,7 @@ import _root_.scala.collection.mutable
   *
   * @param config The configuration of the TableEnvironment
   */
-abstract class TableEnvironment(val config: TableConfig) {
+abstract class TablePlanner(val config: TableConfig) {
 
   // the catalog to hold all registered and translated tables
   // we disable caching here to prevent side effects
@@ -115,8 +115,8 @@ abstract class TableEnvironment(val config: TableConfig) {
 
   /** Returns the [[QueryConfig]] depends on the concrete type of this TableEnvironment. */
   private[flink] def queryConfig: QueryConfig = this match {
-    case _: BatchTableEnvironment => new BatchQueryConfig
-    case _: StreamTableEnvironment => new StreamQueryConfig
+    case _: BatchTablePlanner => new BatchQueryConfig
+    case _: StreamTablePlanner => new StreamQueryConfig
     case _ => null
   }
 
@@ -530,7 +530,7 @@ abstract class TableEnvironment(val config: TableConfig) {
   }
 
   /**
-    * Registers an external [[TableSource]] in this [[TableEnvironment]]'s catalog.
+    * Registers an external [[TableSource]] in this [[TablePlanner]]'s catalog.
     * Registered tables can be referenced in SQL queries.
     *
     * @param name        The name under which the [[TableSource]] is registered.
@@ -542,7 +542,7 @@ abstract class TableEnvironment(val config: TableConfig) {
   }
 
   /**
-    * Registers an internal [[TableSource]] in this [[TableEnvironment]]'s catalog without
+    * Registers an internal [[TableSource]] in this [[TablePlanner]]'s catalog without
     * name checking. Registered tables can be referenced in SQL queries.
     *
     * @param name        The name under which the [[TableSource]] is registered.
@@ -552,7 +552,7 @@ abstract class TableEnvironment(val config: TableConfig) {
 
   /**
     * Registers an external [[TableSink]] with given field names and types in this
-    * [[TableEnvironment]]'s catalog.
+    * [[TablePlanner]]'s catalog.
     * Registered sink tables can be referenced in SQL DML statements.
     *
     * @param name The name under which the [[TableSink]] is registered.
@@ -568,7 +568,7 @@ abstract class TableEnvironment(val config: TableConfig) {
 
   /**
     * Registers an external [[TableSink]] with already configured field names and field types in
-    * this [[TableEnvironment]]'s catalog.
+    * this [[TablePlanner]]'s catalog.
     * Registered sink tables can be referenced in SQL DML statements.
     *
     * @param name The name under which the [[TableSink]] is registered.
@@ -1032,7 +1032,7 @@ abstract class TableEnvironment(val config: TableConfig) {
         "An input of GenericTypeInfo<Row> cannot be converted to Table. " +
           "Please specify the type of the input with a RowTypeInfo.")
     } else {
-      (TableEnvironment.getFieldNames(inputType), TableEnvironment.getFieldIndices(inputType))
+      (TablePlanner.getFieldNames(inputType), TablePlanner.getFieldIndices(inputType))
     }
   }
 
@@ -1050,7 +1050,7 @@ abstract class TableEnvironment(val config: TableConfig) {
       exprs: Array[Expression])
     : (Array[String], Array[Int]) = {
 
-    TableEnvironment.validateType(inputType)
+    TablePlanner.validateType(inputType)
 
     def referenceByName(name: String, ct: CompositeType[_]): Option[Int] = {
       val inputIdx = ct.getFieldIndex(name)
@@ -1248,44 +1248,44 @@ abstract class TableEnvironment(val config: TableConfig) {
 }
 
 /**
-  * Object to instantiate a [[TableEnvironment]] depending on the batch or stream execution
+  * Object to instantiate a [[TablePlanner]] depending on the batch or stream execution
   * environment.
   */
-object TableEnvironment {
+object TablePlanner {
 
   /**
-    * Returns a [[JavaBatchTableEnv]] for a Java [[JavaBatchExecEnv]].
+    * Returns a [[JavaBatchTablePlanner]] for a Java [[JavaBatchExecEnv]].
     *
     * @param executionEnvironment The Java batch ExecutionEnvironment.
     */
-  def getTableEnvironment(executionEnvironment: JavaBatchExecEnv): JavaBatchTableEnv = {
-    new JavaBatchTableEnv(executionEnvironment, new TableConfig())
+  def getTableEnvironment(executionEnvironment: JavaBatchExecEnv): JavaBatchTablePlanner = {
+    new JavaBatchTablePlanner(executionEnvironment, new TableConfig())
   }
 
   /**
-    * Returns a [[JavaBatchTableEnv]] for a Java [[JavaBatchExecEnv]] and a given [[TableConfig]].
+    * Returns a [[JavaBatchTablePlanner]] for a Java [[JavaBatchExecEnv]] and a given [[TableConfig]].
     *
     * @param executionEnvironment The Java batch ExecutionEnvironment.
     * @param tableConfig The TableConfig for the new TableEnvironment.
     */
   def getTableEnvironment(
     executionEnvironment: JavaBatchExecEnv,
-    tableConfig: TableConfig): JavaBatchTableEnv = {
+    tableConfig: TableConfig): JavaBatchTablePlanner = {
 
-    new JavaBatchTableEnv(executionEnvironment, tableConfig)
+    new JavaBatchTablePlanner(executionEnvironment, tableConfig)
   }
 
   /**
-    * Returns a [[ScalaBatchTableEnv]] for a Scala [[ScalaBatchExecEnv]].
+    * Returns a [[ScalaBatchTablePlanner]] for a Scala [[ScalaBatchExecEnv]].
     *
     * @param executionEnvironment The Scala batch ExecutionEnvironment.
     */
-  def getTableEnvironment(executionEnvironment: ScalaBatchExecEnv): ScalaBatchTableEnv = {
-    new ScalaBatchTableEnv(executionEnvironment, new TableConfig())
+  def getTableEnvironment(executionEnvironment: ScalaBatchExecEnv): ScalaBatchTablePlanner = {
+    new ScalaBatchTablePlanner(executionEnvironment, new TableConfig())
   }
 
   /**
-    * Returns a [[ScalaBatchTableEnv]] for a Scala [[ScalaBatchExecEnv]] and a given
+    * Returns a [[ScalaBatchTablePlanner]] for a Scala [[ScalaBatchExecEnv]] and a given
     * [[TableConfig]].
     *
     * @param executionEnvironment The Scala batch ExecutionEnvironment.
@@ -1293,53 +1293,53 @@ object TableEnvironment {
     */
   def getTableEnvironment(
     executionEnvironment: ScalaBatchExecEnv,
-    tableConfig: TableConfig): ScalaBatchTableEnv = {
+    tableConfig: TableConfig): ScalaBatchTablePlanner = {
 
-    new ScalaBatchTableEnv(executionEnvironment, tableConfig)
+    new ScalaBatchTablePlanner(executionEnvironment, tableConfig)
   }
 
   /**
-    * Returns a [[JavaStreamTableEnv]] for a Java [[JavaStreamExecEnv]].
+    * Returns a [[JavaStreamTablePlanner]] for a Java [[JavaStreamExecEnv]].
     *
     * @param executionEnvironment The Java StreamExecutionEnvironment.
     */
-  def getTableEnvironment(executionEnvironment: JavaStreamExecEnv): JavaStreamTableEnv = {
-    new JavaStreamTableEnv(executionEnvironment, new TableConfig())
+  def getTableEnvironment(executionEnvironment: JavaStreamExecEnv): JavaStreamTablePlanner = {
+    new JavaStreamTablePlanner(executionEnvironment, new TableConfig())
   }
 
   /**
-    * Returns a [[JavaStreamTableEnv]] for a Java [[JavaStreamExecEnv]] and a given [[TableConfig]].
+    * Returns a [[JavaStreamTablePlanner]] for a Java [[JavaStreamExecEnv]] and a given [[TableConfig]].
     *
     * @param executionEnvironment The Java StreamExecutionEnvironment.
     * @param tableConfig The TableConfig for the new TableEnvironment.
     */
   def getTableEnvironment(
     executionEnvironment: JavaStreamExecEnv,
-    tableConfig: TableConfig): JavaStreamTableEnv = {
+    tableConfig: TableConfig): JavaStreamTablePlanner = {
 
-    new JavaStreamTableEnv(executionEnvironment, tableConfig)
+    new JavaStreamTablePlanner(executionEnvironment, tableConfig)
   }
 
   /**
-    * Returns a [[ScalaStreamTableEnv]] for a Scala stream [[ScalaStreamExecEnv]].
+    * Returns a [[ScalaStreamTablePlanner]] for a Scala stream [[ScalaStreamExecEnv]].
     *
     * @param executionEnvironment The Scala StreamExecutionEnvironment.
     */
-  def getTableEnvironment(executionEnvironment: ScalaStreamExecEnv): ScalaStreamTableEnv = {
-    new ScalaStreamTableEnv(executionEnvironment, new TableConfig())
+  def getTableEnvironment(executionEnvironment: ScalaStreamExecEnv): ScalaStreamTablePlanner = {
+    new ScalaStreamTablePlanner(executionEnvironment, new TableConfig())
   }
 
   /**
-    * Returns a [[ScalaStreamTableEnv]] for a Scala stream [[ScalaStreamExecEnv]].
+    * Returns a [[ScalaStreamTablePlanner]] for a Scala stream [[ScalaStreamExecEnv]].
     *
     * @param executionEnvironment The Scala StreamExecutionEnvironment.
     * @param tableConfig The TableConfig for the new TableEnvironment.
     */
   def getTableEnvironment(
     executionEnvironment: ScalaStreamExecEnv,
-    tableConfig: TableConfig): ScalaStreamTableEnv = {
+    tableConfig: TableConfig): ScalaStreamTablePlanner = {
 
-    new ScalaStreamTableEnv(executionEnvironment, tableConfig)
+    new ScalaStreamTablePlanner(executionEnvironment, tableConfig)
   }
 
   /**

@@ -29,9 +29,9 @@ import org.junit.Test
   * Test for inserting into tables from external catalog.
   */
 class ExternalCatalogInsertTest extends TableTestBase {
-  private val tableBatchEnv = TableEnvironment.getTableEnvironment(
+  private val tableBatchEnv = TablePlanner.getTableEnvironment(
     ExecutionEnvironment.getExecutionEnvironment)
-  private val tableStreamEnv = TableEnvironment.getTableEnvironment(
+  private val tableStreamEnv = TablePlanner.getTableEnvironment(
     StreamExecutionEnvironment.getExecutionEnvironment)
 
   @Test

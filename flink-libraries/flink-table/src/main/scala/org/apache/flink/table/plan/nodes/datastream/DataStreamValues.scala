@@ -24,7 +24,7 @@ import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.core.Values
 import org.apache.calcite.rex.RexLiteral
 import org.apache.flink.streaming.api.datastream.DataStream
-import org.apache.flink.table.api.{StreamQueryConfig, StreamTableEnvironment}
+import org.apache.flink.table.api.{StreamQueryConfig, StreamTablePlanner}
 import org.apache.flink.table.codegen.InputFormatCodeGenerator
 import org.apache.flink.table.plan.schema.RowSchema
 import org.apache.flink.table.runtime.io.CRowValuesInputFormat
@@ -57,8 +57,8 @@ class DataStreamValues(
   }
 
   override def translateToPlan(
-      tableEnv: StreamTableEnvironment,
-      queryConfig: StreamQueryConfig): DataStream[CRow] = {
+                                tableEnv: StreamTablePlanner,
+                                queryConfig: StreamQueryConfig): DataStream[CRow] = {
 
     val config = tableEnv.getConfig
 

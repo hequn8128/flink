@@ -20,7 +20,7 @@ package org.apache.flink.table.api
 
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.scala._
-import org.apache.flink.table.api.TableEnvironmentTest._
+import org.apache.flink.table.api.TablePlannerTest._
 import org.apache.flink.table.api.Types._
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.typeutils.TimeIndicatorTypeInfo.{PROCTIME_INDICATOR => PROCTIME}
@@ -32,7 +32,7 @@ import org.apache.flink.api.java.typeutils.GenericTypeInfo
 import org.apache.flink.api.scala.typeutils.UnitTypeInfo
 import org.junit.Test
 
-class TableEnvironmentTest extends TableTestBase {
+class TablePlannerTest extends TableTestBase {
 
   // ----------------------------------------------------------------------------------------------
   // schema definition by position
@@ -546,7 +546,7 @@ class TableEnvironmentTest extends TableTestBase {
   }
 }
 
-object TableEnvironmentTest {
+object TablePlannerTest {
 
   case class CClass(cf1: Int, cf2: String, cf3: Double)
 

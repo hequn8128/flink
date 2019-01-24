@@ -18,7 +18,7 @@
 
 package org.apache.flink.table.plan.logical
 
-import org.apache.flink.table.api.TableEnvironment
+import org.apache.flink.table.api.TablePlanner
 import org.apache.flink.table.expressions.{Expression, WindowReference}
 import org.apache.flink.table.validate.{ValidationFailure, ValidationResult, ValidationSuccess}
 
@@ -35,7 +35,7 @@ abstract class LogicalWindow(
 
   def resolveExpressions(resolver: (Expression) => Expression): LogicalWindow = this
 
-  def validate(tableEnv: TableEnvironment): ValidationResult = aliasAttribute match {
+  def validate(tableEnv: TablePlanner): ValidationResult = aliasAttribute match {
     case WindowReference(_, _) => ValidationSuccess
     case _ => ValidationFailure("Window reference for window expected.")
   }

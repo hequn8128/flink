@@ -19,7 +19,7 @@
 package org.apache.flink.table.examples.scala
 
 import org.apache.flink.api.scala._
-import org.apache.flink.table.api.TableEnvironment
+import org.apache.flink.table.api.TablePlanner
 import org.apache.flink.table.api.scala._
 
 /**
@@ -40,7 +40,7 @@ object WordCountTable {
 
     // set up execution environment
     val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTableEnvironment(env)
 
     val input = env.fromElements(WC("hello", 1), WC("hello", 1), WC("ciao", 1))
     val expr = input.toTable(tEnv)

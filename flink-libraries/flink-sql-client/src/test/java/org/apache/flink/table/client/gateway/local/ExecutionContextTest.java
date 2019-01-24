@@ -23,9 +23,9 @@ import org.apache.flink.api.common.restartstrategy.RestartStrategies;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.client.cli.DefaultCLI;
 import org.apache.flink.configuration.Configuration;
-import org.apache.flink.table.api.TableEnvironment;
+import org.apache.flink.table.api.TablePlanner;
 import org.apache.flink.table.api.Types;
-import org.apache.flink.table.api.java.StreamTableEnvironment;
+import org.apache.flink.table.api.java.StreamTablePlanner;
 import org.apache.flink.table.client.config.Environment;
 import org.apache.flink.table.client.gateway.SessionContext;
 import org.apache.flink.table.client.gateway.utils.DummyTableSourceFactory;
@@ -73,7 +73,7 @@ public class ExecutionContextTest {
 	@Test
 	public void testFunctions() throws Exception {
 		final ExecutionContext<?> context = createDefaultExecutionContext();
-		final TableEnvironment tableEnv = context.createEnvironmentInstance().getTableEnvironment();
+		final TablePlanner tableEnv = context.createEnvironmentInstance().getTableEnvironment();
 		final String[] expected = new String[]{"scalarUDF", "tableUDF", "aggregateUDF"};
 		final String[] actual = tableEnv.listUserDefinedFunctions();
 		Arrays.sort(expected);
@@ -119,7 +119,7 @@ public class ExecutionContextTest {
 			new TypeInformation[]{Types.BOOLEAN(), Types.STRING()},
 			sinks.get("TableSourceSink").getFieldTypes());
 
-		final TableEnvironment tableEnv = context.createEnvironmentInstance().getTableEnvironment();
+		final TablePlanner tableEnv = context.createEnvironmentInstance().getTableEnvironment();
 
 		assertArrayEquals(
 			new String[]{"TableNumber1", "TableNumber2", "TableSourceSink", "TestView1", "TestView2"},
@@ -134,7 +134,7 @@ public class ExecutionContextTest {
 			new HashSet<>(Arrays.asList("EnrichmentSource", "HistorySource")),
 			context.getTableSources().keySet());
 
-		final StreamTableEnvironment tableEnv = (StreamTableEnvironment) context.createEnvironmentInstance().getTableEnvironment();
+		final StreamTablePlanner tableEnv = (StreamTablePlanner) context.createEnvironmentInstance().getTableEnvironment();
 
 		assertArrayEquals(
 			new String[]{"EnrichmentSource", "HistorySource", "HistoryView", "TemporalTableUsage"},

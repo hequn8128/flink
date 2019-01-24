@@ -25,7 +25,7 @@ import org.apache.flink.streaming.api.TimeCharacteristic
 import org.apache.flink.streaming.api.functions.timestamps.BoundedOutOfOrdernessTimestampExtractor
 import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
 import org.apache.flink.streaming.api.windowing.time.Time
-import org.apache.flink.table.api.TableEnvironment
+import org.apache.flink.table.api.TablePlanner
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.runtime.utils.{StreamITCase, StreamingWithStateTestBase}
 import org.apache.flink.types.Row
@@ -44,7 +44,7 @@ class TemporalJoinITCase extends StreamingWithStateTestBase {
   @Test
   def testProcessTimeInnerJoin(): Unit = {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTableEnvironment(env)
     env.setStateBackend(getStateBackend)
     StreamITCase.clear
     env.setParallelism(1)
@@ -95,7 +95,7 @@ class TemporalJoinITCase extends StreamingWithStateTestBase {
   @Test
   def testEventTimeInnerJoin(): Unit = {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTableEnvironment(env)
     env.setStateBackend(getStateBackend)
     StreamITCase.clear
     env.setParallelism(1)

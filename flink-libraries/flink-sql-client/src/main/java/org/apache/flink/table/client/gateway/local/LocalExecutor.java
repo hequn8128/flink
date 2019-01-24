@@ -35,7 +35,7 @@ import org.apache.flink.core.fs.Path;
 import org.apache.flink.runtime.jobgraph.JobGraph;
 import org.apache.flink.table.api.QueryConfig;
 import org.apache.flink.table.api.Table;
-import org.apache.flink.table.api.TableEnvironment;
+import org.apache.flink.table.api.TablePlanner;
 import org.apache.flink.table.api.TableSchema;
 import org.apache.flink.table.calcite.FlinkTypeFactory;
 import org.apache.flink.table.client.SqlClientException;
@@ -193,7 +193,7 @@ public class LocalExecutor implements Executor {
 
 	@Override
 	public List<String> listTables(SessionContext session) throws SqlExecutionException {
-		final TableEnvironment tableEnv = getOrCreateExecutionContext(session)
+		final TablePlanner tableEnv = getOrCreateExecutionContext(session)
 			.createEnvironmentInstance()
 			.getTableEnvironment();
 		return Arrays.asList(tableEnv.listTables());
@@ -201,7 +201,7 @@ public class LocalExecutor implements Executor {
 
 	@Override
 	public List<String> listUserDefinedFunctions(SessionContext session) throws SqlExecutionException {
-		final TableEnvironment tableEnv = getOrCreateExecutionContext(session)
+		final TablePlanner tableEnv = getOrCreateExecutionContext(session)
 			.createEnvironmentInstance()
 			.getTableEnvironment();
 		return Arrays.asList(tableEnv.listUserDefinedFunctions());
@@ -209,7 +209,7 @@ public class LocalExecutor implements Executor {
 
 	@Override
 	public TableSchema getTableSchema(SessionContext session, String name) throws SqlExecutionException {
-		final TableEnvironment tableEnv = getOrCreateExecutionContext(session)
+		final TablePlanner tableEnv = getOrCreateExecutionContext(session)
 			.createEnvironmentInstance()
 			.getTableEnvironment();
 		try {
@@ -223,7 +223,7 @@ public class LocalExecutor implements Executor {
 	@Override
 	public String explainStatement(SessionContext session, String statement) throws SqlExecutionException {
 		final ExecutionContext<?> context = getOrCreateExecutionContext(session);
-		final TableEnvironment tableEnv = context
+		final TablePlanner tableEnv = context
 			.createEnvironmentInstance()
 			.getTableEnvironment();
 
@@ -240,7 +240,7 @@ public class LocalExecutor implements Executor {
 
 	@Override
 	public List<String> completeStatement(SessionContext session, String statement, int position) {
-		final TableEnvironment tableEnv = getOrCreateExecutionContext(session)
+		final TablePlanner tableEnv = getOrCreateExecutionContext(session)
 				.createEnvironmentInstance()
 				.getTableEnvironment();
 
@@ -448,7 +448,7 @@ public class LocalExecutor implements Executor {
 	/**
 	 * Creates a table using the given query in the given table environment.
 	 */
-	private Table createTable(TableEnvironment tableEnv, String selectQuery) {
+	private Table createTable(TablePlanner tableEnv, String selectQuery) {
 		// parse and validate query
 		try {
 			return tableEnv.sqlQuery(selectQuery);
@@ -461,7 +461,7 @@ public class LocalExecutor implements Executor {
 	/**
 	 * Applies the given update statement to the given table environment with query configuration.
 	 */
-	private <C> void applyUpdate(ExecutionContext<C> context, TableEnvironment tableEnv, QueryConfig queryConfig, String updateStatement) {
+	private <C> void applyUpdate(ExecutionContext<C> context, TablePlanner tableEnv, QueryConfig queryConfig, String updateStatement) {
 		// parse and validate statement
 		try {
 			// update statement requires an optimization step that might reference UDFs during code compilation

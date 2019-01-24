@@ -19,7 +19,7 @@
 package org.apache.flink.table.api.batch
 
 import org.apache.flink.api.scala._
-import org.apache.flink.table.api.TableEnvironment
+import org.apache.flink.table.api.TablePlanner
 import org.apache.flink.table.api.scala._
 import org.apache.flink.test.util.MultipleProgramsTestBase
 import org.junit.Assert.assertEquals
@@ -33,7 +33,7 @@ class ExplainTest
   @Test
   def testFilterWithoutExtended(): Unit = {
     val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTableEnvironment(env)
 
     val table = env.fromElements((1, "hello"))
       .toTable(tEnv, 'a, 'b)
@@ -48,7 +48,7 @@ class ExplainTest
   @Test
   def testFilterWithExtended(): Unit = {
     val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTableEnvironment(env)
 
     val table = env.fromElements((1, "hello"))
       .toTable(tEnv, 'a, 'b)
@@ -63,7 +63,7 @@ class ExplainTest
   @Test
   def testJoinWithoutExtended(): Unit = {
     val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTableEnvironment(env)
 
     val table1 = env.fromElements((1, "hello")).toTable(tEnv, 'a, 'b)
     val table2 = env.fromElements((1, "hello")).toTable(tEnv, 'c, 'd)
@@ -78,7 +78,7 @@ class ExplainTest
   @Test
   def testJoinWithExtended(): Unit = {
     val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTableEnvironment(env)
 
     val table1 = env.fromElements((1, "hello")).toTable(tEnv, 'a, 'b)
     val table2 = env.fromElements((1, "hello")).toTable(tEnv, 'c, 'd)
@@ -93,7 +93,7 @@ class ExplainTest
   @Test
   def testUnionWithoutExtended(): Unit = {
     val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTableEnvironment(env)
 
     val table1 = env.fromElements((1, "hello")).toTable(tEnv, 'count, 'word)
     val table2 = env.fromElements((1, "hello")).toTable(tEnv, 'count, 'word)
@@ -108,7 +108,7 @@ class ExplainTest
   @Test
   def testUnionWithExtended(): Unit = {
     val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTableEnvironment(env)
 
     val table1 = env.fromElements((1, "hello")).toTable(tEnv, 'count, 'word)
     val table2 = env.fromElements((1, "hello")).toTable(tEnv, 'count, 'word)

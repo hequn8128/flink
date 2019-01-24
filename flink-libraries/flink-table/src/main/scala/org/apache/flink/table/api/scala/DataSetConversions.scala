@@ -47,11 +47,11 @@ class DataSetConversions[T](dataSet: DataSet[T], inputType: TypeInformation[T]) 
     * If not explicitly specified, field names are automatically extracted from the type of
     * the [[DataSet]].
     *
-    * @param tableEnv The [[BatchTableEnvironment]] in which the new [[Table]] is created.
-    * @param fields The field names of the new [[Table]] (optional).
+    * @param tableEnv The [[BatchTablePlanner]] in which the new [[Table]] is created.
+    * @param fields   The field names of the new [[Table]] (optional).
     * @return The resulting [[Table]].
     */
-  def toTable(tableEnv: BatchTableEnvironment, fields: Expression*): Table = {
+  def toTable(tableEnv: BatchTablePlanner, fields: Expression*): Table = {
     if (fields.isEmpty) {
       tableEnv.fromDataSet(dataSet)
     } else {

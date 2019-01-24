@@ -20,7 +20,7 @@ package org.apache.flink.table.runtime.stream.table
 
 import org.apache.flink.api.scala._
 import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
-import org.apache.flink.table.api.TableEnvironment
+import org.apache.flink.table.api.TablePlanner
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.runtime.utils.CommonTestData.NonPojo
 import org.apache.flink.table.runtime.utils.{StreamITCase, StreamTestData}
@@ -36,7 +36,7 @@ class SetOperatorsITCase extends AbstractTestBase {
   @Test
   def testUnion(): Unit = {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTableEnvironment(env)
 
     StreamITCase.testResults = mutable.MutableList()
     val ds1 = StreamTestData.getSmall3TupleDataStream(env).toTable(tEnv, 'a, 'b, 'c)
@@ -56,7 +56,7 @@ class SetOperatorsITCase extends AbstractTestBase {
   @Test
   def testUnionWithFilter(): Unit = {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTableEnvironment(env)
 
     StreamITCase.testResults = mutable.MutableList()
     val ds1 = StreamTestData.getSmall3TupleDataStream(env).toTable(tEnv, 'a, 'b, 'c)
@@ -75,7 +75,7 @@ class SetOperatorsITCase extends AbstractTestBase {
   @Test
   def testUnionWithAnyType(): Unit = {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTableEnvironment(env)
 
     StreamITCase.testResults = mutable.MutableList()
     val s1 = env.fromElements((1, new NonPojo), (2, new NonPojo)).toTable(tEnv, 'a, 'b)
@@ -92,7 +92,7 @@ class SetOperatorsITCase extends AbstractTestBase {
   @Test
   def testUnionWithCompositeType(): Unit = {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTableEnvironment(env)
 
     StreamITCase.testResults = mutable.MutableList()
     val s1 = env.fromElements((1, (1, "a")), (2, (2, "b")))
@@ -111,7 +111,7 @@ class SetOperatorsITCase extends AbstractTestBase {
   @Test
   def testInUncorrelated(): Unit = {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTableEnvironment(env)
     StreamITCase.clear
 
     val dataA = Seq(
@@ -147,7 +147,7 @@ class SetOperatorsITCase extends AbstractTestBase {
   @Test
   def testInUncorrelatedWithConditionAndAgg(): Unit = {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTableEnvironment(env)
     StreamITCase.clear
 
     val dataA = Seq(
@@ -187,7 +187,7 @@ class SetOperatorsITCase extends AbstractTestBase {
   @Test
   def testInWithMultiUncorrelatedCondition(): Unit = {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TableEnvironment.getTableEnvironment(env)
+    val tEnv = TablePlanner.getTableEnvironment(env)
     StreamITCase.clear
 
     val dataA = Seq(

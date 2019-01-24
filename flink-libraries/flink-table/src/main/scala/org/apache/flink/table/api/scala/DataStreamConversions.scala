@@ -47,11 +47,11 @@ class DataStreamConversions[T](dataStream: DataStream[T], inputType: TypeInforma
     * If not explicitly specified, field names are automatically extracted from the type of
     * the [[DataStream]].
     *
-    * @param tableEnv The [[StreamTableEnvironment]] in which the new [[Table]] is created.
-    * @param fields The field names of the new [[Table]] (optional).
+    * @param tableEnv The [[StreamTablePlanner]] in which the new [[Table]] is created.
+    * @param fields   The field names of the new [[Table]] (optional).
     * @return The resulting [[Table]].
     */
-  def toTable(tableEnv: StreamTableEnvironment, fields: Expression*): Table = {
+  def toTable(tableEnv: StreamTablePlanner, fields: Expression*): Table = {
     if (fields.isEmpty) {
       tableEnv.fromDataStream(dataStream)
     } else {
