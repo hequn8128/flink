@@ -100,8 +100,8 @@ class DataStreamGroupAggregate(
   }
 
   override def translateToPlan(
-                                tableEnv: StreamTablePlanner,
-                                queryConfig: StreamQueryConfig): DataStream[CRow] = {
+       tableEnv: StreamTablePlanner,
+       queryConfig: StreamQueryConfig): DataStream[CRow] = {
 
     if (groupings.length > 0 && queryConfig.getMinIdleStateRetentionTime < 0) {
       LOG.warn(

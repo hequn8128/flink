@@ -20,28 +20,20 @@ package org.apache.flink.table.runtime.stream.sql
 
 import java.io.File
 
-import org.apache.flink.api.common.typeinfo.{BasicTypeInfo, TypeInformation}
-import org.apache.flink.api.java.typeutils.RowTypeInfo
+import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.scala._
-import org.apache.flink.streaming.api.TimeCharacteristic
 import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
+import org.apache.flink.table.api.java.TablePlannerFactory
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.{TableConfig, TableEnvironment, TablePlanner, Types}
-import org.apache.flink.table.descriptors.{Rowtime, Schema}
-import org.apache.flink.table.expressions.utils.Func15
-import org.apache.flink.table.runtime.stream.sql.SqlITCase.TimestampAndWatermarkWithOffset
-import org.apache.flink.table.runtime.stream.table.{RowCollector, TestUpsertSink}
-import org.apache.flink.table.runtime.utils.TimeTestUtil.EventTimeSourceFunction
+import org.apache.flink.table.factories.TablePlannerUtil
 import org.apache.flink.table.runtime.utils._
 import org.apache.flink.table.sinks.CsvTableSink
-import org.apache.flink.table.utils.{InMemoryTableFactory, MemoryTableSourceSinkUtil}
 import org.apache.flink.table.validate.FunctionCatalog
 import org.apache.flink.test.util.TestBaseUtils
 import org.apache.flink.types.Row
-import org.junit.Assert._
 import org.junit._
 
-import scala.collection.mutable
 
 class NewITCase extends StreamingWithStateTestBase {
 
@@ -126,6 +118,17 @@ class NewITCase extends StreamingWithStateTestBase {
       .toAppendStream[Row].print
 
     env.execute()
+  }
+
+  @Test
+  def example4(): Unit = {
+    val config: TableConfig = TableConfig.builder()
+      //      .asStreamingExecution()
+      .asBatchExecution()
+      .watermarkInterval(100)
+      .build()
+    
+    TablePlannerUtil.find(classOf[TablePlannerFactory], TablePlannerUtil.generatePlannerDiscriptor(config))
   }
 }
 

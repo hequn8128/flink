@@ -379,4 +379,6 @@ class StreamTablePlanner(
 
     registerAggregateFunctionInternal[T, ACC](name, f)
   }
+
+  override def createTableEnvironment(): TableEnvironment = ???
 }

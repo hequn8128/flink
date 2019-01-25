@@ -20,7 +20,7 @@ package org.apache.flink.table.utils
 
 import org.apache.calcite.tools.RuleSet
 import org.apache.flink.api.common.typeinfo.TypeInformation
-import org.apache.flink.table.api.{QueryConfig, Table, TableConfig, TablePlanner}
+import org.apache.flink.table.api._
 import org.apache.flink.table.descriptors.{ConnectorDescriptor, TableDescriptor}
 import org.apache.flink.table.sinks.TableSink
 import org.apache.flink.table.sources.TableSource
@@ -56,4 +56,6 @@ class MockTablePlanner extends TablePlanner(new TableConfig) {
   override def explain(table: Table): String = ???
 
   override def connect(connectorDescriptor: ConnectorDescriptor): TableDescriptor = ???
+
+  override def createTableEnvironment(): TableEnvironment = ???
 }

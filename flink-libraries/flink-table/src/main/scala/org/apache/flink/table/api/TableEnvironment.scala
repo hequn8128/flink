@@ -19,19 +19,19 @@
 package org.apache.flink.table.api
 
 import org.apache.flink.api.common.typeinfo.TypeInformation
-import org.apache.flink.table.catalog.{ExternalCatalog}
+import org.apache.flink.table.catalog.ExternalCatalog
 import org.apache.flink.table.functions.{AggregateFunction, ScalarFunction, TableFunction}
 import org.apache.flink.table.sinks.TableSink
 import org.apache.flink.table.sources.TableSource
 
 import _root_.scala.annotation.varargs
-
 import org.apache.flink.api.scala.{ExecutionEnvironment => ScalaBatchExecEnv}
 import org.apache.flink.streaming.api.scala.{StreamExecutionEnvironment => ScalaStreamExecEnv}
+import org.apache.flink.table.api.java.TablePlannerFactory
 import org.apache.flink.table.api.scala.{BatchTableEnvironment => ScalaBatchTableEnv}
 import org.apache.flink.table.api.scala.{BatchTablePlanner => ScalaBatchTablePlanner, StreamTablePlanner => ScalaStreamTablePlanner}
-
 import org.apache.flink.table.api.scala.{StreamTableEnvironment => ScalaStreamTableEnv}
+import org.apache.flink.table.factories.TablePlannerUtil
 
 /**
   * The abstract base class for batch and stream TableEnvironments.
@@ -236,7 +236,6 @@ abstract class TableEnvironment(private[flink] val tablePlanner: TablePlanner) {
   : Unit = {
     tablePlanner.registerAggregateFunctionInternal(name, f)
   }
-
   def execute()
 }
 
@@ -244,19 +243,10 @@ object TableEnvironment {
 
   def create(tableConfig: TableConfig): TableEnvironment = {
 
-    // 1. Discover StreamPlanner
-    tableConfig.getExecutionMode match {
-      case ExecutionMode.StreamingMode =>
-        val env = ScalaStreamExecEnv.getExecutionEnvironment
-        env.getConfig.setAutoWatermarkInterval(tableConfig.getWatermarkInterval)
-        val streamTablePlanner = new ScalaStreamTablePlanner(env, tableConfig)
-        new ScalaStreamTableEnv(streamTablePlanner)
-
-      case ExecutionMode.BatchMode =>
-        val env = ScalaBatchExecEnv.getExecutionEnvironment
-        val batchTablePlanner = new ScalaBatchTablePlanner(env, tableConfig)
-        new ScalaBatchTableEnv(batchTablePlanner)
-    }
+    TablePlannerUtil
+      .find(classOf[TablePlannerFactory], TablePlannerUtil.generatePlannerDiscriptor(tableConfig))
+      .createTablePlanner(tableConfig)
+      .createTableEnvironment()
   }
 }
 

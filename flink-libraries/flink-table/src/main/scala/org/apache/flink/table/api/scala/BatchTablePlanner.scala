@@ -185,4 +185,8 @@ class BatchTablePlanner(
   : Unit = {
     registerAggregateFunctionInternal[T, ACC](name, f)
   }
+
+  override def createTableEnvironment(): TableEnvironment = {
+    new BatchTableEnvironment(this)
+  }
 }

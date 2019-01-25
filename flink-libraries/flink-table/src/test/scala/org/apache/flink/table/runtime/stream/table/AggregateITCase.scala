@@ -90,7 +90,7 @@ class AggregateITCase extends StreamingWithStateTestBase {
 
     val t = StreamTestData.get5TupleDataStream(env).toTable(tEnv, 'a, 'b, 'c, 'd, 'e)
       .groupBy('e)
-      .select('e, 'a.count.distinct)
+      .select('e, 'a.count)
 
     val results = t.toRetractStream[Row](queryConfig)
     results.addSink(new StreamITCase.RetractingSink).setParallelism(1)

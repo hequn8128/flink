@@ -1248,6 +1248,8 @@ abstract class TablePlanner(val config: TableConfig) {
 
     Some(generated)
   }
+
+  def createTableEnvironment(): TableEnvironment
 }
 
 /**

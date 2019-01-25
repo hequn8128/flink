@@ -19,7 +19,7 @@ package org.apache.flink.table.api.scala
 
 import org.apache.flink.api.scala._
 import org.apache.flink.api.common.typeinfo.TypeInformation
-import org.apache.flink.table.api.{StreamQueryConfig, Table, TableConfig, TablePlanner}
+import org.apache.flink.table.api._
 import org.apache.flink.table.expressions.Expression
 import org.apache.flink.table.functions.{AggregateFunction, TableFunction}
 import org.apache.flink.streaming.api.scala.{DataStream, StreamExecutionEnvironment}
@@ -230,5 +230,9 @@ class StreamTablePlanner(
       f: AggregateFunction[T, ACC])
   : Unit = {
     registerAggregateFunctionInternal[T, ACC](name, f)
+  }
+
+  override def createTableEnvironment(): TableEnvironment = {
+    new StreamTableEnvironment(this)
   }
 }
