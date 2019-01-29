@@ -18,7 +18,7 @@
 package org.apache.flink.table.examples.scala
 
 import org.apache.flink.api.scala._
-import org.apache.flink.table.api.TablePlanner
+import org.apache.flink.table.api.TableEnvImpl
 import org.apache.flink.table.api.scala._
 
 /**
@@ -84,7 +84,7 @@ object TPCHQuery3Table {
 
     // get execution environment
     val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTablePlanner(env)
+    val tEnv = TableEnvImpl.getTableEnvironment(env)
 
     val lineitems = getLineitemDataSet(env)
       .toTable(tEnv, 'id, 'extdPrice, 'discount, 'shipDate)

@@ -23,17 +23,14 @@ import java.io.File
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.scala._
 import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
-import org.apache.flink.table.api.java.TablePlannerFactory
+import org.apache.flink.table.api.scala.TableEnvironment
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.{TableConfig, TableEnvironment, TablePlanner, Types}
-import org.apache.flink.table.factories.TablePlannerUtil
+import org.apache.flink.table.api.{TableConfig, Types}
 import org.apache.flink.table.runtime.utils._
 import org.apache.flink.table.sinks.CsvTableSink
-import org.apache.flink.table.validate.FunctionCatalog
 import org.apache.flink.test.util.TestBaseUtils
 import org.apache.flink.types.Row
 import org.junit._
-
 
 class NewITCase extends StreamingWithStateTestBase {
 
@@ -88,48 +85,55 @@ class NewITCase extends StreamingWithStateTestBase {
 
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     // create with StreamTableEnvironment
-    val tEnv = StreamTableEnvironment.create(env)
 
-    val ds = StreamTestData.get3TupleDataStream(env)
-    tEnv
-      .fromDataStream(ds, 'a, 'b, 'c)
-      .select("*")
-      .toAppendStream[Row].print
-
-    env.execute()
-  }
-
-  /** test unbounded groupBy (without window) **/
-  @Test
-  def example3(): Unit = {
-
-    StreamITCase.clear
-
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    // createTableEnvironment with TablePlanner
-    val tEnv = TablePlanner.createTableEnvironment(env)
-
-    FunctionCatalog.builtInFunctions.map(e => println(e._1))
-
-    val ds = StreamTestData.get3TupleDataStream(env)
-    tEnv
-      .fromDataStream(ds, 'a, 'b, 'c)
-      .select("*")
-      .toAppendStream[Row].print
-
-    env.execute()
-  }
-
-  @Test
-  def example4(): Unit = {
     val config: TableConfig = TableConfig.builder()
       //      .asStreamingExecution()
       .asBatchExecution()
       .watermarkInterval(100)
       .build()
-    
-    TablePlannerUtil.find(classOf[TablePlannerFactory], TablePlannerUtil.generatePlannerDiscriptor(config))
+
+    val tEnv = StreamTableEnvironment.create(config)
+
+    val ds = StreamTestData.get3TupleDataStream(env)
+    tEnv
+      .fromDataStream(ds, 'a, 'b, 'c)
+      .select("*")
+      .toAppendStream[Row].print
+
+    env.execute()
   }
+//
+//  /** test unbounded groupBy (without window) **/
+//  @Test
+//  def example3(): Unit = {
+//
+//    StreamITCase.clear
+//
+//    val env = StreamExecutionEnvironment.getExecutionEnvironment
+//    // createTableEnvironment with TablePlanner
+//    val tEnv = AbstractTableEnvironment.createTableEnvironment(env)
+//
+//    FunctionCatalog.builtInFunctions.map(e => println(e._1))
+//
+//    val ds = StreamTestData.get3TupleDataStream(env)
+//    tEnv
+//      .fromDataStream(ds, 'a, 'b, 'c)
+//      .select("*")
+//      .toAppendStream[Row].print
+//
+//    env.execute()
+//  }
+//
+//  @Test
+//  def example4(): Unit = {
+//    val config: TableConfig = TableConfig.builder()
+//      //      .asStreamingExecution()
+//      .asBatchExecution()
+//      .watermarkInterval(100)
+//      .build()
+//
+//    TablePlannerUtil.find(classOf[TablePlannerFactory], TablePlannerUtil.generatePlannerDiscriptor(config))
+//  }
 }
 
 

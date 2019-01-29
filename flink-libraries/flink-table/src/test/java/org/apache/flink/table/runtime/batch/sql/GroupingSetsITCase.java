@@ -25,8 +25,8 @@ import org.apache.flink.api.java.operators.MapOperator;
 import org.apache.flink.api.java.tuple.Tuple3;
 import org.apache.flink.table.api.Table;
 import org.apache.flink.table.api.TableConfig;
-import org.apache.flink.table.api.TablePlanner;
-import org.apache.flink.table.api.java.BatchTablePlanner;
+import org.apache.flink.table.api.TableEnvImpl;
+import org.apache.flink.table.api.java.BatchTableEnvironment;
 import org.apache.flink.table.runtime.utils.TableProgramsClusterTestBase;
 import org.apache.flink.test.operators.util.CollectionDataSets;
 import org.apache.flink.test.util.TestBaseUtils;
@@ -50,7 +50,7 @@ public class GroupingSetsITCase extends TableProgramsClusterTestBase {
 
 	private static final String TABLE_NAME = "MyTable";
 	private static final String TABLE_WITH_NULLS_NAME = "MyTableWithNulls";
-	private BatchTablePlanner tableEnv;
+	private BatchTableEnvironment tableEnv;
 
 	public GroupingSetsITCase(TestExecutionMode mode, TableConfigMode tableConfigMode) {
 		super(mode, tableConfigMode);
@@ -59,7 +59,7 @@ public class GroupingSetsITCase extends TableProgramsClusterTestBase {
 	@Before
 	public void setupTables() {
 		ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
-		tableEnv = TablePlanner.getTablePlanner(env, new TableConfig());
+		tableEnv = TableEnvImpl.getTableEnvironment(env, new TableConfig());
 
 		DataSet<Tuple3<Integer, Long, String>> dataSet = CollectionDataSets.get3TupleDataSet(env);
 		tableEnv.registerDataSet(TABLE_NAME, dataSet);

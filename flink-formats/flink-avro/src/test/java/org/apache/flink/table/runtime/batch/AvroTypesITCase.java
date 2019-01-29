@@ -28,8 +28,8 @@ import org.apache.flink.formats.avro.generated.Fixed2;
 import org.apache.flink.formats.avro.generated.User;
 import org.apache.flink.formats.avro.utils.AvroKryoSerializerUtils;
 import org.apache.flink.table.api.Table;
-import org.apache.flink.table.api.TablePlanner;
-import org.apache.flink.table.api.java.BatchTablePlanner;
+import org.apache.flink.table.api.TableEnvImpl;
+import org.apache.flink.table.api.java.BatchTableEnvironment;
 import org.apache.flink.table.runtime.utils.TableProgramsClusterTestBase;
 import org.apache.flink.test.util.TestBaseUtils;
 import org.apache.flink.types.Row;
@@ -150,7 +150,7 @@ public class AvroTypesITCase extends TableProgramsClusterTestBase {
 		ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
 		env.getConfig().registerTypeWithKryoSerializer(LocalDate.class, AvroKryoSerializerUtils.JodaLocalDateSerializer.class);
 		env.getConfig().registerTypeWithKryoSerializer(LocalTime.class, AvroKryoSerializerUtils.JodaLocalTimeSerializer.class);
-		BatchTablePlanner tEnv = TablePlanner.getTablePlanner(env, config());
+		BatchTableEnvironment tEnv = TableEnvImpl.getTableEnvironment(env, config());
 
 		Table t = tEnv.fromDataSet(testData(env));
 		Table result = t.select("*");
@@ -177,7 +177,7 @@ public class AvroTypesITCase extends TableProgramsClusterTestBase {
 	@Test
 	public void testAvroStringAccess() throws Exception {
 		ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
-		BatchTablePlanner tEnv = TablePlanner.getTablePlanner(env, config());
+		BatchTableEnvironment tEnv = TableEnvImpl.getTableEnvironment(env, config());
 
 		Table t = tEnv.fromDataSet(testData(env));
 		Table result = t.select("name");
@@ -191,7 +191,7 @@ public class AvroTypesITCase extends TableProgramsClusterTestBase {
 	@Test
 	public void testAvroObjectAccess() throws Exception {
 		ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
-		BatchTablePlanner tEnv = TablePlanner.getTablePlanner(env, config());
+		BatchTableEnvironment tEnv = TableEnvImpl.getTableEnvironment(env, config());
 
 		Table t = tEnv.fromDataSet(testData(env));
 		Table result = t
@@ -206,7 +206,7 @@ public class AvroTypesITCase extends TableProgramsClusterTestBase {
 	@Test
 	public void testAvroToAvro() throws Exception {
 		ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
-		BatchTablePlanner tEnv = TablePlanner.getTablePlanner(env, config());
+		BatchTableEnvironment tEnv = TableEnvImpl.getTableEnvironment(env, config());
 
 		Table t = tEnv.fromDataSet(testData(env));
 		Table result = t.select("*");

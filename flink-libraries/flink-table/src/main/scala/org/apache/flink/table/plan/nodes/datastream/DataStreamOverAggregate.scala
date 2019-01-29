@@ -28,7 +28,7 @@ import org.apache.calcite.rel.{RelNode, RelWriter, SingleRel}
 import org.apache.calcite.rex.RexLiteral
 import org.apache.flink.api.java.functions.NullByteKeySelector
 import org.apache.flink.streaming.api.datastream.DataStream
-import org.apache.flink.table.api.{StreamQueryConfig, StreamTablePlanner, TableConfig, TableException}
+import org.apache.flink.table.api.{StreamQueryConfig, StreamTableEnvImpl, TableConfig, TableException}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.AggregationCodeGenerator
 import org.apache.flink.table.plan.nodes.OverAggregate
@@ -97,7 +97,7 @@ class DataStreamOverAggregate(
   }
 
   override def translateToPlan(
-                                tableEnv: StreamTablePlanner,
+                                tableEnv: StreamTableEnvImpl,
                                 queryConfig: StreamQueryConfig): DataStream[CRow] = {
 
     if (logicWindow.groups.size > 1) {

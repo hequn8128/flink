@@ -20,14 +20,14 @@ package org.apache.flink.table.descriptors
 
 import java.util
 
-import org.apache.flink.table.api.StreamTablePlanner
+import org.apache.flink.table.api.StreamTableEnvImpl
 import org.apache.flink.table.descriptors.StreamTableDescriptorValidator._
 
 /**
   * Descriptor for specifying a table source and/or sink in a streaming environment.
   */
 class StreamTableDescriptor(
-                             tableEnv: StreamTablePlanner,
+                             tableEnv: StreamTableEnvImpl,
                              connectorDescriptor: ConnectorDescriptor)
   extends ConnectTableDescriptor[StreamTableDescriptor](
     tableEnv,

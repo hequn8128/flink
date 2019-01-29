@@ -124,7 +124,7 @@ class DataStreamMatch(
   }
 
   override def translateToPlan(
-                                tableEnv: StreamTablePlanner,
+                                tableEnv: StreamTableEnvImpl,
                                 queryConfig: StreamQueryConfig)
     : DataStream[CRow] = {
 
@@ -198,7 +198,7 @@ class DataStreamMatch(
   }
 
   private def translateOrder(
-                              tableEnv: StreamTablePlanner,
+                              tableEnv: StreamTableEnvImpl,
                               crowInput: DataStream[CRow],
                               orderKeys: RelCollation)
     : (DataStream[CRow], Option[RowComparator]) = {

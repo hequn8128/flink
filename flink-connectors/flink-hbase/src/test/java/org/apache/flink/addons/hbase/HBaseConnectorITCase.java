@@ -30,8 +30,8 @@ import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.TaskManagerOptions;
 import org.apache.flink.table.api.Table;
 import org.apache.flink.table.api.TableConfig;
-import org.apache.flink.table.api.TablePlanner;
-import org.apache.flink.table.api.java.BatchTablePlanner;
+import org.apache.flink.table.api.TableEnvImpl;
+import org.apache.flink.table.api.java.BatchTableEnvironment;
 import org.apache.flink.table.functions.ScalarFunction;
 import org.apache.flink.test.util.TestBaseUtils;
 import org.apache.flink.types.Row;
@@ -145,7 +145,7 @@ public class HBaseConnectorITCase extends HBaseTestingClusterAutostarter {
 
 		ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
 		env.setParallelism(4);
-		BatchTablePlanner tableEnv = TablePlanner.getTablePlanner(env, new TableConfig());
+		BatchTableEnvironment tableEnv = TableEnvImpl.getTableEnvironment(env, new TableConfig());
 		HBaseTableSource hbaseTable = new HBaseTableSource(getConf(), TEST_TABLE);
 		hbaseTable.addColumn(FAMILY1, F1COL1, Integer.class);
 		hbaseTable.addColumn(FAMILY2, F2COL1, String.class);
@@ -186,7 +186,7 @@ public class HBaseConnectorITCase extends HBaseTestingClusterAutostarter {
 
 		ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
 		env.setParallelism(4);
-		BatchTablePlanner tableEnv = TablePlanner.getTablePlanner(env, new TableConfig());
+		BatchTableEnvironment tableEnv = TableEnvImpl.getTableEnvironment(env, new TableConfig());
 		HBaseTableSource hbaseTable = new HBaseTableSource(getConf(), TEST_TABLE);
 		hbaseTable.addColumn(FAMILY1, F1COL1, Integer.class);
 		hbaseTable.addColumn(FAMILY2, F2COL1, String.class);
@@ -225,7 +225,7 @@ public class HBaseConnectorITCase extends HBaseTestingClusterAutostarter {
 
 		ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
 		env.setParallelism(4);
-		BatchTablePlanner tableEnv = TablePlanner.getTablePlanner(env, new TableConfig());
+		BatchTableEnvironment tableEnv = TableEnvImpl.getTableEnvironment(env, new TableConfig());
 		HBaseTableSource hbaseTable = new HBaseTableSource(getConf(), TEST_TABLE);
 		// shuffle order of column registration
 		hbaseTable.addColumn(FAMILY2, F2COL1, String.class);
@@ -260,7 +260,7 @@ public class HBaseConnectorITCase extends HBaseTestingClusterAutostarter {
 
 		ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
 		env.setParallelism(4);
-		BatchTablePlanner tableEnv = TablePlanner.getTablePlanner(env, new TableConfig());
+		BatchTableEnvironment tableEnv = TableEnvImpl.getTableEnvironment(env, new TableConfig());
 		// fetch row2 from the table till the end
 		HBaseTableSource hbaseTable = new HBaseTableSource(getConf(), TEST_TABLE);
 		hbaseTable.addColumn(FAMILY2, F2COL1, byte[].class);

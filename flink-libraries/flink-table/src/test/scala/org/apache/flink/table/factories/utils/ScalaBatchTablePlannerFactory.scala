@@ -20,10 +20,9 @@ package org.apache.flink.table.factories.utils
 
 import java.util
 
-import org.apache.flink.table.api.TableConfig
+import org.apache.flink.table.api.{TableConfig, TablePlanner, TablePlannerFactory}
 import org.apache.flink.api.scala.{ExecutionEnvironment => ScalaBatchExecEnv}
-import org.apache.flink.table.api.java.TablePlannerFactory
-import org.apache.flink.table.api.scala.{BatchTablePlanner => ScalaBatchTablePlanner}
+import org.apache.flink.table.api.scala.{BatchTableEnvironment => ScalaBatchTablePlanner}
 
 /**
   * Table source factory for testing.
@@ -33,7 +32,6 @@ class ScalaBatchTablePlannerFactory extends TablePlannerFactory {
   override def requiredContext(): util.Map[String, String] = {
     val context = new util.HashMap[String, String]()
     context.put("mode", "batch")
-//    context.put("code", "scala")
     context
   }
 
@@ -44,10 +42,9 @@ class ScalaBatchTablePlannerFactory extends TablePlannerFactory {
 
   override def createTablePlanner(
       tableConfig: TableConfig)
-    : ScalaBatchTablePlanner = {
+    : TablePlanner = {
 
-    val env = ScalaBatchExecEnv.getExecutionEnvironment
-    new ScalaBatchTablePlanner(env, tableConfig)
+    new TablePlanner(tableConfig)
   }
 }
 

@@ -22,8 +22,8 @@ import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.scala._
 import org.apache.flink.streaming.api.scala.DataStream
 import org.apache.flink.table.api.{BatchQueryConfig, StreamQueryConfig, Table, TableException}
-import org.apache.flink.table.api.scala.{BatchTablePlanner => ScalaBatchTableEnv}
-import org.apache.flink.table.api.scala.{StreamTablePlanner => ScalaStreamTableEnv}
+import org.apache.flink.table.api.scala.{BatchTableEnvironment => ScalaBatchTableEnv}
+import org.apache.flink.table.api.scala.{StreamTableEnvironment => ScalaStreamTableEnv}
 
 /**
   * Holds methods to convert a [[Table]] into a [[DataSet]] or a [[DataStream]].

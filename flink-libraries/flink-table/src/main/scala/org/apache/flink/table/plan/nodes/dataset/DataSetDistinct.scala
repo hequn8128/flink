@@ -24,7 +24,7 @@ import org.apache.calcite.rel.metadata.RelMetadataQuery
 import org.apache.calcite.rel.{RelNode, RelWriter, SingleRel}
 import org.apache.flink.api.common.operators.base.ReduceOperatorBase.CombineHint
 import org.apache.flink.api.java.DataSet
-import org.apache.flink.table.api.{BatchQueryConfig, BatchTablePlanner}
+import org.apache.flink.table.api.{BatchQueryConfig, BatchTableEnvImpl}
 import org.apache.flink.table.runtime.aggregate.DistinctReduce
 import org.apache.flink.types.Row
 
@@ -77,7 +77,7 @@ class DataSetDistinct(
   }
 
   override def translateToPlan(
-                                tableEnv: BatchTablePlanner,
+                                tableEnv: BatchTableEnvImpl,
                                 queryConfig: BatchQueryConfig): DataSet[Row] = {
 
     val inputDS = getInput.asInstanceOf[DataSetRel].translateToPlan(tableEnv, queryConfig)

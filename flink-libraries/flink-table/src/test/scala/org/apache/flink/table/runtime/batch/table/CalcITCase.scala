@@ -24,7 +24,7 @@ import java.util
 
 import org.apache.flink.api.scala._
 import org.apache.flink.api.scala.util.CollectionDataSets
-import org.apache.flink.table.api.TablePlanner
+import org.apache.flink.table.api.TableEnvImpl
 import org.apache.flink.table.api.Types._
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.expressions.Literal
@@ -51,7 +51,7 @@ class CalcITCase(
   @Test
   def testSimpleSelectAll(): Unit = {
     val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTablePlanner(env, config)
+    val tEnv = TableEnvImpl.getTableEnvironment(env, config)
 
     val t = CollectionDataSets.get3TupleDataSet(env).toTable(tEnv).select('_1, '_2, '_3)
 
@@ -68,7 +68,7 @@ class CalcITCase(
   @Test
   def testSimpleSelectAllWithAs(): Unit = {
     val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTablePlanner(env, config)
+    val tEnv = TableEnvImpl.getTableEnvironment(env, config)
 
     val t = CollectionDataSets.get3TupleDataSet(env).toTable(tEnv, 'a, 'b, 'c).select('a, 'b, 'c)
 
@@ -85,7 +85,7 @@ class CalcITCase(
   @Test
   def testSimpleSelectWithNaming(): Unit = {
     val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTablePlanner(env, config)
+    val tEnv = TableEnvImpl.getTableEnvironment(env, config)
 
     val t = CollectionDataSets.get3TupleDataSet(env).toTable(tEnv)
       .select('_1 as 'a, '_2 as 'b, '_1 as 'c)
@@ -101,7 +101,7 @@ class CalcITCase(
   @Test
   def testSimpleSelectRenameAll(): Unit = {
     val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTablePlanner(env, config)
+    val tEnv = TableEnvImpl.getTableEnvironment(env, config)
 
     val t = CollectionDataSets.get3TupleDataSet(env).toTable(tEnv)
       .select('_1 as 'a, '_2 as 'b, '_3 as 'c)
@@ -117,7 +117,7 @@ class CalcITCase(
   @Test
   def testSelectStar(): Unit = {
     val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTablePlanner(env, config)
+    val tEnv = TableEnvImpl.getTableEnvironment(env, config)
 
     val t = CollectionDataSets.getSmallNestedTupleDataSet(env).toTable(tEnv, 'a, 'b).select('*)
 
@@ -130,7 +130,7 @@ class CalcITCase(
   @Test
   def testAllRejectingFilter(): Unit = {
     val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTablePlanner(env, config)
+    val tEnv = TableEnvImpl.getTableEnvironment(env, config)
 
     val ds = CollectionDataSets.get3TupleDataSet(env).toTable(tEnv, 'a, 'b, 'c)
 
@@ -144,7 +144,7 @@ class CalcITCase(
   @Test
   def testAllPassingFilter(): Unit = {
     val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTablePlanner(env, config)
+    val tEnv = TableEnvImpl.getTableEnvironment(env, config)
 
     val ds = CollectionDataSets.get3TupleDataSet(env).toTable(tEnv, 'a, 'b, 'c)
 
@@ -162,7 +162,7 @@ class CalcITCase(
   @Test
   def testFilterOnStringTupleField(): Unit = {
     val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTablePlanner(env, config)
+    val tEnv = TableEnvImpl.getTableEnvironment(env, config)
 
     val ds = CollectionDataSets.get3TupleDataSet(env).toTable(tEnv, 'a, 'b, 'c)
     val filterDs = ds.filter( 'c.like("%world%") )
@@ -175,7 +175,7 @@ class CalcITCase(
   @Test
   def testFilterOnIntegerTupleField(): Unit = {
     val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTablePlanner(env, config)
+    val tEnv = TableEnvImpl.getTableEnvironment(env, config)
 
     val ds = CollectionDataSets.get3TupleDataSet(env).toTable(tEnv, 'a, 'b, 'c)
 
@@ -192,7 +192,7 @@ class CalcITCase(
   @Test
   def testNotEquals(): Unit = {
     val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTablePlanner(env, config)
+    val tEnv = TableEnvImpl.getTableEnvironment(env, config)
 
     val ds = CollectionDataSets.get3TupleDataSet(env).toTable(tEnv, 'a, 'b, 'c)
 
@@ -208,7 +208,7 @@ class CalcITCase(
   @Test
   def testDisjunctivePredicate(): Unit = {
     val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTablePlanner(env, config)
+    val tEnv = TableEnvImpl.getTableEnvironment(env, config)
 
     val ds = CollectionDataSets.get3TupleDataSet(env).toTable(tEnv, 'a, 'b, 'c)
 
@@ -221,7 +221,7 @@ class CalcITCase(
   @Test
   def testConsecutiveFilters(): Unit = {
     val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTablePlanner(env, config)
+    val tEnv = TableEnvImpl.getTableEnvironment(env, config)
 
     val ds = CollectionDataSets.get3TupleDataSet(env).toTable(tEnv, 'a, 'b, 'c)
 
@@ -236,7 +236,7 @@ class CalcITCase(
   @Test
   def testFilterBasicType(): Unit = {
     val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTablePlanner(env, config)
+    val tEnv = TableEnvImpl.getTableEnvironment(env, config)
 
     val ds = CollectionDataSets.getStringDataSet(env)
 
@@ -250,7 +250,7 @@ class CalcITCase(
   @Test
   def testFilterOnCustomType(): Unit = {
     val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTablePlanner(env, config)
+    val tEnv = TableEnvImpl.getTableEnvironment(env, config)
 
     val ds = CollectionDataSets.getCustomTypeDataSet(env)
     val filterDs = ds.toTable(tEnv, 'myInt as 'i, 'myLong as 'l, 'myString as 's)
@@ -264,7 +264,7 @@ class CalcITCase(
   @Test
   def testSimpleCalc(): Unit = {
     val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTablePlanner(env, config)
+    val tEnv = TableEnvImpl.getTableEnvironment(env, config)
 
     val t = CollectionDataSets.get3TupleDataSet(env).toTable(tEnv)
         .select('_1, '_2, '_3)
@@ -280,7 +280,7 @@ class CalcITCase(
   @Test
   def testCalcWithTwoFilters(): Unit = {
     val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTablePlanner(env, config)
+    val tEnv = TableEnvImpl.getTableEnvironment(env, config)
 
     val t = CollectionDataSets.get3TupleDataSet(env).toTable(tEnv)
         .select('_1, '_2, '_3)
@@ -297,7 +297,7 @@ class CalcITCase(
   @Test
   def testCalcWithAggregation(): Unit = {
     val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTablePlanner(env, config)
+    val tEnv = TableEnvImpl.getTableEnvironment(env, config)
 
     val t = CollectionDataSets.get3TupleDataSet(env).toTable(tEnv)
         .select('_1, '_2, '_3)
@@ -314,7 +314,7 @@ class CalcITCase(
   @Test
   def testCalcJoin(): Unit = {
     val env: ExecutionEnvironment = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTablePlanner(env, config)
+    val tEnv = TableEnvImpl.getTableEnvironment(env, config)
 
     val ds1 = CollectionDataSets.getSmall3TupleDataSet(env).toTable(tEnv, 'a, 'b, 'c)
     val ds2 = CollectionDataSets.get5TupleDataSet(env).toTable(tEnv, 'd, 'e, 'f, 'g, 'h)
@@ -330,7 +330,7 @@ class CalcITCase(
   @Test
   def testAdvancedDataTypes(): Unit = {
     val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTablePlanner(env, config)
+    val tEnv = TableEnvImpl.getTableEnvironment(env, config)
     tEnv.getConfig.setDecimalContext(new MathContext(30))
 
     val t = env
@@ -355,7 +355,7 @@ class CalcITCase(
   @Test
   def testUserDefinedScalarFunction() {
     val env = ExecutionEnvironment.getExecutionEnvironment
-    val tableEnv = TablePlanner.getTablePlanner(env, config)
+    val tableEnv = TableEnvImpl.getTableEnvironment(env, config)
     tableEnv.registerFunction("hashCode", OldHashCode)
     tableEnv.registerFunction("hashCode", HashCode)
     val table = env.fromElements("a", "b", "c").toTable(tableEnv, 'text)
@@ -369,7 +369,7 @@ class CalcITCase(
   def testNumericAutocastInArithmetic() {
 
     val env = ExecutionEnvironment.getExecutionEnvironment
-    val tableEnv = TablePlanner.getTablePlanner(env)
+    val tableEnv = TableEnvImpl.getTableEnvironment(env)
 
     val table = env.fromElements(
       (1.toByte, 1.toShort, 1, 1L, 1.0f, 1.0d, 1L, 1001.1)).toTable(tableEnv)
@@ -384,7 +384,7 @@ class CalcITCase(
   @Test
   def testNumericAutocastInComparison() {
     val env: ExecutionEnvironment = ExecutionEnvironment.getExecutionEnvironment
-    val tableEnv = TablePlanner.getTablePlanner(env)
+    val tableEnv = TableEnvImpl.getTableEnvironment(env)
 
     val table = env.fromElements(
       (1.toByte, 1.toShort, 1, 1L, 1.0f, 1.0d),
@@ -400,7 +400,7 @@ class CalcITCase(
   @Test
   def testCasting() {
     val env: ExecutionEnvironment = ExecutionEnvironment.getExecutionEnvironment
-    val tableEnv = TablePlanner.getTablePlanner(env)
+    val tableEnv = TableEnvImpl.getTableEnvironment(env)
     val table = env.fromElements((1, 0.0, 1L, true)).toTable(tableEnv)
       .select(
         // * -> String
@@ -423,7 +423,7 @@ class CalcITCase(
   @Test
   def testCastFromString() {
     val env: ExecutionEnvironment = ExecutionEnvironment.getExecutionEnvironment
-    val tableEnv = TablePlanner.getTablePlanner(env)
+    val tableEnv = TableEnvImpl.getTableEnvironment(env)
     val table = env.fromElements(("1", "true", "2.0")).toTable(tableEnv)
       .select('_1.cast(BYTE), '_1.cast(SHORT), '_1.cast(INT), '_1.cast(LONG),
         '_3.cast(DOUBLE), '_3.cast(FLOAT), '_2.cast(BOOLEAN))
@@ -436,7 +436,7 @@ class CalcITCase(
   @Test
   def testUserDefinedScalarFunctionWithParameter(): Unit = {
     val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTablePlanner(env)
+    val tEnv = TableEnvImpl.getTableEnvironment(env)
     tEnv.registerFunction("RichFunc2", new RichFunc2)
     UserDefinedFunctionTestUtils.setJobParameters(env, Map("string.value" -> "ABC"))
 
@@ -458,7 +458,7 @@ class CalcITCase(
     val filePath = UserDefinedFunctionTestUtils.writeCacheFile("test_words", words)
     val env = ExecutionEnvironment.getExecutionEnvironment
     env.registerCachedFile(filePath, "words")
-    val tEnv = TablePlanner.getTablePlanner(env)
+    val tEnv = TableEnvImpl.getTableEnvironment(env)
     tEnv.registerFunction("RichFunc3", new RichFunc3)
 
     val ds = CollectionDataSets.getSmall3TupleDataSet(env)
@@ -476,7 +476,7 @@ class CalcITCase(
   @Test
   def testValueConstructor(): Unit = {
     val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTablePlanner(env, config)
+    val tEnv = TableEnvImpl.getTableEnvironment(env, config)
 
     val rowValue = ("foo", 12, Timestamp.valueOf("1984-07-12 14:34:24"))
 
@@ -504,7 +504,7 @@ class CalcITCase(
   @Test
   def testMultipleUserDefinedScalarFunctions(): Unit = {
     val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTablePlanner(env)
+    val tEnv = TableEnvImpl.getTableEnvironment(env)
     tEnv.registerFunction("RichFunc1", new RichFunc1)
     tEnv.registerFunction("RichFunc2", new RichFunc2)
     UserDefinedFunctionTestUtils.setJobParameters(env, Map("string.value" -> "Abc"))
@@ -525,7 +525,7 @@ class CalcITCase(
   @Test
   def testScalarFunctionConstructorWithParams(): Unit = {
     val env = ExecutionEnvironment.getExecutionEnvironment
-    val tableEnv = TablePlanner.getTablePlanner(env, config)
+    val tableEnv = TableEnvImpl.getTableEnvironment(env, config)
 
     val data = new mutable.MutableList[(Int, Long, String)]
     data.+=((1, 1L, "Jack#22"))
@@ -558,7 +558,7 @@ class CalcITCase(
 
     val env = ExecutionEnvironment.getExecutionEnvironment
 
-    val tEnv = TablePlanner.getTablePlanner(env)
+    val tEnv = TableEnvImpl.getTableEnvironment(env)
 
     val splitUDF0 = new SplitUDF(deterministic = true)
     val splitUDF1 = new SplitUDF(deterministic = false)
@@ -582,7 +582,7 @@ class CalcITCase(
   @Test
   def testSplitFieldsOnCustomType(): Unit = {
     val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTablePlanner(env, config)
+    val tEnv = TableEnvImpl.getTableEnvironment(env, config)
     tEnv.getConfig.setMaxGeneratedCodeLength(1)  // splits fields
 
     val ds = CollectionDataSets.getCustomTypeDataSet(env)

@@ -20,7 +20,7 @@ package org.apache.flink.table.runtime.stream.sql
 
 import org.apache.flink.api.scala._
 import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
-import org.apache.flink.table.api.TablePlanner
+import org.apache.flink.table.api.TableEnvImpl
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.runtime.utils.{StreamITCase, StreamingWithStateTestBase}
 import org.apache.flink.types.Row
@@ -32,7 +32,7 @@ class SetOperatorsITCase extends StreamingWithStateTestBase {
   @Test
   def testInUncorrelatedWithConditionAndAgg(): Unit = {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTablePlanner(env)
+    val tEnv = TableEnvImpl.getTableEnvironment(env)
     StreamITCase.clear
 
     val sqlQuery =
@@ -77,7 +77,7 @@ class SetOperatorsITCase extends StreamingWithStateTestBase {
   @Test
   def testInWithMultiUncorrelatedCondition(): Unit = {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTablePlanner(env)
+    val tEnv = TableEnvImpl.getTableEnvironment(env)
     StreamITCase.clear
 
     val sqlQuery =
@@ -129,7 +129,7 @@ class SetOperatorsITCase extends StreamingWithStateTestBase {
   @Test
   def testNotInUncorrelated(): Unit = {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTablePlanner(env)
+    val tEnv = TableEnvImpl.getTableEnvironment(env)
     StreamITCase.clear
 
     val sqlQuery =

@@ -22,7 +22,6 @@ import java.util
 import java.util.{ServiceConfigurationError, ServiceLoader, Map => JMap}
 
 import org.apache.flink.table.api._
-import org.apache.flink.table.api.java.TablePlannerFactory
 import org.apache.flink.table.descriptors.{Descriptor, FormatDescriptorValidator, SchemaValidator}
 import org.apache.flink.table.util.Logging
 import org.apache.flink.util.Preconditions

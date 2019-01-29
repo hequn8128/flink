@@ -20,7 +20,7 @@ package org.apache.flink.table.runtime.batch.sql
 
 import org.apache.flink.api.scala._
 import org.apache.flink.api.scala.util.CollectionDataSets
-import org.apache.flink.table.api.TablePlanner
+import org.apache.flink.table.api.TableEnvImpl
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.runtime.utils.TableProgramsCollectionTestBase
 import org.apache.flink.table.runtime.utils.TableProgramsTestBase.TableConfigMode
@@ -35,7 +35,7 @@ import org.junit.runners.Parameterized
 import scala.collection.JavaConverters._
 
 @RunWith(classOf[Parameterized])
-class TablePlannerITCase(
+class TableEnvImplITCase(
     configMode: TableConfigMode)
   extends TableProgramsCollectionTestBase(configMode) {
 
@@ -43,7 +43,7 @@ class TablePlannerITCase(
   def testSQLTable(): Unit = {
 
     val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTablePlanner(env, config)
+    val tEnv = TableEnvImpl.getTableEnvironment(env, config)
 
     val ds = CollectionDataSets.get3TupleDataSet(env)
     tEnv.registerDataSet("MyTable", ds, 'a, 'b, 'c)
@@ -61,7 +61,7 @@ class TablePlannerITCase(
   def testTableSQLTable(): Unit = {
 
     val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTablePlanner(env, config)
+    val tEnv = TableEnvImpl.getTableEnvironment(env, config)
 
     val ds = CollectionDataSets.get3TupleDataSet(env).toTable(tEnv, 'a, 'b, 'c)
     val t1 = ds.filter('a > 9)
@@ -81,7 +81,7 @@ class TablePlannerITCase(
   def testMultipleSQLQueries(): Unit = {
 
     val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTablePlanner(env, config)
+    val tEnv = TableEnvImpl.getTableEnvironment(env, config)
 
     val t = CollectionDataSets.get3TupleDataSet(env).toTable(tEnv, 'a, 'b, 'c)
     tEnv.registerTable("MyTable", t)
@@ -101,7 +101,7 @@ class TablePlannerITCase(
   @Test
   def testSelectWithCompositeType(): Unit = {
     val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTablePlanner(env, config)
+    val tEnv = TableEnvImpl.getTableEnvironment(env, config)
 
     val sqlQuery = "SELECT MyTable.a2, MyTable.a1._2 FROM MyTable"
 
@@ -119,7 +119,7 @@ class TablePlannerITCase(
   @Test
   def testInsertIntoMemoryTable(): Unit = {
     val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTablePlanner(env)
+    val tEnv = TableEnvImpl.getTableEnvironment(env)
     MemoryTableSourceSinkUtil.clear()
 
     val t = CollectionDataSets.getSmall3TupleDataSet(env).toTable(tEnv).as('a, 'b, 'c)

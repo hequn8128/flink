@@ -26,8 +26,8 @@ import org.apache.flink.api.java.typeutils.RowTypeInfo;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.api.Table;
-import org.apache.flink.table.api.TablePlanner;
-import org.apache.flink.table.api.java.StreamTablePlanner;
+import org.apache.flink.table.api.TableEnvImpl;
+import org.apache.flink.table.api.java.StreamTableEnvironment;
 import org.apache.flink.table.runtime.utils.JavaStreamTestData;
 import org.apache.flink.table.runtime.utils.StreamITCase;
 import org.apache.flink.test.util.AbstractTestBase;
@@ -46,7 +46,7 @@ public class JavaSqlITCase extends AbstractTestBase {
 	@Test
 	public void testRowRegisterRowWithNames() throws Exception {
 		StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-		StreamTablePlanner tableEnv = TablePlanner.getTablePlanner(env);
+		StreamTableEnvironment tableEnv = TableEnvImpl.getTableEnvironment(env);
 		StreamITCase.clear();
 
 		List<Row> data = new ArrayList<>();
@@ -85,7 +85,7 @@ public class JavaSqlITCase extends AbstractTestBase {
 	@Test
 	public void testSelect() throws Exception {
 		StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-		StreamTablePlanner tableEnv = TablePlanner.getTablePlanner(env);
+		StreamTableEnvironment tableEnv = TableEnvImpl.getTableEnvironment(env);
 		StreamITCase.clear();
 
 		DataStream<Tuple3<Integer, Long, String>> ds = JavaStreamTestData.getSmall3TupleDataSet(env);
@@ -110,7 +110,7 @@ public class JavaSqlITCase extends AbstractTestBase {
 	@Test
 	public void testFilter() throws Exception {
 		StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-		StreamTablePlanner tableEnv = TablePlanner.getTablePlanner(env);
+		StreamTableEnvironment tableEnv = TableEnvImpl.getTableEnvironment(env);
 		StreamITCase.clear();
 
 		DataStream<Tuple5<Integer, Long, Integer, String, Long>> ds = JavaStreamTestData.get5TupleDataStream(env);
@@ -135,7 +135,7 @@ public class JavaSqlITCase extends AbstractTestBase {
 	@Test
 	public void testUnion() throws Exception {
 		StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-		StreamTablePlanner tableEnv = TablePlanner.getTablePlanner(env);
+		StreamTableEnvironment tableEnv = TableEnvImpl.getTableEnvironment(env);
 		StreamITCase.clear();
 
 		DataStream<Tuple3<Integer, Long, String>> ds1 = JavaStreamTestData.getSmall3TupleDataSet(env);

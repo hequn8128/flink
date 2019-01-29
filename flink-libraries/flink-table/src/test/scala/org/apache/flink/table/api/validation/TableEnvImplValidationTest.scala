@@ -23,19 +23,19 @@ import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.typeutils.{GenericTypeInfo, RowTypeInfo, TupleTypeInfo, TypeExtractor}
 import org.apache.flink.api.scala._
 import org.apache.flink.api.scala.util.CollectionDataSets
-import org.apache.flink.table.api.TablePlannerTest.{CClass, PojoClass}
+import org.apache.flink.table.api.TableEnvImplTest.{CClass, PojoClass}
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.{TablePlanner, TableException}
+import org.apache.flink.table.api.{TableEnvImpl, TableException}
 import org.apache.flink.table.runtime.types.CRowTypeInfo
 import org.apache.flink.table.utils.TableTestBase
 import org.apache.flink.types.Row
 import org.junit.Assert.assertTrue
 import org.junit._
 
-class TablePlannerValidationTest extends TableTestBase {
+class TableEnvImplValidationTest extends TableTestBase {
 
   private val env = ExecutionEnvironment.getExecutionEnvironment
-  private val tEnv = TablePlanner.getTablePlanner(env)
+  private val tEnv = TableEnvImpl.getTableEnvironment(env)
 
   val tupleType = new TupleTypeInfo(
     INT_TYPE_INFO,
@@ -113,7 +113,7 @@ class TablePlannerValidationTest extends TableTestBase {
   @Test(expected = classOf[TableException])
   def testRegisterExistingDataSet(): Unit = {
     val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTablePlanner(env)
+    val tEnv = TableEnvImpl.getTableEnvironment(env)
 
     val ds1 = CollectionDataSets.get3TupleDataSet(env)
     tEnv.registerDataSet("MyTable", ds1)
@@ -125,7 +125,7 @@ class TablePlannerValidationTest extends TableTestBase {
   @Test(expected = classOf[TableException])
   def testScanUnregisteredTable(): Unit = {
     val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTablePlanner(env)
+    val tEnv = TableEnvImpl.getTableEnvironment(env)
     // Must fail. No table registered under that name.
     tEnv.scan("someTable")
   }
@@ -133,7 +133,7 @@ class TablePlannerValidationTest extends TableTestBase {
   @Test(expected = classOf[TableException])
   def testRegisterExistingTable(): Unit = {
     val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTablePlanner(env)
+    val tEnv = TableEnvImpl.getTableEnvironment(env)
 
     val t1 = CollectionDataSets.get3TupleDataSet(env).toTable(tEnv)
     tEnv.registerTable("MyTable", t1)
@@ -145,8 +145,8 @@ class TablePlannerValidationTest extends TableTestBase {
   @Test(expected = classOf[TableException])
   def testRegisterTableFromOtherEnv(): Unit = {
     val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv1 = TablePlanner.getTablePlanner(env)
-    val tEnv2 = TablePlanner.getTablePlanner(env)
+    val tEnv1 = TableEnvImpl.getTableEnvironment(env)
+    val tEnv2 = TableEnvImpl.getTableEnvironment(env)
 
     val t1 = CollectionDataSets.get3TupleDataSet(env).toTable(tEnv1)
     // Must fail. Table is bound to different TableEnvironment.
@@ -156,7 +156,7 @@ class TablePlannerValidationTest extends TableTestBase {
   @Test(expected = classOf[TableException])
   def testToTableWithToManyFields(): Unit = {
     val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTablePlanner(env)
+    val tEnv = TableEnvImpl.getTableEnvironment(env)
 
     CollectionDataSets.get3TupleDataSet(env)
       // Must fail. Number of fields does not match.
@@ -166,7 +166,7 @@ class TablePlannerValidationTest extends TableTestBase {
   @Test(expected = classOf[TableException])
   def testToTableWithAmbiguousFields(): Unit = {
     val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTablePlanner(env)
+    val tEnv = TableEnvImpl.getTableEnvironment(env)
 
     CollectionDataSets.get3TupleDataSet(env)
       // Must fail. Field names not unique.
@@ -176,7 +176,7 @@ class TablePlannerValidationTest extends TableTestBase {
   @Test(expected = classOf[TableException])
   def testToTableWithNonFieldReference1(): Unit = {
     val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTablePlanner(env)
+    val tEnv = TableEnvImpl.getTableEnvironment(env)
 
     // Must fail. as() can only have field references
     CollectionDataSets.get3TupleDataSet(env)
@@ -186,7 +186,7 @@ class TablePlannerValidationTest extends TableTestBase {
   @Test(expected = classOf[TableException])
   def testToTableWithNonFieldReference2(): Unit = {
     val env = ExecutionEnvironment.getExecutionEnvironment
-    val tEnv = TablePlanner.getTablePlanner(env)
+    val tEnv = TableEnvImpl.getTableEnvironment(env)
 
     // Must fail. as() can only have field references
     CollectionDataSets.get3TupleDataSet(env)
@@ -196,7 +196,7 @@ class TablePlannerValidationTest extends TableTestBase {
   @Test(expected = classOf[TableException])
   def testGenericRow() {
     val env = ExecutionEnvironment.getExecutionEnvironment
-    val tableEnv = TablePlanner.getTablePlanner(env)
+    val tableEnv = TableEnvImpl.getTableEnvironment(env)
 
     // use null value the enforce GenericType
     val dataSet = env.fromElements(Row.of(null))
@@ -210,7 +210,7 @@ class TablePlannerValidationTest extends TableTestBase {
   @Test(expected = classOf[TableException])
   def testGenericRowWithAlias() {
     val env = ExecutionEnvironment.getExecutionEnvironment
-    val tableEnv = TablePlanner.getTablePlanner(env)
+    val tableEnv = TableEnvImpl.getTableEnvironment(env)
 
     // use null value the enforce GenericType
     val dataSet = env.fromElements(Row.of(null))

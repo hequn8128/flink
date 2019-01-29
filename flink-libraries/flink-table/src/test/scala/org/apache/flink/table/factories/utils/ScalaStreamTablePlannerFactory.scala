@@ -20,11 +20,7 @@ package org.apache.flink.table.factories.utils
 
 import java.util
 
-import org.apache.flink.table.api.TableConfig
-import org.apache.flink.table.api.scala.StreamTablePlanner
-import org.apache.flink.streaming.api.scala.{StreamExecutionEnvironment => ScalaStreamExecEnv}
-import org.apache.flink.table.api.java.TablePlannerFactory
-import org.apache.flink.table.api.scala.{StreamTablePlanner => ScalaStreamTablePlanner}
+import org.apache.flink.table.api.{TableConfig, TablePlanner, TablePlannerFactory}
 
 /**
   * Table source factory for testing.
@@ -34,7 +30,6 @@ class ScalaStreamTablePlannerFactory extends TablePlannerFactory {
   override def requiredContext(): util.Map[String, String] = {
     val context = new util.HashMap[String, String]()
     context.put("mode", "stream")
-//    context.put("code", "scala")
     context
   }
 
@@ -45,10 +40,9 @@ class ScalaStreamTablePlannerFactory extends TablePlannerFactory {
 
   override def createTablePlanner(
       tableConfig: TableConfig)
-    : StreamTablePlanner = {
+    : TablePlanner = {
 
-    val env = ScalaStreamExecEnv.getExecutionEnvironment
-    new ScalaStreamTablePlanner(env, tableConfig)
+    new TablePlanner(tableConfig)
   }
 }
 

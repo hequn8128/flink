@@ -36,7 +36,7 @@ import _root_.scala.collection.JavaConverters._
   * Similar to how the batch and streaming APIs have DataSet and DataStream,
   * the Table API is built around [[Table]].
   *
-  * Use the methods of [[Table]] to transform data. Use [[TablePlanner]] to convert a [[Table]]
+  * Use the methods of [[Table]] to transform data. Use [[TableEnvImpl]] to convert a [[Table]]
   * back to a DataSet or DataStream.
   *
   * When using Scala a [[Table]] can also be converted using implicit conversions.
@@ -58,12 +58,12 @@ import _root_.scala.collection.JavaConverters._
   * in a Scala DSL or as an expression String. Please refer to the documentation for the expression
   * syntax.
   *
-  * @param tablePlanner    The [[TablePlanner]] to which the table is bound.
-  * @param logicalPlan logical representation
+  * @param tablePlanner The [[TableEnvImpl]] to which the table is bound.
+  * @param logicalPlan  logical representation
   */
 class Table(
-    private[flink] val tablePlanner: TablePlanner,
-    private[flink] val logicalPlan: LogicalNode) {
+             private[flink] val tablePlanner: TableEnvImpl,
+             private[flink] val logicalPlan: LogicalNode) {
 
   // Check if the plan has an unbounded TableFunctionCall as child node.
   //   A TableFunctionCall is tolerated as root node because the Table holds the initial call.
@@ -78,7 +78,7 @@ class Table(
     * @param tableEnv The TableEnvironment in which the call is created.
     * @param udtfCall A String expression of the TableFunction call.
     */
-  def this(tableEnv: TablePlanner, udtfCall: String) {
+  def this(tableEnv: TableEnvImpl, udtfCall: String) {
     this(tableEnv, UserDefinedFunctionUtils.createLogicalFunctionCall(tableEnv, udtfCall))
   }
 
@@ -385,7 +385,7 @@ class Table(
     * operations must not overlap, use [[as]] to rename fields if necessary. You can use
     * where and select clauses after a join to further specify the behaviour of the join.
     *
-    * Note: Both tables must be bound to the same [[TablePlanner]].
+    * Note: Both tables must be bound to the same [[TableEnvImpl]].
     *
     * Example:
     *
@@ -401,7 +401,7 @@ class Table(
     * Joins two [[Table]]s. Similar to an SQL join. The fields of the two joined
     * operations must not overlap, use [[as]] to rename fields if necessary.
     *
-    * Note: Both tables must be bound to the same [[TablePlanner]].
+    * Note: Both tables must be bound to the same [[TableEnvImpl]].
     *
     * Example:
     *
@@ -417,7 +417,7 @@ class Table(
     * Joins two [[Table]]s. Similar to an SQL join. The fields of the two joined
     * operations must not overlap, use [[as]] to rename fields if necessary.
     *
-    * Note: Both tables must be bound to the same [[TablePlanner]].
+    * Note: Both tables must be bound to the same [[TableEnvImpl]].
     *
     * Example:
     *
@@ -468,7 +468,7 @@ class Table(
     * Joins two [[Table]]s. Similar to an SQL left outer join. The fields of the two joined
     * operations must not overlap, use [[as]] to rename fields if necessary.
     *
-    * Note: Both tables must be bound to the same [[TablePlanner]] and its [[TableConfig]] must
+    * Note: Both tables must be bound to the same [[TableEnvImpl]] and its [[TableConfig]] must
     * have nullCheck enabled.
     *
     * Example:
@@ -485,7 +485,7 @@ class Table(
     * Joins two [[Table]]s. Similar to an SQL left outer join. The fields of the two joined
     * operations must not overlap, use [[as]] to rename fields if necessary.
     *
-    * Note: Both tables must be bound to the same [[TablePlanner]] and its [[TableConfig]] must
+    * Note: Both tables must be bound to the same [[TableEnvImpl]] and its [[TableConfig]] must
     * have nullCheck enabled.
     *
     * Example:
@@ -502,7 +502,7 @@ class Table(
     * Joins two [[Table]]s. Similar to an SQL right outer join. The fields of the two joined
     * operations must not overlap, use [[as]] to rename fields if necessary.
     *
-    * Note: Both tables must be bound to the same [[TablePlanner]] and its [[TableConfig]] must
+    * Note: Both tables must be bound to the same [[TableEnvImpl]] and its [[TableConfig]] must
     * have nullCheck enabled.
     *
     * Example:
@@ -519,7 +519,7 @@ class Table(
     * Joins two [[Table]]s. Similar to an SQL right outer join. The fields of the two joined
     * operations must not overlap, use [[as]] to rename fields if necessary.
     *
-    * Note: Both tables must be bound to the same [[TablePlanner]] and its [[TableConfig]] must
+    * Note: Both tables must be bound to the same [[TableEnvImpl]] and its [[TableConfig]] must
     * have nullCheck enabled.
     *
     * Example:
@@ -536,7 +536,7 @@ class Table(
     * Joins two [[Table]]s. Similar to an SQL full outer join. The fields of the two joined
     * operations must not overlap, use [[as]] to rename fields if necessary.
     *
-    * Note: Both tables must be bound to the same [[TablePlanner]] and its [[TableConfig]] must
+    * Note: Both tables must be bound to the same [[TableEnvImpl]] and its [[TableConfig]] must
     * have nullCheck enabled.
     *
     * Example:
@@ -553,7 +553,7 @@ class Table(
     * Joins two [[Table]]s. Similar to an SQL full outer join. The fields of the two joined
     * operations must not overlap, use [[as]] to rename fields if necessary.
     *
-    * Note: Both tables must be bound to the same [[TablePlanner]] and its [[TableConfig]] must
+    * Note: Both tables must be bound to the same [[TableEnvImpl]] and its [[TableConfig]] must
     * have nullCheck enabled.
     *
     * Example:
@@ -620,7 +620,7 @@ class Table(
     * exist in the right table. Duplicate records in the left table are returned
     * exactly once, i.e., duplicates are removed. Both tables must have identical field types.
     *
-    * Note: Both tables must be bound to the same [[TablePlanner]].
+    * Note: Both tables must be bound to the same [[TableEnvImpl]].
     *
     * Example:
     *
@@ -645,7 +645,7 @@ class Table(
     * in the right table is returned (n - m) times, i.e., as many duplicates as are present
     * in the right table are removed. Both tables must have identical field types.
     *
-    * Note: Both tables must be bound to the same [[TablePlanner]].
+    * Note: Both tables must be bound to the same [[TableEnvImpl]].
     *
     * Example:
     *
@@ -667,7 +667,7 @@ class Table(
     * Unions two [[Table]]s with duplicate records removed.
     * Similar to an SQL UNION. The fields of the two union operations must fully overlap.
     *
-    * Note: Both tables must be bound to the same [[TablePlanner]].
+    * Note: Both tables must be bound to the same [[TableEnvImpl]].
     *
     * Example:
     *
@@ -687,7 +687,7 @@ class Table(
     * Unions two [[Table]]s. Similar to an SQL UNION ALL. The fields of the two union operations
     * must fully overlap.
     *
-    * Note: Both tables must be bound to the same [[TablePlanner]].
+    * Note: Both tables must be bound to the same [[TableEnvImpl]].
     *
     * Example:
     *
@@ -709,7 +709,7 @@ class Table(
     * returned just once, i.e., the resulting table has no duplicate records. Similar to an
     * SQL INTERSECT. The fields of the two intersect operations must fully overlap.
     *
-    * Note: Both tables must be bound to the same [[TablePlanner]].
+    * Note: Both tables must be bound to the same [[TableEnvImpl]].
     *
     * Example:
     *
@@ -732,7 +732,7 @@ class Table(
     * is present in both tables, i.e., the resulting table might have duplicate records. Similar
     * to an SQL INTERSECT ALL. The fields of the two intersect operations must fully overlap.
     *
-    * Note: Both tables must be bound to the same [[TablePlanner]].
+    * Note: Both tables must be bound to the same [[TableEnvImpl]].
     *
     * Example:
     *
@@ -988,7 +988,7 @@ class Table(
   @varargs
   def window(overWindows: OverWindow*): OverWindowedTable = {
 
-    if (tablePlanner.isInstanceOf[BatchTablePlanner]) {
+    if (tablePlanner.isInstanceOf[BatchTableEnvImpl]) {
       throw new TableException("Over-windows for batch tables are currently not supported.")
     }
 

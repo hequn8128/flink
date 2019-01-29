@@ -18,28 +18,34 @@
 package org.apache.flink.table.api.scala
 
 import org.apache.flink.api.common.typeinfo.TypeInformation
-import org.apache.flink.api.scala.{DataSet}
-import org.apache.flink.streaming.api.scala.{DataStream, StreamExecutionEnvironment}
-import org.apache.flink.table.api.{BatchQueryConfig, Table, TablePlanner}
+import org.apache.flink.api.scala._
+import org.apache.flink.table.api._
 import org.apache.flink.table.expressions.Expression
+import org.apache.flink.table.functions.{AggregateFunction, TableFunction}
+
+import _root_.scala.reflect.ClassTag
 
 /**
-  * The [[TablePlanner]] for a Scala [[StreamExecutionEnvironment]].
+  * The [[TableEnvImpl]] for a Scala batch [[DataSet]]
+  * [[ExecutionEnvironment]].
   *
   * A TableEnvironment can be used to:
-  * - convert a [[DataStream]] to a [[Table]]
-  * - register a [[DataStream]] in the [[TablePlanner]]'s catalog
-  * - register a [[Table]] in the [[TablePlanner]]'s catalog
+  * - convert a [[DataSet]] to a [[Table]]
+  * - register a [[DataSet]] in the [[TableEnvImpl]]'s catalog
+  * - register a [[Table]] in the [[TableEnvImpl]]'s catalog
   * - scan a registered table to obtain a [[Table]]
   * - specify a SQL query on registered tables to obtain a [[Table]]
-  * - convert a [[Table]] into a [[DataStream]]
+  * - convert a [[Table]] into a [[DataSet]]
   * - explain the AST and execution plan of a [[Table]]
   *
-  * @param execEnv The Scala [[StreamExecutionEnvironment]] of the TableEnvironment.
+  * @param execEnv The Scala batch [[ExecutionEnvironment]] of the TableEnvironment.
   * @param config The configuration of the TableEnvironment.
   */
-class BatchTableEnvironment(tablePlanner: BatchTablePlanner)
-  extends org.apache.flink.table.api.BatchTableEnvironment(tablePlanner) {
+class BatchTableEnvironment(
+    execEnv: ExecutionEnvironment,
+    config: TableConfig)
+  extends org.apache.flink.table.api.BatchTableEnvImpl(execEnv.getJavaEnv, config)
+    with org.apache.flink.table.api.scala.TableEnvironment {
 
   /**
     * Converts the given [[DataSet]] into a [[Table]].
@@ -51,7 +57,10 @@ class BatchTableEnvironment(tablePlanner: BatchTablePlanner)
     * @return The converted [[Table]].
     */
   def fromDataSet[T](dataSet: DataSet[T]): Table = {
-    tablePlanner.fromDataSet(dataSet)
+
+    val name = createUniqueTableName()
+    registerDataSetInternal(name, dataSet.javaSet)
+    scan(name)
   }
 
   /**
@@ -70,12 +79,15 @@ class BatchTableEnvironment(tablePlanner: BatchTablePlanner)
     * @return The converted [[Table]].
     */
   def fromDataSet[T](dataSet: DataSet[T], fields: Expression*): Table = {
-    tablePlanner.fromDataSet(dataSet, fields: _*)
+
+    val name = createUniqueTableName()
+    registerDataSetInternal(name, dataSet.javaSet, fields.toArray)
+    scan(name)
   }
 
   /**
     * Registers the given [[DataSet]] as table in the
-    * [[TablePlanner]]'s catalog.
+    * [[TableEnvImpl]]'s catalog.
     * Registered tables can be referenced in SQL queries.
     *
     * The field names of the [[Table]] are automatically derived from the type of the [[DataSet]].
@@ -85,12 +97,14 @@ class BatchTableEnvironment(tablePlanner: BatchTablePlanner)
     * @tparam T The type of the [[DataSet]] to register.
     */
   def registerDataSet[T](name: String, dataSet: DataSet[T]): Unit = {
-    tablePlanner.registerDataSet(name, dataSet)
+
+    checkValidTableName(name)
+    registerDataSetInternal(name, dataSet.javaSet)
   }
 
   /**
     * Registers the given [[DataSet]] as table with specified field names in the
-    * [[TablePlanner]]'s catalog.
+    * [[TableEnvImpl]]'s catalog.
     * Registered tables can be referenced in SQL queries.
     *
     * Example:
@@ -106,7 +120,9 @@ class BatchTableEnvironment(tablePlanner: BatchTablePlanner)
     * @tparam T The type of the [[DataSet]] to register.
     */
   def registerDataSet[T](name: String, dataSet: DataSet[T], fields: Expression*): Unit = {
-    tablePlanner.registerDataSet(name, dataSet)
+
+    checkValidTableName(name)
+    registerDataSetInternal(name, dataSet.javaSet, fields.toArray)
   }
 
   /**
@@ -122,7 +138,8 @@ class BatchTableEnvironment(tablePlanner: BatchTablePlanner)
     * @return The converted [[DataSet]].
     */
   def toDataSet[T: TypeInformation](table: Table): DataSet[T] = {
-    tablePlanner.toDataSet(table)
+    // Use the default batch query config.
+    wrap[T](translate(table, queryConfig))(ClassTag.AnyRef.asInstanceOf[ClassTag[T]])
   }
 
   /**
@@ -139,13 +156,44 @@ class BatchTableEnvironment(tablePlanner: BatchTablePlanner)
     * @return The converted [[DataSet]].
     */
   def toDataSet[T: TypeInformation](table: Table, queryConfig: BatchQueryConfig): DataSet[T] = {
-    tablePlanner.toDataSet(table, queryConfig)
+    wrap[T](translate(table, queryConfig))(ClassTag.AnyRef.asInstanceOf[ClassTag[T]])
+  }
+
+  /**
+    * Registers a [[TableFunction]] under a unique name in the TableEnvironment's catalog.
+    * Registered functions can be referenced in Table API and SQL queries.
+    *
+    * @param name The name under which the function is registered.
+    * @param tf The TableFunction to register.
+    * @tparam T The type of the output row.
+    */
+  def registerFunction[T: TypeInformation](name: String, tf: TableFunction[T]): Unit = {
+    registerTableFunctionInternal(name, tf)
+  }
+
+  /**
+    * Registers an [[AggregateFunction]] under a unique name in the TableEnvironment's catalog.
+    * Registered functions can be referenced in Table API and SQL queries.
+    *
+    * @param name The name under which the function is registered.
+    * @param f The AggregateFunction to register.
+    * @tparam T The type of the output value.
+    * @tparam ACC The type of aggregate accumulator.
+    */
+  def registerFunction[T: TypeInformation, ACC: TypeInformation](
+      name: String,
+      f: AggregateFunction[T, ACC])
+  : Unit = {
+    registerAggregateFunctionInternal[T, ACC](name, f)
   }
 
   override def execute(): Unit = {
-    tablePlanner.execEnv.execute()
+    execEnv.execute()
   }
 }
 
-
-
+object BatchTableEnvironment {
+  def create(execEnv: ExecutionEnvironment): BatchTableEnvironment = {
+    new BatchTableEnvironment(execEnv, new TableConfig)
+  }
+}

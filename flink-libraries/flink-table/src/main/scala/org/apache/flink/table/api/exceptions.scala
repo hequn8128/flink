@@ -18,7 +18,6 @@
 
 package org.apache.flink.table.api
 
-import org.apache.flink.table.api.java.TablePlannerFactory
 import org.apache.flink.table.descriptors.DescriptorProperties
 import org.apache.flink.table.factories.TableFactory
 

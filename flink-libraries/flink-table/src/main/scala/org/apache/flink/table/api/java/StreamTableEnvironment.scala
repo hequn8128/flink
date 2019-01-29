@@ -28,12 +28,12 @@ import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import _root_.java.lang.{Boolean => JBool}
 
 /**
-  * The [[TablePlanner]] for a Java [[StreamExecutionEnvironment]].
+  * The [[TableEnvImpl]] for a Java [[StreamExecutionEnvironment]].
   *
   * A TableEnvironment can be used to:
   * - convert a [[DataStream]] to a [[Table]]
-  * - register a [[DataStream]] in the [[TablePlanner]]'s catalog
-  * - register a [[Table]] in the [[TablePlanner]]'s catalog
+  * - register a [[DataStream]] in the [[TableEnvImpl]]'s catalog
+  * - register a [[Table]] in the [[TableEnvImpl]]'s catalog
   * - scan a registered table to obtain a [[Table]]
   * - specify a SQL query on registered tables to obtain a [[Table]]
   * - convert a [[Table]] into a [[DataStream]]
@@ -42,10 +42,11 @@ import _root_.java.lang.{Boolean => JBool}
   * @param execEnv The Java [[StreamExecutionEnvironment]] of the TableEnvironment.
   * @param config The configuration of the TableEnvironment.
   */
-class StreamTablePlanner(
+class StreamTableEnvironment(
     execEnv: StreamExecutionEnvironment,
     config: TableConfig)
-  extends org.apache.flink.table.api.StreamTablePlanner(execEnv, config) {
+  extends org.apache.flink.table.api.StreamTableEnvImpl(execEnv, config)
+    with org.apache.flink.table.api.java.TableEnvironment {
 
   /**
     * Converts the given [[DataStream]] into a [[Table]].
@@ -91,7 +92,7 @@ class StreamTablePlanner(
 
   /**
     * Registers the given [[DataStream]] as table in the
-    * [[TablePlanner]]'s catalog.
+    * [[TableEnvImpl]]'s catalog.
     * Registered tables can be referenced in SQL queries.
     *
     * The field names of the [[Table]] are automatically derived
@@ -109,7 +110,7 @@ class StreamTablePlanner(
 
   /**
     * Registers the given [[DataStream]] as table with specified field names in the
-    * [[TablePlanner]]'s catalog.
+    * [[TableEnvImpl]]'s catalog.
     * Registered tables can be referenced in SQL queries.
     *
     * Example:
@@ -195,7 +196,7 @@ class StreamTablePlanner(
       clazz: Class[T],
       queryConfig: StreamQueryConfig): DataStream[T] = {
     val typeInfo = TypeExtractor.createTypeInfo(clazz)
-    TablePlanner.validateType(typeInfo)
+    TableEnvImpl.validateType(typeInfo)
     translate[T](table, queryConfig, updatesAsRetraction = false, withChangeFlag = false)(typeInfo)
   }
 
@@ -220,7 +221,7 @@ class StreamTablePlanner(
       table: Table,
       typeInfo: TypeInformation[T],
       queryConfig: StreamQueryConfig): DataStream[T] = {
-    TablePlanner.validateType(typeInfo)
+    TableEnvImpl.validateType(typeInfo)
     translate[T](table, queryConfig, updatesAsRetraction = false, withChangeFlag = false)(typeInfo)
   }
 
@@ -296,7 +297,7 @@ class StreamTablePlanner(
       queryConfig: StreamQueryConfig): DataStream[JTuple2[JBool, T]] = {
 
     val typeInfo = TypeExtractor.createTypeInfo(clazz)
-    TablePlanner.validateType(typeInfo)
+    TableEnvImpl.validateType(typeInfo)
     val resultType = new TupleTypeInfo[JTuple2[JBool, T]](Types.BOOLEAN, typeInfo)
     translate[JTuple2[JBool, T]](
       table,
@@ -328,7 +329,7 @@ class StreamTablePlanner(
       typeInfo: TypeInformation[T],
       queryConfig: StreamQueryConfig): DataStream[JTuple2[JBool, T]] = {
 
-    TablePlanner.validateType(typeInfo)
+    TableEnvImpl.validateType(typeInfo)
     val resultTypeInfo = new TupleTypeInfo[JTuple2[JBool, T]](
       Types.BOOLEAN,
       typeInfo
@@ -380,5 +381,14 @@ class StreamTablePlanner(
     registerAggregateFunctionInternal[T, ACC](name, f)
   }
 
-  override def createTableEnvironment(): TableEnvironment = ???
+  override def execute(): Unit = {
+    execEnv.execute()
+  }
+
+}
+
+object StreamTableEnvironment {
+  def create(execEnv: StreamExecutionEnvironment): StreamTableEnvironment = {
+    new StreamTableEnvironment(execEnv, new TableConfig)
+  }
 }

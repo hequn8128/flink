@@ -38,9 +38,9 @@ import org.apache.flink.streaming.api.functions.sink.filesystem.bucketassigners.
 import org.apache.flink.streaming.api.functions.sink.filesystem.rollingpolicies.OnCheckpointRollingPolicy;
 import org.apache.flink.streaming.api.functions.source.SourceFunction;
 import org.apache.flink.table.api.Table;
-import org.apache.flink.table.api.TablePlanner;
+import org.apache.flink.table.api.TableEnvImpl;
 import org.apache.flink.table.api.TableSchema;
-import org.apache.flink.table.api.java.StreamTablePlanner;
+import org.apache.flink.table.api.java.StreamTableEnvironment;
 import org.apache.flink.table.sources.DefinedFieldMapping;
 import org.apache.flink.table.sources.DefinedRowtimeAttributes;
 import org.apache.flink.table.sources.RowtimeAttributeDescriptor;
@@ -88,7 +88,7 @@ public class StreamSQLTestProgram {
 		sEnv.enableCheckpointing(4000);
 		sEnv.getConfig().setAutoWatermarkInterval(1000);
 
-		StreamTablePlanner tEnv = TablePlanner.getTablePlanner(sEnv);
+		StreamTableEnvironment tEnv = TableEnvImpl.getTableEnvironment(sEnv);
 
 		tEnv.registerTableSource("table1", new GeneratorTableSource(10, 100, 60, 0));
 		tEnv.registerTableSource("table2", new GeneratorTableSource(5, 0.2f, 60, 5));

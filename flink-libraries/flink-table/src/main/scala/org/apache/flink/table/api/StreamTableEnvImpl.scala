@@ -66,13 +66,13 @@ import _root_.scala.collection.JavaConverters._
   * - convert a [[Table]] into a [[DataStream]]
   *
   * @param execEnv The [[StreamExecutionEnvironment]] which is wrapped in this
-  *                [[StreamTablePlanner]].
-  * @param config  The [[TableConfig]] of this [[StreamTablePlanner]].
+  *                [[StreamTableEnvImpl]].
+  * @param config  The [[TableConfig]] of this [[StreamTableEnvImpl]].
   */
-abstract class StreamTablePlanner(
+abstract class StreamTableEnvImpl(
     private[flink] val execEnv: StreamExecutionEnvironment,
     config: TableConfig)
-  extends TablePlanner(config) {
+  extends TableEnvImpl(config) {
 
   // a counter for unique table names
   private val nameCntr: AtomicInteger = new AtomicInteger(0)
@@ -102,7 +102,7 @@ abstract class StreamTablePlanner(
     "_DataStreamTable_" + nameCntr.getAndIncrement()
 
   /**
-    * Registers an internal [[StreamTableSource]] in this [[TablePlanner]]'s catalog without
+    * Registers an internal [[StreamTableSource]] in this [[TableEnvImpl]]'s catalog without
     * name checking. Registered tables can be referenced in SQL queries.
     *
     * @param name        The name under which the [[TableSource]] is registered.
@@ -200,7 +200,7 @@ abstract class StreamTablePlanner(
 
   /**
     * Registers an external [[TableSink]] with given field names and types in this
-    * [[TablePlanner]]'s catalog.
+    * [[TableEnvImpl]]'s catalog.
     * Registered sink tables can be referenced in SQL DML statements.
     *
     * Example:
@@ -243,7 +243,7 @@ abstract class StreamTablePlanner(
 
   /**
     * Registers an external [[TableSink]] with already configured field names and field types in
-    * this [[TablePlanner]]'s catalog.
+    * this [[TableEnvImpl]]'s catalog.
     * Registered sink tables can be referenced in SQL DML statements.
     *
     * @param name The name under which the [[TableSink]] is registered.
@@ -505,7 +505,7 @@ abstract class StreamTablePlanner(
   }
 
   /**
-    * Registers a [[DataStream]] as a table under a given name in the [[TablePlanner]]'s
+    * Registers a [[DataStream]] as a table under a given name in the [[TableEnvImpl]]'s
     * catalog.
     *
     * @param name The name under which the table is registered in the catalog.
@@ -527,7 +527,7 @@ abstract class StreamTablePlanner(
 
   /**
     * Registers a [[DataStream]] as a table under a given name with field names as specified by
-    * field expressions in the [[TablePlanner]]'s catalog.
+    * field expressions in the [[TableEnvImpl]]'s catalog.
     *
     * @param name The name under which the table is registered in the catalog.
     * @param dataStream The [[DataStream]] to register as table in the catalog.

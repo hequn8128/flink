@@ -18,7 +18,7 @@
 
 package org.apache.flink.table.factories
 
-import org.apache.flink.table.api.{BatchTablePlanner, StreamTablePlanner, TablePlanner, TableException}
+import org.apache.flink.table.api.{BatchTableEnvImpl, StreamTableEnvImpl, TableEnvImpl, TableException}
 import org.apache.flink.table.descriptors.Descriptor
 import org.apache.flink.table.sinks.TableSink
 import org.apache.flink.table.sources.TableSource
@@ -32,19 +32,19 @@ object TableFactoryUtil {
     * Returns a table source for a table environment.
     */
   def findAndCreateTableSource[T](
-                                   tableEnvironment: TablePlanner,
+                                   tableEnvironment: TableEnvImpl,
                                    descriptor: Descriptor)
     : TableSource[T] = {
 
     val javaMap = descriptor.toProperties
 
     tableEnvironment match {
-      case _: BatchTablePlanner =>
+      case _: BatchTableEnvImpl =>
         TableFactoryService
           .find(classOf[BatchTableSourceFactory[T]], javaMap)
           .createBatchTableSource(javaMap)
 
-      case _: StreamTablePlanner =>
+      case _: StreamTableEnvImpl =>
         TableFactoryService
           .find(classOf[StreamTableSourceFactory[T]], javaMap)
           .createStreamTableSource(javaMap)
@@ -58,19 +58,19 @@ object TableFactoryUtil {
     * Returns a table sink for a table environment.
     */
   def findAndCreateTableSink[T](
-                                 tableEnvironment: TablePlanner,
+                                 tableEnvironment: TableEnvImpl,
                                  descriptor: Descriptor)
     : TableSink[T] = {
 
     val javaMap = descriptor.toProperties
 
     tableEnvironment match {
-      case _: BatchTablePlanner =>
+      case _: BatchTableEnvImpl =>
         TableFactoryService
           .find(classOf[BatchTableSinkFactory[T]], javaMap)
           .createBatchTableSink(javaMap)
 
-      case _: StreamTablePlanner =>
+      case _: StreamTableEnvImpl =>
         TableFactoryService
           .find(classOf[StreamTableSinkFactory[T]], javaMap)
           .createStreamTableSink(javaMap)

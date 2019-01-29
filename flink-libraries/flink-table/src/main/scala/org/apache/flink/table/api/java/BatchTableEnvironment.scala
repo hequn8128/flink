@@ -15,36 +15,36 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.flink.table.api.scala
+package org.apache.flink.table.api.java
 
 import org.apache.flink.api.common.typeinfo.TypeInformation
-import org.apache.flink.api.scala._
+import org.apache.flink.api.java.typeutils.TypeExtractor
+import org.apache.flink.api.java.{DataSet, ExecutionEnvironment}
 import org.apache.flink.table.api._
-import org.apache.flink.table.expressions.Expression
+import org.apache.flink.table.expressions.ExpressionParser
 import org.apache.flink.table.functions.{AggregateFunction, TableFunction}
 
-import _root_.scala.reflect.ClassTag
-
 /**
-  * The [[TablePlanner]] for a Scala batch [[DataSet]]
+  * The [[TableEnvImpl]] for a Java batch [[DataSet]]
   * [[ExecutionEnvironment]].
   *
   * A TableEnvironment can be used to:
   * - convert a [[DataSet]] to a [[Table]]
-  * - register a [[DataSet]] in the [[TablePlanner]]'s catalog
-  * - register a [[Table]] in the [[TablePlanner]]'s catalog
+  * - register a [[DataSet]] in the [[TableEnvImpl]]'s catalog
+  * - register a [[Table]] in the [[TableEnvImpl]]'s catalog
   * - scan a registered table to obtain a [[Table]]
   * - specify a SQL query on registered tables to obtain a [[Table]]
   * - convert a [[Table]] into a [[DataSet]]
   * - explain the AST and execution plan of a [[Table]]
   *
-  * @param execEnv The Scala batch [[ExecutionEnvironment]] of the TableEnvironment.
+  * @param execEnv The Java batch [[ExecutionEnvironment]] of the TableEnvironment.
   * @param config The configuration of the TableEnvironment.
   */
-class BatchTablePlanner(
+class BatchTableEnvironment(
     execEnv: ExecutionEnvironment,
     config: TableConfig)
-  extends org.apache.flink.table.api.BatchTablePlanner(execEnv.getJavaEnv, config) {
+  extends org.apache.flink.table.api.BatchTableEnvImpl(execEnv, config)
+    with org.apache.flink.table.api.java.TableEnvironment {
 
   /**
     * Converts the given [[DataSet]] into a [[Table]].
@@ -55,10 +55,10 @@ class BatchTablePlanner(
     * @tparam T The type of the [[DataSet]].
     * @return The converted [[Table]].
     */
-  private[flink] def fromDataSet[T](dataSet: DataSet[T]): Table = {
+  def fromDataSet[T](dataSet: DataSet[T]): Table = {
 
     val name = createUniqueTableName()
-    registerDataSetInternal(name, dataSet.javaSet)
+    registerDataSetInternal(name, dataSet)
     scan(name)
   }
 
@@ -68,8 +68,8 @@ class BatchTablePlanner(
     * Example:
     *
     * {{{
-    *   val set: DataSet[(String, Long)] = ...
-    *   val tab: Table = tableEnv.fromDataSet(set, 'a, 'b)
+    *   DataSet<Tuple2<String, Long>> set = ...
+    *   Table tab = tableEnv.fromDataSet(set, "a, b")
     * }}}
     *
     * @param dataSet The [[DataSet]] to be converted.
@@ -77,16 +77,19 @@ class BatchTablePlanner(
     * @tparam T The type of the [[DataSet]].
     * @return The converted [[Table]].
     */
-  private[flink] def fromDataSet[T](dataSet: DataSet[T], fields: Expression*): Table = {
+  def fromDataSet[T](dataSet: DataSet[T], fields: String): Table = {
+    val exprs = ExpressionParser
+      .parseExpressionList(fields)
+      .toArray
 
     val name = createUniqueTableName()
-    registerDataSetInternal(name, dataSet.javaSet, fields.toArray)
+    registerDataSetInternal(name, dataSet, exprs)
     scan(name)
   }
 
   /**
     * Registers the given [[DataSet]] as table in the
-    * [[TablePlanner]]'s catalog.
+    * [[TableEnvImpl]]'s catalog.
     * Registered tables can be referenced in SQL queries.
     *
     * The field names of the [[Table]] are automatically derived from the type of the [[DataSet]].
@@ -95,22 +98,22 @@ class BatchTablePlanner(
     * @param dataSet The [[DataSet]] to register.
     * @tparam T The type of the [[DataSet]] to register.
     */
-  private[flink] def registerDataSet[T](name: String, dataSet: DataSet[T]): Unit = {
+  def registerDataSet[T](name: String, dataSet: DataSet[T]): Unit = {
 
     checkValidTableName(name)
-    registerDataSetInternal(name, dataSet.javaSet)
+    registerDataSetInternal(name, dataSet)
   }
 
   /**
     * Registers the given [[DataSet]] as table with specified field names in the
-    * [[TablePlanner]]'s catalog.
+    * [[TableEnvImpl]]'s catalog.
     * Registered tables can be referenced in SQL queries.
     *
     * Example:
     *
     * {{{
-    *   val set: DataSet[(String, Long)] = ...
-    *   tableEnv.registerDataSet("myTable", set, 'a, 'b)
+    *   DataSet<Tuple2<String, Long>> set = ...
+    *   tableEnv.registerDataSet("myTable", set, "a, b")
     * }}}
     *
     * @param name The name under which the [[DataSet]] is registered in the catalog.
@@ -118,10 +121,13 @@ class BatchTablePlanner(
     * @param fields The field names of the registered table.
     * @tparam T The type of the [[DataSet]] to register.
     */
-  private[flink] def registerDataSet[T](name: String, dataSet: DataSet[T], fields: Expression*): Unit = {
+  def registerDataSet[T](name: String, dataSet: DataSet[T], fields: String): Unit = {
+    val exprs = ExpressionParser
+      .parseExpressionList(fields)
+      .toArray
 
     checkValidTableName(name)
-    registerDataSetInternal(name, dataSet.javaSet, fields.toArray)
+    registerDataSetInternal(name, dataSet, exprs)
   }
 
   /**
@@ -133,12 +139,31 @@ class BatchTablePlanner(
     * - POJO [[DataSet]] types: Fields are mapped by field name, field types must match.
     *
     * @param table The [[Table]] to convert.
+    * @param clazz The class of the type of the resulting [[DataSet]].
     * @tparam T The type of the resulting [[DataSet]].
     * @return The converted [[DataSet]].
     */
-  private[flink] def toDataSet[T: TypeInformation](table: Table): DataSet[T] = {
+  def toDataSet[T](table: Table, clazz: Class[T]): DataSet[T] = {
+    // Use the default query config.
+    translate[T](table, queryConfig)(TypeExtractor.createTypeInfo(clazz))
+  }
+
+  /**
+    * Converts the given [[Table]] into a [[DataSet]] of a specified type.
+    *
+    * The fields of the [[Table]] are mapped to [[DataSet]] fields as follows:
+    * - [[org.apache.flink.types.Row]] and [[org.apache.flink.api.java.tuple.Tuple]]
+    * types: Fields are mapped by position, field types must match.
+    * - POJO [[DataSet]] types: Fields are mapped by field name, field types must match.
+    *
+    * @param table The [[Table]] to convert.
+    * @param typeInfo The [[TypeInformation]] that specifies the type of the resulting [[DataSet]].
+    * @tparam T The type of the resulting [[DataSet]].
+    * @return The converted [[DataSet]].
+    */
+  def toDataSet[T](table: Table, typeInfo: TypeInformation[T]): DataSet[T] = {
     // Use the default batch query config.
-    wrap[T](translate(table, queryConfig))(ClassTag.AnyRef.asInstanceOf[ClassTag[T]])
+    translate[T](table, queryConfig)(typeInfo)
   }
 
   /**
@@ -150,12 +175,37 @@ class BatchTablePlanner(
     * - POJO [[DataSet]] types: Fields are mapped by field name, field types must match.
     *
     * @param table The [[Table]] to convert.
-    * @param queryConfig The configuration of the query to generate.
+    * @param clazz The class of the type of the resulting [[DataSet]].
+    * @param queryConfig The configuration for the query to generate.
     * @tparam T The type of the resulting [[DataSet]].
     * @return The converted [[DataSet]].
     */
-  private[flink] def toDataSet[T: TypeInformation](table: Table, queryConfig: BatchQueryConfig): DataSet[T] = {
-    wrap[T](translate(table, queryConfig))(ClassTag.AnyRef.asInstanceOf[ClassTag[T]])
+  def toDataSet[T](
+      table: Table,
+      clazz: Class[T],
+      queryConfig: BatchQueryConfig): DataSet[T] = {
+    translate[T](table, queryConfig)(TypeExtractor.createTypeInfo(clazz))
+  }
+
+  /**
+    * Converts the given [[Table]] into a [[DataSet]] of a specified type.
+    *
+    * The fields of the [[Table]] are mapped to [[DataSet]] fields as follows:
+    * - [[org.apache.flink.types.Row]] and [[org.apache.flink.api.java.tuple.Tuple]]
+    * types: Fields are mapped by position, field types must match.
+    * - POJO [[DataSet]] types: Fields are mapped by field name, field types must match.
+    *
+    * @param table The [[Table]] to convert.
+    * @param typeInfo The [[TypeInformation]] that specifies the type of the resulting [[DataSet]].
+    * @param queryConfig The configuration for the query to generate.
+    * @tparam T The type of the resulting [[DataSet]].
+    * @return The converted [[DataSet]].
+    */
+  def toDataSet[T](
+      table: Table,
+      typeInfo: TypeInformation[T],
+      queryConfig: BatchQueryConfig): DataSet[T] = {
+    translate[T](table, queryConfig)(typeInfo)
   }
 
   /**
@@ -166,8 +216,12 @@ class BatchTablePlanner(
     * @param tf The TableFunction to register.
     * @tparam T The type of the output row.
     */
-  private[flink] def registerFunction[T: TypeInformation](name: String, tf: TableFunction[T]): Unit = {
-    registerTableFunctionInternal(name, tf)
+  def registerFunction[T](name: String, tf: TableFunction[T]): Unit = {
+    implicit val typeInfo: TypeInformation[T] = TypeExtractor
+      .createTypeInfo(tf, classOf[TableFunction[_]], tf.getClass, 0)
+      .asInstanceOf[TypeInformation[T]]
+
+    registerTableFunctionInternal[T](name, tf)
   }
 
   /**
@@ -179,14 +233,28 @@ class BatchTablePlanner(
     * @tparam T The type of the output value.
     * @tparam ACC The type of aggregate accumulator.
     */
-  private[flink] def registerFunction[T: TypeInformation, ACC: TypeInformation](
+  def registerFunction[T, ACC](
       name: String,
       f: AggregateFunction[T, ACC])
   : Unit = {
+    implicit val typeInfo: TypeInformation[T] = TypeExtractor
+      .createTypeInfo(f, classOf[AggregateFunction[T, ACC]], f.getClass, 0)
+      .asInstanceOf[TypeInformation[T]]
+
+    implicit val accTypeInfo: TypeInformation[ACC] = TypeExtractor
+      .createTypeInfo(f, classOf[AggregateFunction[T, ACC]], f.getClass, 1)
+      .asInstanceOf[TypeInformation[ACC]]
+
     registerAggregateFunctionInternal[T, ACC](name, f)
   }
 
-  override def createTableEnvironment(): TableEnvironment = {
-    new BatchTableEnvironment(this)
+  override def execute(): Unit = {
+    execEnv.execute()
+  }
+}
+
+object BatchTableEnvironment {
+  def create(execEnv: ExecutionEnvironment): BatchTableEnvironment = {
+    new BatchTableEnvironment(execEnv, new TableConfig)
   }
 }

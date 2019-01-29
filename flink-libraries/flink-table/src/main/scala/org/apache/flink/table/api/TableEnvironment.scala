@@ -25,12 +25,7 @@ import org.apache.flink.table.sinks.TableSink
 import org.apache.flink.table.sources.TableSource
 
 import _root_.scala.annotation.varargs
-import org.apache.flink.api.scala.{ExecutionEnvironment => ScalaBatchExecEnv}
-import org.apache.flink.streaming.api.scala.{StreamExecutionEnvironment => ScalaStreamExecEnv}
-import org.apache.flink.table.api.java.TablePlannerFactory
-import org.apache.flink.table.api.scala.{BatchTableEnvironment => ScalaBatchTableEnv}
-import org.apache.flink.table.api.scala.{BatchTablePlanner => ScalaBatchTablePlanner, StreamTablePlanner => ScalaStreamTablePlanner}
-import org.apache.flink.table.api.scala.{StreamTableEnvironment => ScalaStreamTableEnv}
+import org.apache.flink.table.descriptors.{BatchTableDescriptor, ConnectTableDescriptor, ConnectorDescriptor, TableDescriptor}
 import org.apache.flink.table.factories.TablePlannerUtil
 
 /**
@@ -38,16 +33,14 @@ import org.apache.flink.table.factories.TablePlannerUtil
   *
   * @param config The configuration of the TableEnvironment
   */
-abstract class TableEnvironment(private[flink] val tablePlanner: TablePlanner) {
+trait TableEnvironment {
 
   /**
     * Creates a table from a table source.
     *
     * @param source table source used as table
     */
-  def fromTableSource(source: TableSource[_]): Table = {
-    tablePlanner.fromTableSource(source)
-  }
+  def fromTableSource(source: TableSource[_]): Table
 
   /**
     * Registers an [[ExternalCatalog]] under a unique name in the TableEnvironment's schema.
@@ -56,9 +49,7 @@ abstract class TableEnvironment(private[flink] val tablePlanner: TablePlanner) {
     * @param name            The name under which the externalCatalog will be registered
     * @param externalCatalog The externalCatalog to register
     */
-  def registerExternalCatalog(name: String, externalCatalog: ExternalCatalog): Unit = {
-    tablePlanner.registerExternalCatalog(name, externalCatalog)
-  }
+  def registerExternalCatalog(name: String, externalCatalog: ExternalCatalog): Unit
 
   /**
     * Gets a registered [[ExternalCatalog]] by name.
@@ -66,9 +57,7 @@ abstract class TableEnvironment(private[flink] val tablePlanner: TablePlanner) {
     * @param name The name to look up the [[ExternalCatalog]]
     * @return The [[ExternalCatalog]]
     */
-  def getRegisteredExternalCatalog(name: String): ExternalCatalog = {
-    tablePlanner.getRegisteredExternalCatalog(name)
-  }
+  def getRegisteredExternalCatalog(name: String): ExternalCatalog
 
   /**
     * Registers a [[Table]] under a unique name in the TableEnvironment's catalog.
@@ -77,33 +66,42 @@ abstract class TableEnvironment(private[flink] val tablePlanner: TablePlanner) {
     * @param name The name under which the table will be registered.
     * @param table The table to register.
     */
-  def registerTable(name: String, table: Table): Unit = {
-    tablePlanner.registerTable(name, table)
-  }
-
+  def registerTable(name: String, table: Table): Unit
 
   /**
-    * Registers an external [[TableSource]] in this [[TablePlanner]]'s catalog.
+    * Registers an external [[TableSource]] in this [[TableEnvImpl]]'s catalog.
     * Registered tables can be referenced in SQL queries.
     *
     * @param name        The name under which the [[TableSource]] is registered.
     * @param tableSource The [[TableSource]] to register.
     */
-  def registerTableSource(name: String, tableSource: TableSource[_]): Unit = {
-    tablePlanner.registerTableSource(name, tableSource)
-  }
+  def registerTableSource(name: String, tableSource: TableSource[_]): Unit
+
+  /**
+    * Registers an external [[TableSink]] with given field names and types in this
+    * [[TableEnvImpl]]'s catalog.
+    * Registered sink tables can be referenced in SQL DML statements.
+    *
+    * @param name The name under which the [[TableSink]] is registered.
+    * @param fieldNames The field names to register with the [[TableSink]].
+    * @param fieldTypes The field types to register with the [[TableSink]].
+    * @param tableSink The [[TableSink]] to register.
+    */
+  def registerTableSink(
+      name: String,
+      fieldNames: Array[String],
+      fieldTypes: Array[TypeInformation[_]],
+      tableSink: TableSink[_]): Unit
 
   /**
     * Registers an external [[TableSink]] with already configured field names and field types in
-    * this [[TablePlanner]]'s catalog.
+    * this [[TableEnvImpl]]'s catalog.
     * Registered sink tables can be referenced in SQL DML statements.
     *
     * @param name The name under which the [[TableSink]] is registered.
     * @param configuredSink The configured [[TableSink]] to register.
     */
-  def registerTableSink(name: String, configuredSink: TableSink[_]): Unit = {
-    tablePlanner.registerTableSink(name, configuredSink)
-  }
+  def registerTableSink(name: String, configuredSink: TableSink[_]): Unit
 
   /**
     * Scans a registered table and returns the resulting [[Table]].
@@ -129,9 +127,7 @@ abstract class TableEnvironment(private[flink] val tablePlanner: TablePlanner) {
     */
   @throws[TableException]
   @varargs
-  def scan(tablePath: String*): Table = {
-    tablePlanner.scan(tablePath: _*)
-  }
+  def scan(tablePath: String*): Table
 
   /**
     * Evaluates a SQL query on registered tables and retrieves the result as a [[Table]].
@@ -150,9 +146,7 @@ abstract class TableEnvironment(private[flink] val tablePlanner: TablePlanner) {
     * @param query The SQL query to evaluate.
     * @return The result of the query as Table
     */
-  def sqlQuery(query: String): Table = {
-    tablePlanner.sqlQuery(query)
-  }
+  def sqlQuery(query: String): Table
 
   /**
     * Evaluates a SQL statement such as INSERT, UPDATE or DELETE; or a DDL statement;
@@ -173,9 +167,7 @@ abstract class TableEnvironment(private[flink] val tablePlanner: TablePlanner) {
     *
     * @param stmt The SQL statement to evaluate.
     */
-  def sqlUpdate(stmt: String): Unit = {
-    tablePlanner.sqlUpdate(stmt)
-  }
+  def sqlUpdate(stmt: String): Unit
 
   /**
     * Evaluates a SQL statement such as INSERT, UPDATE or DELETE; or a DDL statement;
@@ -197,58 +189,68 @@ abstract class TableEnvironment(private[flink] val tablePlanner: TablePlanner) {
     * @param stmt The SQL statement to evaluate.
     * @param config The [[QueryConfig]] to use.
     */
-  def sqlUpdate(stmt: String, config: QueryConfig): Unit = {
-    tablePlanner.sqlUpdate(stmt, config)
-  }
+  def sqlUpdate(stmt: String, config: QueryConfig): Unit
 
   /**
     * Registers a [[ScalarFunction]] under a unique name. Replaces already existing
     * user-defined functions under this name.
     */
-  def registerFunction(name: String, function: ScalarFunction): Unit = {
-
-    tablePlanner.registerFunction(name, function)
-  }
+  def registerFunction(name: String, function: ScalarFunction): Unit
 
   /**
-    * Registers a [[TableFunction]] under a unique name in the TableEnvironment's catalog.
-    * Registered functions can be referenced in SQL queries.
+    * Creates a table source and/or table sink from a descriptor.
     *
-    * @param name The name under which the function is registered.
-    * @param tf The TableFunction to register
+    * Descriptors allow for declaring the communication to external systems in an
+    * implementation-agnostic way. The classpath is scanned for suitable table factories that match
+    * the desired configuration.
+    *
+    * The following example shows how to read from a connector using a JSON format and
+    * registering a table source as "MyTable":
+    *
+    * {{{
+    *
+    * tableEnv
+    *   .connect(
+    *     new ExternalSystemXYZ()
+    *       .version("0.11"))
+    *   .withFormat(
+    *     new Json()
+    *       .jsonSchema("{...}")
+    *       .failOnMissingField(false))
+    *   .withSchema(
+    *     new Schema()
+    *       .field("user-name", "VARCHAR").from("u_name")
+    *       .field("count", "DECIMAL")
+    *   .registerSource("MyTable")
+    * }}}
+    *
+    * @param connectorDescriptor connector descriptor describing the external system
     */
-  def registerFunction[T: TypeInformation](name: String, tf: TableFunction[T]): Unit = {
-    tablePlanner.registerTableFunctionInternal(name, tf)
-  }
+  def connect(connectorDescriptor: ConnectorDescriptor): TableDescriptor
 
   /**
-    * Registers an [[AggregateFunction]] under a unique name in the TableEnvironment's catalog.
-    * Registered functions can be referenced in Table API and SQL queries.
+    * Gets the names of all tables registered in this environment.
     *
-    * @param name The name under which the function is registered.
-    * @param f The AggregateFunction to register.
-    * @tparam T The type of the output value.
-    * @tparam ACC The type of aggregate accumulator.
+    * @return A list of the names of all registered tables.
     */
-  def registerFunction[T: TypeInformation, ACC: TypeInformation](
-      name: String,
-      f: AggregateFunction[T, ACC])
-  : Unit = {
-    tablePlanner.registerAggregateFunctionInternal(name, f)
-  }
+  def listTables(): Array[String]
+
+  /**
+    * Gets the names of all functions registered in this environment.
+    */
+  def listUserDefinedFunctions(): Array[String]
+
+  /**
+    * Returns the AST of the specified Table API and SQL queries and the execution plan to compute
+    * the result of the given [[Table]].
+    *
+    * @param table The table for which the AST and execution plan will be returned.
+    */
+  def explain(table: Table): String
+
   def execute()
 }
 
-object TableEnvironment {
-
-  def create(tableConfig: TableConfig): TableEnvironment = {
-
-    TablePlannerUtil
-      .find(classOf[TablePlannerFactory], TablePlannerUtil.generatePlannerDiscriptor(tableConfig))
-      .createTablePlanner(tableConfig)
-      .createTableEnvironment()
-  }
-}
 
 
 

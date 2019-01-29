@@ -16,16 +16,15 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.descriptors
+package org.apache.flink.table.api
 
-import org.apache.flink.table.api.BatchTableEnvImpl
+import _root_.java.{util}
 
-/**
-  * Descriptor for specifying a table source and/or sink in a batch environment.
-  */
-class BatchTableDescriptor(
-                            tableEnv: BatchTableEnvImpl,
-                            connectorDescriptor: ConnectorDescriptor)
-  extends ConnectTableDescriptor[BatchTableDescriptor](
-    tableEnv,
-    connectorDescriptor)
+trait TablePlannerFactory {
+
+  def requiredContext(): util.Map[String, String]
+
+  def supportedProperties(): util.List[String]
+
+  def createTablePlanner(tableConfig: TableConfig): TablePlanner
+}
