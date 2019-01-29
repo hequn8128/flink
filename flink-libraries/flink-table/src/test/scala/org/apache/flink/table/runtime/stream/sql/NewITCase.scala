@@ -85,14 +85,7 @@ class NewITCase extends StreamingWithStateTestBase {
 
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     // create with StreamTableEnvironment
-
-    val config: TableConfig = TableConfig.builder()
-      //      .asStreamingExecution()
-      .asBatchExecution()
-      .watermarkInterval(100)
-      .build()
-
-    val tEnv = StreamTableEnvironment.create(config)
+    val tEnv = StreamTableEnvironment.create(env)
 
     val ds = StreamTestData.get3TupleDataStream(env)
     tEnv

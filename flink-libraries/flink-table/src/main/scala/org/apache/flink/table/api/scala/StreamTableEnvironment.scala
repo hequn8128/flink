@@ -25,6 +25,8 @@ import org.apache.flink.table.functions.{AggregateFunction, TableFunction}
 import org.apache.flink.streaming.api.scala.{DataStream, StreamExecutionEnvironment}
 import org.apache.flink.streaming.api.scala.asScalaStream
 import org.apache.flink.table.factories.TablePlannerUtil
+import org.apache.flink.streaming.api.scala.{StreamExecutionEnvironment => ScalaStreamExecEnv}
+
 
 /**
   * The [[TableEnvImpl]] for a Scala [[StreamExecutionEnvironment]].
