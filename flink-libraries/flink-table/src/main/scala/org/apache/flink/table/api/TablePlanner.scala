@@ -34,7 +34,7 @@ class TablePlanner(val config: TableConfig) {
     language match {
       case "scala" =>
         val env = ScalaStreamExecEnv.getExecutionEnvironment
-        new StreamTableEnvImpl(env, config).asInstanceOf[ENV]
+        new StreamTableEnvironment(env, config).asInstanceOf[ENV]
       case "java" => null.asInstanceOf[ENV]
     }
   }
