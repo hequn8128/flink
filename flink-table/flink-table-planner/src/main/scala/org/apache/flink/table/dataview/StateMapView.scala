@@ -18,7 +18,7 @@
 package org.apache.flink.table.dataview
 
 import java.util
-import java.lang.{Iterable => JIterable}
+import java.lang.{Iterable => JIterable, Boolean => JBool}
 
 import org.apache.flink.api.common.state.MapState
 import org.apache.flink.table.api.dataview.MapView
@@ -40,7 +40,7 @@ class StateMapView[K, V](state: MapState[K, V]) extends MapView[K, V] {
 
   override def remove(key: K): Unit = state.remove(key)
 
-  override def contains(key: K): Boolean = state.contains(key)
+  override def contains(key: K): JBool = state.contains(key)
 
   override def entries: JIterable[util.Map.Entry[K, V]] = state.entries()
 

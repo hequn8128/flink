@@ -507,8 +507,8 @@ object UserDefinedFunctionUtils {
             case map: MapViewTypeInfo[_, _] =>
               val mapView = field.get(acc).asInstanceOf[MapView[_, _]]
               if (mapView != null) {
-                val keyTypeInfo = mapView.keyTypeInfo
-                val valueTypeInfo = mapView.valueTypeInfo
+                val keyTypeInfo = mapView.getKeyTypeInfo
+                val valueTypeInfo = mapView.getValueTypeInfo
                 val newTypeInfo = if (keyTypeInfo != null && valueTypeInfo != null) {
                   new MapViewTypeInfo(keyTypeInfo, valueTypeInfo)
                 } else {
