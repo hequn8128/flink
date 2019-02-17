@@ -16,12 +16,12 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.api.dataview
+package org.apache.flink.table.dataview
 
 import java.lang.reflect.Field
 
 import org.apache.flink.api.common.state.{ListStateDescriptor, MapStateDescriptor, State, StateDescriptor}
-import org.apache.flink.table.dataview.{ListViewTypeInfo, MapViewTypeInfo}
+import org.apache.flink.table.api.dataview.{DataView, ListView, MapView}
 
 /**
   * Data view specification.
@@ -41,7 +41,7 @@ case class ListViewSpec[T](
   extends DataViewSpec[ListView[T]] {
 
   override def toStateDescriptor: StateDescriptor[_ <: State, _] =
-    new ListStateDescriptor[T](stateId, listViewTypeInfo.elementType)
+    new ListStateDescriptor[T](stateId, listViewTypeInfo.getElementType)
 }
 
 case class MapViewSpec[K, V](

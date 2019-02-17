@@ -532,7 +532,7 @@ object UserDefinedFunctionUtils {
             case list: ListViewTypeInfo[_] =>
               val listView = field.get(acc).asInstanceOf[ListView[_]]
               if (listView != null) {
-                val elementTypeInfo = listView.elementTypeInfo
+                val elementTypeInfo = listView.getElementTypeInfo
                 val newTypeInfo = if (elementTypeInfo != null) {
                   new ListViewTypeInfo(elementTypeInfo)
                 } else {

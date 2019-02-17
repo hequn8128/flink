@@ -161,10 +161,10 @@ final public class ArrayListSerializer<T> extends TypeSerializer<ArrayList<T>> {
 				((CollectionSerializerConfigSnapshot<?, ?>) configSnapshot).getSingleNestedSerializerAndConfig();
 
 			CompatibilityResult<T> compatResult = CompatibilityUtil.resolveCompatibilityResult(
-					previousElemSerializerAndConfig.f0,
-					UnloadableDummyTypeSerializer.class,
-					previousElemSerializerAndConfig.f1,
-					elementSerializer);
+				previousElemSerializerAndConfig.f0,
+				UnloadableDummyTypeSerializer.class,
+				previousElemSerializerAndConfig.f1,
+				elementSerializer);
 
 			if (!compatResult.isRequiresMigration()) {
 				return CompatibilityResult.compatible();
