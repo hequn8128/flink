@@ -51,5 +51,5 @@ case class MapViewSpec[K, V](
   extends DataViewSpec[MapView[K, V]] {
 
   override def toStateDescriptor: StateDescriptor[_ <: State, _] =
-    new MapStateDescriptor[K, V](stateId, mapViewTypeInfo.keyType, mapViewTypeInfo.valueType)
+    new MapStateDescriptor[K, V](stateId, mapViewTypeInfo.getKeyType, mapViewTypeInfo.getValueType)
 }

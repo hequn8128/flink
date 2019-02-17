@@ -174,10 +174,6 @@ public class ListView<T> implements DataView {
 
 	@Override
 	public int hashCode() {
-
-		if (list == null)
-			return 0;
-
 		return list.hashCode();
 	}
 }
