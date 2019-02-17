@@ -41,7 +41,7 @@ public class ListViewTypeInfoFactory<T> extends TypeInfoFactory<ListView<T>> {
 		TypeInformation<?> elementType = genericParameters.get("T");
 		if (elementType == null) {
 			// we might can get the elementType later from the ListView constructor
-			return new GenericTypeInfo(Object.class);
+			elementType = new GenericTypeInfo(Object.class);
 		}
 
 		return new ListViewTypeInfo<T>((TypeInformation<T>) elementType);

@@ -138,16 +138,16 @@ public class ListViewSerializer<T> extends TypeSerializer<ListView<T>> {
 			// backwards compatibility path;
 			// Flink versions older or equal to 1.6.x returns a
 			// CollectionSerializerConfigSnapshot as the snapshot
-			Tuple2<TypeSerializer<?>, TypeSerializerSnapshot<?>> previousElemSerializerAndConfig =
+			Tuple2<TypeSerializer<?>, TypeSerializerSnapshot<?>> previousListSerializerAndConfig =
 				((CollectionSerializerConfigSnapshot<?, ?>) configSnapshot).getSingleNestedSerializerAndConfig();
 
 			// in older versions, the nested list serializer was always
 			// specifically a ListSerializer, so this cast is safe
 			ListSerializer<T> castedSer = (ListSerializer<T>) listSerializer;
 			CompatibilityResult<T> compatResult = CompatibilityUtil.resolveCompatibilityResult(
-				previousElemSerializerAndConfig.f0,
+				previousListSerializerAndConfig.f0,
 				UnloadableDummyTypeSerializer.class,
-				previousElemSerializerAndConfig.f1,
+				previousListSerializerAndConfig.f1,
 				castedSer.getElementSerializer());
 
 			if (!compatResult.isRequiresMigration()) {
