@@ -18,6 +18,7 @@
 
 package org.apache.flink.table.dataview;
 
+import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.common.typeutils.CompatibilityResult;
 import org.apache.flink.api.common.typeutils.CompatibilityUtil;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
@@ -43,6 +44,7 @@ import java.util.List;
  *
  * @param <T> The type of element in the list.
  */
+@Internal
 public class ListViewSerializer<T> extends TypeSerializer<ListView<T>> {
 
 	private static final long serialVersionUID = -2030398712359267867L;

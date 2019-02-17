@@ -18,6 +18,7 @@
 
 package org.apache.flink.table.dataview;
 
+import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.common.typeutils.CompatibilityResult;
 import org.apache.flink.api.common.typeutils.CompatibilityUtil;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
@@ -46,6 +47,7 @@ import java.util.Map;
  * @param <K> The type of the keys in the map.
  * @param <V> The type of the values in the map.
  */
+@Internal
 public class MapViewSerializer<K, V> extends TypeSerializer<MapView<K, V>> {
 
 	private static final long serialVersionUID = -9007142882049098705L;

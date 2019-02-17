@@ -18,6 +18,7 @@
 
 package org.apache.flink.table.dataview;
 
+import org.apache.flink.annotation.PublicEvolving;
 import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
@@ -30,6 +31,7 @@ import org.apache.flink.table.api.dataview.MapView;
  * @param <K> key type
  * @param <V> value type
  */
+@PublicEvolving
 public class MapViewTypeInfo<K, V> extends TypeInformation<MapView<K, V>> {
 
 	private final TypeInformation<K> keyType;

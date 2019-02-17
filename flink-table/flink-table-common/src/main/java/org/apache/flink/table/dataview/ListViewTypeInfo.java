@@ -18,6 +18,7 @@
 
 package org.apache.flink.table.dataview;
 
+import org.apache.flink.annotation.PublicEvolving;
 import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
@@ -29,6 +30,7 @@ import org.apache.flink.table.api.dataview.ListView;
  *
  * @param <T> The type of the elements in the {@link ListView}.
  */
+@PublicEvolving
 public class ListViewTypeInfo<T> extends TypeInformation<ListView<T>> {
 
 	private final TypeInformation<T> elementType;
