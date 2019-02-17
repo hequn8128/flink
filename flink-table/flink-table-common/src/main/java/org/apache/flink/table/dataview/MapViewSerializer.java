@@ -129,8 +129,8 @@ public class MapViewSerializer<K, V> extends TypeSerializer<MapView<K, V>> {
 	}
 
 	@Override
-	public TypeSerializerSnapshot<MapView<K, V>> snapshotConfiguration() {
-		return null;
+	public MapViewSerializerSnapshot<K, V> snapshotConfiguration() {
+		return new MapViewSerializerSnapshot<K, V>(this);
 	}
 
 	// copy and modified from MapSerializer.ensureCompatibility
