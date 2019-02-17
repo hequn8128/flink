@@ -21,6 +21,7 @@ package org.apache.flink.table.dataview;
 import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
+import org.apache.flink.api.common.typeutils.base.MapSerializer;
 import org.apache.flink.table.api.dataview.MapView;
 
 /**
@@ -81,26 +82,33 @@ public class MapViewTypeInfo<K, V> extends TypeInformation<MapView<K, V>> {
 	public TypeSerializer<MapView<K, V>> createSerializer(ExecutionConfig config) {
 		TypeSerializer<K> keySer = keyType.createSerializer(config);
 		TypeSerializer<V> valueSer = valueType.createSerializer(config);
-		return null;
+		return new MapViewSerializer<>(new MapSerializer<>(keySer, valueSer));
 	}
 
 	@Override
 	public String toString() {
-		return null;
+		return "MapView<" + keyType.toString() + ", " + valueType.toString() + ">";
 	}
 
 	@Override
 	public boolean equals(Object obj) {
-		return false;
+		if (obj == this) {
+			return true;
+		} else if (obj instanceof MapViewTypeInfo) {
+			final MapViewTypeInfo<?, ?> other = (MapViewTypeInfo<?, ?>) obj;
+			return other.canEqual(this) && keyType.equals(other.keyType) && valueType.equals(other.valueType);
+		} else {
+			return false;
+		}
 	}
 
 	@Override
 	public int hashCode() {
-		return 0;
+		return 31 * keyType.hashCode() + valueType.hashCode();
 	}
 
 	@Override
 	public boolean canEqual(Object obj) {
-		return false;
+		return obj != null && obj.getClass() == getClass();
 	}
 }

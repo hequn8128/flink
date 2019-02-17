@@ -52,7 +52,7 @@ public class MapViewTypeInfoFactory<K, V> extends TypeInfoFactory<MapView<K, V>>
 			valueType = new GenericTypeInfo<>(Object.class);
 		}
 
-		return null;
+		return new MapViewTypeInfo<K, V>((TypeInformation<K>) keyType, (TypeInformation<V>) valueType);
 	}
 }
 
