@@ -38,7 +38,7 @@ public class ListViewTypeInfo<T> extends TypeInformation<ListView<T>> {
 	}
 
 	/**
-	 * Gets the type information for the elements contained in the {@link ListView}
+	 * Gets the type information for the elements contained in the {@link ListView}.
 	 */
 	public TypeInformation<T> getElementType() {
 		return elementType;
@@ -66,7 +66,7 @@ public class ListViewTypeInfo<T> extends TypeInformation<ListView<T>> {
 
 	@Override
 	public Class<ListView<T>> getTypeClass() {
-		return (Class<ListView<T>>)(Class<?>)ListView.class;
+		return (Class<ListView<T>>) (Class<?>) ListView.class;
 	}
 
 	@Override

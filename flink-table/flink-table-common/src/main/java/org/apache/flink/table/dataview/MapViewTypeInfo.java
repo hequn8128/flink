@@ -23,6 +23,12 @@ import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.table.api.dataview.MapView;
 
+/**
+ * {@link MapView} type information.
+ *
+ * @param <K> key type
+ * @param <V> value type
+ */
 public class MapViewTypeInfo<K, V> extends TypeInformation<MapView<K, V>> {
 
 	private final TypeInformation<K> keyType;
@@ -63,7 +69,7 @@ public class MapViewTypeInfo<K, V> extends TypeInformation<MapView<K, V>> {
 
 	@Override
 	public Class<MapView<K, V>> getTypeClass() {
-		return (Class<MapView<K, V>>)(Class<?>)MapView.class;
+		return (Class<MapView<K, V>>) (Class<?>) MapView.class;
 	}
 
 	@Override

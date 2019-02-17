@@ -75,6 +75,7 @@ import java.util.Map;
  *  }
  *
  * }
+ * </pre>
  *
  * @param <K> key type
  * @param <V> value type
@@ -83,9 +84,9 @@ import java.util.Map;
 @TypeInfo(MapViewTypeInfoFactory.class)
 public class MapView<K, V> implements DataView {
 
-	transient private TypeInformation<K> keyTypeInfo;
-	transient private TypeInformation<V> valueTypeInfo;
-	private Map<K,V> map;
+	private final transient TypeInformation<K> keyTypeInfo;
+	private final transient TypeInformation<V> valueTypeInfo;
+	private final Map<K, V> map;
 
 	public MapView(
 		TypeInformation<K> keyTypeInfo, TypeInformation<V> valueTypeInfo, Map<K, V> map) {

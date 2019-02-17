@@ -82,8 +82,8 @@ import java.util.List;
 @TypeInfo(ListViewTypeInfoFactory.class)
 public class ListView<T> implements DataView {
 
-	transient private TypeInformation<T> elementTypeInfo;
-	private List<T> list;
+	private final transient TypeInformation<T> elementTypeInfo;
+	private final List<T> list;
 
 	public ListView(TypeInformation<T> elementTypeInfo, List<T> list) {
 		this.elementTypeInfo = elementTypeInfo;

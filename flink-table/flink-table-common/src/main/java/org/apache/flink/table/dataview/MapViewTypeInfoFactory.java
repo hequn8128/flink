@@ -21,11 +21,19 @@ package org.apache.flink.table.dataview;
 import org.apache.flink.api.common.typeinfo.TypeInfoFactory;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.java.typeutils.GenericTypeInfo;
+import org.apache.flink.api.java.typeutils.TypeExtractor;
 import org.apache.flink.table.api.dataview.MapView;
 
 import java.lang.reflect.Type;
 import java.util.Map;
 
+/**
+ * Used by {@link TypeExtractor} to create a {@link TypeInformation} for
+ * implementations of {@link MapView}.
+ *
+ * @param <K> the key type of {@link MapView}
+ * @param <V> the value type of {@link MapView}
+ */
 public class MapViewTypeInfoFactory<K, V> extends TypeInfoFactory<MapView<K, V>> {
 
 	@Override
