@@ -120,8 +120,8 @@ public class ListViewSerializer<T> extends TypeSerializer<ListView<T>> {
 	}
 
 	@Override
-	public TypeSerializerSnapshot<ListView<T>> snapshotConfiguration() {
-		return null;
+	public ListViewSerializerSnapshot<T> snapshotConfiguration() {
+		return new ListViewSerializerSnapshot<T>(this);
 	}
 
 	@Override
