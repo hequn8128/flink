@@ -113,7 +113,7 @@ class StreamTableSourceScan(
     )
 
     // ingest table and convert and extract time attributes if necessary
-    val ingestedTable = convertToInternalRow(
+    val ingestedTable = convertAppendToInternalRow(
       outputSchema,
       inputDataStream,
       fieldIndexes,
