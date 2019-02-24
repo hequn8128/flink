@@ -78,23 +78,23 @@ class NewITCase extends StreamingWithStateTestBase {
 
 
   /** test unbounded groupBy (without window) **/
-  @Test
-  def example2(): Unit = {
-
-    StreamITCase.clear
-
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    // create with StreamTableEnvironment
-    val tEnv = StreamTableEnvironment.create(env)
-
-    val ds = StreamTestData.get3TupleDataStream(env)
-    tEnv
-      .fromDataStream(ds, 'a, 'b, 'c)
-      .select("*")
-      .toAppendStream[Row].print
-
-    env.execute()
-  }
+//  @Test
+//  def example2(): Unit = {
+//
+//    StreamITCase.clear
+//
+//    val env = StreamExecutionEnvironment.getExecutionEnvironment
+//    // create with StreamTableEnvironment
+//    val tEnv = StreamTableEnvironment.create(env)
+//
+//    val ds = StreamTestData.get3TupleDataStream(env)
+//    tEnv
+//      .fromDataStream(ds, 'a, 'b, 'c)
+//      .select("*")
+//      .toAppendStream[Row].print
+//
+//    env.execute()
+//  }
 //
 //  /** test unbounded groupBy (without window) **/
 //  @Test

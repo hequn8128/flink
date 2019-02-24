@@ -95,40 +95,40 @@ class SqlITCase extends StreamingWithStateTestBase {
     )
     assertEquals(expected.sorted, StreamITCase.testResults.sorted)
   }
-
-  @Test
-  def testDistinctAggOnRowTimeTumbleWindow(): Unit = {
-
-    val env = StreamExecutionEnvironment.getExecutionEnvironment
-    env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
-    val tEnv = StreamTableEnvironment.create(env)
-    env.setParallelism(1)
-    StreamITCase.clear
-
-    val t = StreamTestData.get5TupleDataStream(env).assignAscendingTimestamps(x => x._2)
-      .toTable(tEnv, 'a, 'b, 'c, 'd, 'e, 'rowtime.rowtime)
-    tEnv.registerTable("MyTable", t)
-
-    val sqlQuery = "SELECT a, " +
-      "  SUM(DISTINCT e), " +
-      "  MIN(DISTINCT e), " +
-      "  COUNT(DISTINCT e)" +
-      "FROM MyTable " +
-      "GROUP BY a, " +
-      "  TUMBLE(rowtime, INTERVAL '5' SECOND) "
-
-    val results = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
-    results.addSink(new StreamITCase.StringSink[Row])
-    env.execute()
-
-    val expected = List(
-      "1,1,1,1",
-      "2,3,1,2",
-      "3,5,2,2",
-      "4,3,1,2",
-      "5,6,1,3")
-    assertEquals(expected.sorted, StreamITCase.testResults.sorted)
-  }
+//
+//  @Test
+//  def testDistinctAggOnRowTimeTumbleWindow(): Unit = {
+//
+//    val env = StreamExecutionEnvironment.getExecutionEnvironment
+//    env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
+//    val tEnv = StreamTableEnvironment.create(env)
+//    env.setParallelism(1)
+//    StreamITCase.clear
+//
+//    val t = StreamTestData.get5TupleDataStream(env).assignAscendingTimestamps(x => x._2)
+//      .toTable(tEnv, 'a, 'b, 'c, 'd, 'e, 'rowtime.rowtime)
+//    tEnv.registerTable("MyTable", t)
+//
+//    val sqlQuery = "SELECT a, " +
+//      "  SUM(DISTINCT e), " +
+//      "  MIN(DISTINCT e), " +
+//      "  COUNT(DISTINCT e)" +
+//      "FROM MyTable " +
+//      "GROUP BY a, " +
+//      "  TUMBLE(rowtime, INTERVAL '5' SECOND) "
+//
+//    val results = tEnv.sqlQuery(sqlQuery).toAppendStream[Row]
+//    results.addSink(new StreamITCase.StringSink[Row])
+//    env.execute()
+//
+//    val expected = List(
+//      "1,1,1,1",
+//      "2,3,1,2",
+//      "3,5,2,2",
+//      "4,3,1,2",
+//      "5,6,1,3")
+//    assertEquals(expected.sorted, StreamITCase.testResults.sorted)
+//  }
 
   @Test
   def testRowTimeTumbleWindow(): Unit = {
