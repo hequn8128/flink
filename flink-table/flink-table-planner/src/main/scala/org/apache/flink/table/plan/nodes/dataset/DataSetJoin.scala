@@ -34,9 +34,10 @@ import org.apache.flink.api.common.operators.base.JoinOperatorBase.JoinHint
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.DataSet
 import org.apache.flink.api.java.typeutils.RowTypeInfo
-import org.apache.flink.table.api.{BatchQueryConfig, BatchTableEnvironment, TableConfig, TableException, Types}
+import org.apache.flink.table.api.{BatchQueryConfig, TableException, Types}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.{FunctionCodeGenerator, GeneratedFunction}
+import org.apache.flink.table.plan.env.{BatchTableEnvImpl, InternalTableConfig}
 import org.apache.flink.table.plan.nodes.CommonJoin
 import org.apache.flink.table.runtime._
 import org.apache.flink.types.Row
@@ -116,7 +117,7 @@ class DataSetJoin(
   }
 
   override def translateToPlan(
-      tableEnv: BatchTableEnvironment,
+      tableEnv: BatchTableEnvImpl,
       queryConfig: BatchQueryConfig): DataSet[Row] = {
 
     val config = tableEnv.getConfig
@@ -207,7 +208,7 @@ class DataSetJoin(
       leftKeys: Array[Int],
       rightKeys: Array[Int],
       resultType: TypeInformation[Row],
-      config: TableConfig): DataSet[Row] = {
+      config: InternalTableConfig): DataSet[Row] = {
 
     val generator = new FunctionCodeGenerator(
       config,
@@ -252,7 +253,7 @@ class DataSetJoin(
       leftKeys: Array[Int],
       rightKeys: Array[Int],
       resultType: TypeInformation[Row],
-      config: TableConfig): DataSet[Row] = {
+      config: InternalTableConfig): DataSet[Row] = {
 
     if (!config.getNullCheck) {
       throw new TableException("Null check in TableConfig must be enabled for outer joins.")
@@ -308,7 +309,7 @@ class DataSetJoin(
       leftKeys: Array[Int],
       rightKeys: Array[Int],
       resultType: TypeInformation[Row],
-      config: TableConfig): DataSet[Row] = {
+      config: InternalTableConfig): DataSet[Row] = {
 
     if (!config.getNullCheck) {
       throw new TableException("Null check in TableConfig must be enabled for outer joins.")
@@ -364,7 +365,7 @@ class DataSetJoin(
       leftKeys: Array[Int],
       rightKeys: Array[Int],
       resultType: TypeInformation[Row],
-      config: TableConfig): DataSet[Row] = {
+      config: InternalTableConfig): DataSet[Row] = {
 
     if (!config.getNullCheck) {
       throw new TableException("Null check in TableConfig must be enabled for outer joins.")
@@ -512,7 +513,7 @@ class DataSetJoin(
   private def generatePredicateFunction(
       leftType: TypeInformation[Row],
       rightType: TypeInformation[Row],
-      config: TableConfig): GeneratedFunction[JoinFunction[Row, Row, JBool], JBool] = {
+      config: InternalTableConfig): GeneratedFunction[JoinFunction[Row, Row, JBool], JBool] = {
     val predGenerator = new FunctionCodeGenerator(config, false, leftType, Some(rightType))
     val condition = predGenerator.generateExpression(joinCondition)
     val predCode =
@@ -535,7 +536,7 @@ class DataSetJoin(
       leftType: TypeInformation[Row],
       rightType: TypeInformation[Row],
       resultType: TypeInformation[Row],
-      config: TableConfig): GeneratedFunction[JoinFunction[Row, Row, Row], Row] = {
+      config: InternalTableConfig): GeneratedFunction[JoinFunction[Row, Row, Row], Row] = {
 
     val conversionGenerator = new FunctionCodeGenerator(config, true, leftType, Some(rightType))
     val conversion = conversionGenerator.generateConverterResultExpression(

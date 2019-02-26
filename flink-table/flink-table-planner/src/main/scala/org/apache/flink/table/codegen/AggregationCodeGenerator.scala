@@ -25,7 +25,6 @@ import org.apache.calcite.rex.RexLiteral
 import org.apache.flink.api.common.state.{ListStateDescriptor, MapStateDescriptor, State, StateDescriptor}
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.typeutils.TypeExtractionUtils.{extractTypeArgument, getRawClass}
-import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.api.dataview._
 import org.apache.flink.table.codegen.CodeGenUtils.{newName, reflectiveFieldWriteAccess}
 import org.apache.flink.table.codegen.Indenter.toISC
@@ -34,6 +33,7 @@ import org.apache.flink.table.functions.AggregateFunction
 import org.apache.flink.table.functions.aggfunctions.DistinctAccumulator
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils.{getUserDefinedMethod, signatureToString}
+import org.apache.flink.table.plan.env.InternalTableConfig
 import org.apache.flink.table.runtime.aggregate.{GeneratedAggregations, SingleElementIterable}
 import org.apache.flink.table.utils.EncodingUtils
 import org.apache.flink.types.Row
@@ -50,7 +50,7 @@ import scala.collection.mutable
   * @param constants constant expressions that act like a second input in the parameter indices.
   */
 class AggregationCodeGenerator(
-    config: TableConfig,
+    config: InternalTableConfig,
     nullableInput: Boolean,
     input: TypeInformation[_ <: Any],
     constants: Option[Seq[RexLiteral]])

@@ -34,7 +34,7 @@ import org.apache.flink.streaming.api.functions.ProcessFunction
 import org.apache.flink.streaming.api.functions.windowing.{AllWindowFunction, WindowFunction}
 import org.apache.flink.streaming.api.windowing.windows.{Window => DataStreamWindow}
 import org.apache.flink.table.api.dataview.DataViewSpec
-import org.apache.flink.table.api.{StreamQueryConfig, TableConfig, TableException}
+import org.apache.flink.table.api.{StreamQueryConfig, TableException}
 import org.apache.flink.table.calcite.FlinkRelBuilder.NamedWindowProperty
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.AggregationCodeGenerator
@@ -44,6 +44,7 @@ import org.apache.flink.table.functions.aggfunctions._
 import org.apache.flink.table.functions.utils.AggSqlFunction
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils._
 import org.apache.flink.table.functions.{AggregateFunction => TableAggregateFunction}
+import org.apache.flink.table.plan.env.InternalTableConfig
 import org.apache.flink.table.plan.logical._
 import org.apache.flink.table.runtime.types.{CRow, CRowTypeInfo}
 import org.apache.flink.table.typeutils.TypeCheckUtils._
@@ -80,7 +81,7 @@ object AggregateUtil {
       inputTypeInfo: TypeInformation[Row],
       inputFieldTypeInfo: Seq[TypeInformation[_]],
       queryConfig: StreamQueryConfig,
-      tableConfig: TableConfig,
+      tableConfig: InternalTableConfig,
       rowTimeIdx: Option[Int],
       isPartitioned: Boolean,
       isRowsClause: Boolean)
@@ -167,7 +168,7 @@ object AggregateUtil {
       inputFieldTypes: Seq[TypeInformation[_]],
       groupings: Array[Int],
       queryConfig: StreamQueryConfig,
-      tableConfig: TableConfig,
+      tableConfig: InternalTableConfig,
       generateRetraction: Boolean,
       consumeRetraction: Boolean): ProcessFunction[CRow, CRow] = {
 
@@ -234,7 +235,7 @@ object AggregateUtil {
       inputFieldTypeInfo: Seq[TypeInformation[_]],
       precedingOffset: Long,
       queryConfig: StreamQueryConfig,
-      tableConfig: TableConfig,
+      tableConfig: InternalTableConfig,
       isRowsClause: Boolean,
       rowTimeIdx: Option[Int])
     : ProcessFunction[CRow, CRow] = {
@@ -343,7 +344,7 @@ object AggregateUtil {
     inputType: RelDataType,
     inputFieldTypeInfo: Seq[TypeInformation[_]],
     isParserCaseSensitive: Boolean,
-    tableConfig: TableConfig)
+    tableConfig: InternalTableConfig)
   : MapFunction[Row, Row] = {
 
     val needRetract = false
@@ -454,7 +455,7 @@ object AggregateUtil {
       physicalInputRowType: RelDataType,
       physicalInputTypes: Seq[TypeInformation[_]],
       isParserCaseSensitive: Boolean,
-      tableConfig: TableConfig)
+      tableConfig: InternalTableConfig)
     : RichGroupReduceFunction[Row, Row] = {
 
     val needRetract = false
@@ -573,7 +574,7 @@ object AggregateUtil {
       outputType: RelDataType,
       groupings: Array[Int],
       properties: Seq[NamedWindowProperty],
-      tableConfig: TableConfig,
+      tableConfig: InternalTableConfig,
       isInputCombined: Boolean = false)
     : RichGroupReduceFunction[Row, Row] = {
 
@@ -733,7 +734,7 @@ object AggregateUtil {
     physicalInputRowType: RelDataType,
     physicalInputTypes: Seq[TypeInformation[_]],
     groupings: Array[Int],
-    tableConfig: TableConfig): MapPartitionFunction[Row, Row] = {
+    tableConfig: InternalTableConfig): MapPartitionFunction[Row, Row] = {
 
     val needRetract = false
     val aggregateMetadata = extractAggregateMetadata(
@@ -810,7 +811,7 @@ object AggregateUtil {
       physicalInputRowType: RelDataType,
       physicalInputTypes: Seq[TypeInformation[_]],
       groupings: Array[Int],
-      tableConfig: TableConfig)
+      tableConfig: InternalTableConfig)
     : GroupCombineFunction[Row, Row] = {
 
     val needRetract = false
@@ -879,7 +880,7 @@ object AggregateUtil {
       inputFieldTypeInfo: Seq[TypeInformation[_]],
       outputType: RelDataType,
       groupings: Array[Int],
-      tableConfig: TableConfig): (
+      tableConfig: InternalTableConfig): (
         Option[DataSetPreAggFunction],
         Option[TypeInformation[Row]],
         Either[DataSetAggFunction, DataSetFinalAggFunction]) = {
@@ -1053,7 +1054,7 @@ object AggregateUtil {
       outputType: RelDataType,
       groupingKeys: Array[Int],
       needMerge: Boolean,
-      tableConfig: TableConfig)
+      tableConfig: InternalTableConfig)
     : (DataStreamAggFunction[CRow, Row, Row], RowTypeInfo) = {
 
     val needRetract = false
@@ -1099,7 +1100,7 @@ object AggregateUtil {
     aggregateCalls: Seq[AggregateCall],
     inputType: RelDataType,
     groupKeysCount: Int,
-    tableConfig: TableConfig): Boolean = {
+    tableConfig: InternalTableConfig): Boolean = {
 
     val aggregateList = extractAggregateMetadata(
       aggregateCalls,
@@ -1276,7 +1277,7 @@ object AggregateUtil {
       inputFieldsCount: Int,
       aggregateInputTypes: Seq[RelDataType],
       needRetraction: Boolean,
-      tableConfig: TableConfig,
+      tableConfig: InternalTableConfig,
       isStateBackedDataViews: Boolean,
       uniqueIdWithinAggregate: Int)
     : AggregateCallMetadata = {
@@ -1350,7 +1351,7 @@ object AggregateUtil {
       aggregateInputType: RelDataType,
       inputFieldsCount: Int,
       needRetraction: Boolean,
-      tableConfig: TableConfig,
+      tableConfig: InternalTableConfig,
       isStateBackedDataViews: Boolean = false)
     : AggregateMetadata = {
 
@@ -1410,7 +1411,7 @@ object AggregateUtil {
       aggFunc: SqlAggFunction,
       needRetraction: Boolean,
       inputDataType: Seq[RelDataType],
-      tableConfig: TableConfig)
+      tableConfig: InternalTableConfig)
     : TableAggregateFunction[_ <: Any, _ <: Any] = {
 
     lazy val outputType = inputDataType.get(0)

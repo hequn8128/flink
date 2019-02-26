@@ -24,7 +24,7 @@ import org.apache.calcite.sql.fun.SqlStdOperatorTable
 import org.apache.calcite.tools.RelBuilder
 import org.apache.flink.api.common.typeinfo.BasicTypeInfo._
 import org.apache.flink.api.common.typeinfo.TypeInformation
-import org.apache.flink.table.api.StreamTableEnvironment
+import org.apache.flink.table.api.Table
 import org.apache.flink.table.typeutils.TypeCheckUtils._
 import org.apache.flink.table.validate.{ValidationFailure, ValidationResult, ValidationSuccess}
 
@@ -38,7 +38,7 @@ case class In(expression: Expression, elements: Seq[Expression]) extends Express
     // check if this is a sub-query expression or an element list
     elements.head match {
 
-      case TableReference(name, table) =>
+      case TableReference(name, table: Table) =>
         RexSubQuery.in(table.getRelNode, ImmutableList.of(expression.toRexNode))
 
       case _ =>
@@ -50,7 +50,7 @@ case class In(expression: Expression, elements: Seq[Expression]) extends Express
     // check if this is a sub-query expression or an element list
     elements.head match {
 
-      case TableReference(name, table) =>
+      case TableReference(name, table: Table) =>
         if (elements.length != 1) {
           return ValidationFailure("IN operator supports only one table reference.")
         }

@@ -34,11 +34,12 @@ import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.common.typeutils.CompositeType
 import org.apache.flink.api.java.typeutils.{PojoField, PojoTypeInfo, TypeExtractor}
 import org.apache.flink.table.api.dataview._
-import org.apache.flink.table.api.{TableEnvironment, TableException, ValidationException}
+import org.apache.flink.table.api.{TableException, ValidationException}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.dataview._
 import org.apache.flink.table.expressions._
 import org.apache.flink.table.functions.{AggregateFunction, ScalarFunction, TableFunction, UserDefinedFunction}
+import org.apache.flink.table.plan.env.TableEnvImpl
 import org.apache.flink.table.plan.logical._
 import org.apache.flink.table.plan.schema.FlinkTableFunctionImpl
 import org.apache.flink.util.InstantiationUtil
@@ -702,9 +703,9 @@ object UserDefinedFunctionUtils {
   def getFieldInfo(inputType: TypeInformation[_])
     : (Array[String], Array[Int], Array[TypeInformation[_]]) = {
 
-    (TableEnvironment.getFieldNames(inputType),
-    TableEnvironment.getFieldIndices(inputType),
-    TableEnvironment.getFieldTypes(inputType))
+    (TableEnvImpl.getFieldNames(inputType),
+    TableEnvImpl.getFieldIndices(inputType),
+    TableEnvImpl.getFieldTypes(inputType))
   }
 
   /**
@@ -774,7 +775,7 @@ object UserDefinedFunctionUtils {
     * @return A LogicalTableFunctionCall.
     */
   def createLogicalFunctionCall(
-      tableEnv: TableEnvironment,
+      tableEnv: TableEnvImpl,
       callExpr: Expression)
     : LogicalTableFunctionCall = {
 

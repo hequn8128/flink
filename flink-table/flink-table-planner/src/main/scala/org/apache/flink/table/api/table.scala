@@ -25,6 +25,7 @@ import org.apache.flink.table.expressions.{Alias, Asc, Expression, ExpressionPar
 import org.apache.flink.table.functions.TemporalTableFunction
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils
 import org.apache.flink.table.plan.ProjectionTranslator._
+import org.apache.flink.table.plan.env.{BatchTableEnvImpl, InternalTableConfig, TableEnvImpl}
 import org.apache.flink.table.plan.logical.{Minus, _}
 import org.apache.flink.table.sinks.TableSink
 
@@ -58,11 +59,11 @@ import _root_.scala.collection.JavaConverters._
   * in a Scala DSL or as an expression String. Please refer to the documentation for the expression
   * syntax.
   *
-  * @param tableEnv The [[TableEnvironment]] to which the table is bound.
+  * @param tableEnv    The [[TableEnvImpl]] to which the table is bound.
   * @param logicalPlan logical representation
   */
 class Table(
-    private[flink] val tableEnv: TableEnvironment,
+    private[flink] val tableEnv: TableEnvImpl,
     private[flink] val logicalPlan: LogicalNode) {
 
   // Check if the plan has an unbounded TableFunctionCall as child node.
@@ -87,7 +88,7 @@ class Table(
     "This constructor will be removed. Use table.joinLateral() or " +
       "table.leftOuterJoinLateral() instead.",
     "1.8")
-  def this(tableEnv: TableEnvironment, tableFunctionCall: String) {
+  def this(tableEnv: TableEnvImpl, tableFunctionCall: String) {
     this(tableEnv, UserDefinedFunctionUtils
       .createLogicalFunctionCall(tableEnv, ExpressionParser.parseExpression(tableFunctionCall)))
   }
@@ -1197,7 +1198,7 @@ class Table(
   @varargs
   def window(overWindows: OverWindow*): OverWindowedTable = {
 
-    if (tableEnv.isInstanceOf[BatchTableEnvironment]) {
+    if (tableEnv.isInstanceOf[BatchTableEnvImpl]) {
       throw new TableException("Over-windows for batch tables are currently not supported.")
     }
 

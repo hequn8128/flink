@@ -22,11 +22,12 @@ import org.apache.calcite.rex.{RexCall, RexNode}
 import org.apache.calcite.sql.SemiJoinType
 import org.apache.flink.api.common.functions.Function
 import org.apache.flink.api.common.typeinfo.TypeInformation
-import org.apache.flink.table.api.{TableConfig, TableException}
+import org.apache.flink.table.api.TableException
 import org.apache.flink.table.codegen.CodeGenUtils.primitiveDefaultValue
 import org.apache.flink.table.codegen.GeneratedExpression.{ALWAYS_NULL, NO_CODE}
 import org.apache.flink.table.codegen._
 import org.apache.flink.table.functions.utils.TableSqlFunction
+import org.apache.flink.table.plan.env.InternalTableConfig
 import org.apache.flink.table.plan.schema.RowSchema
 import org.apache.flink.table.runtime.TableFunctionCollector
 import org.apache.flink.types.Row
@@ -42,7 +43,7 @@ trait CommonCorrelate {
     * Generates the flat map function to run the user-defined table function.
     */
   private[flink] def generateFunction[T <: Function](
-    config: TableConfig,
+    config: InternalTableConfig,
     inputSchema: RowSchema,
     udtfTypeInfo: TypeInformation[Any],
     returnSchema: RowSchema,
@@ -113,7 +114,7 @@ trait CommonCorrelate {
     * Generates table function collector.
     */
   private[flink] def generateCollector(
-    config: TableConfig,
+    config: InternalTableConfig,
     inputSchema: RowSchema,
     udtfTypeInfo: TypeInformation[Any],
     returnSchema: RowSchema,

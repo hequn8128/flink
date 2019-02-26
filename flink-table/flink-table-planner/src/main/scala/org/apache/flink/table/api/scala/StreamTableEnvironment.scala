@@ -17,266 +17,55 @@
  */
 package org.apache.flink.table.api.scala
 
-import org.apache.flink.api.scala._
 import org.apache.flink.api.common.typeinfo.TypeInformation
+import org.apache.flink.streaming.api.scala.{DataStream, StreamExecutionEnvironment}
 import org.apache.flink.table.api.{StreamQueryConfig, Table, TableConfig, TableEnvironment}
+import org.apache.flink.table.descriptors.{ConnectorDescriptor, StreamTableDescriptor}
 import org.apache.flink.table.expressions.Expression
 import org.apache.flink.table.functions.{AggregateFunction, TableFunction}
-import org.apache.flink.streaming.api.scala.{DataStream, StreamExecutionEnvironment}
-import org.apache.flink.streaming.api.scala.asScalaStream
 
-/**
-  * The [[TableEnvironment]] for a Scala [[StreamExecutionEnvironment]] that works with
-  * [[DataStream]]s.
-  *
-  * A TableEnvironment can be used to:
-  * - convert a [[DataStream]] to a [[Table]]
-  * - register a [[DataStream]] in the [[TableEnvironment]]'s catalog
-  * - register a [[Table]] in the [[TableEnvironment]]'s catalog
-  * - scan a registered table to obtain a [[Table]]
-  * - specify a SQL query on registered tables to obtain a [[Table]]
-  * - convert a [[Table]] into a [[DataStream]]
-  * - explain the AST and execution plan of a [[Table]]
-  *
-  * @param execEnv The Scala [[StreamExecutionEnvironment]] of the TableEnvironment.
-  * @param config The configuration of the TableEnvironment.
-  */
-class StreamTableEnvironment @deprecated(
-      "This constructor will be removed. Use StreamTableEnvironment.create() instead.",
-      "1.8.0") (
-    execEnv: StreamExecutionEnvironment,
-    config: TableConfig)
-  extends org.apache.flink.table.api.StreamTableEnvironment(
-    execEnv.getWrappedStreamExecutionEnvironment,
-    config) {
+trait StreamTableEnvironment extends TableEnvironment {
 
-  /**
-    * Converts the given [[DataStream]] into a [[Table]].
-    *
-    * The field names of the [[Table]] are automatically derived from the type of the
-    * [[DataStream]].
-    *
-    * @param dataStream The [[DataStream]] to be converted.
-    * @tparam T The type of the [[DataStream]].
-    * @return The converted [[Table]].
-    */
-  def fromDataStream[T](dataStream: DataStream[T]): Table = {
+  def registerFunction[T: TypeInformation](name: String, tf: TableFunction[T]): Unit
 
-    val name = createUniqueTableName()
-    registerDataStreamInternal(name, dataStream.javaStream)
-    scan(name)
-  }
+  def registerFunction[T: TypeInformation, ACC: TypeInformation](
+    name: String,
+    f: AggregateFunction[T, ACC]): Unit
 
-  /**
-    * Converts the given [[DataStream]] into a [[Table]] with specified field names.
-    *
-    * Example:
-    *
-    * {{{
-    *   val stream: DataStream[(String, Long)] = ...
-    *   val tab: Table = tableEnv.fromDataStream(stream, 'a, 'b)
-    * }}}
-    *
-    * @param dataStream The [[DataStream]] to be converted.
-    * @param fields The field names of the resulting [[Table]].
-    * @tparam T The type of the [[DataStream]].
-    * @return The converted [[Table]].
-    */
-  def fromDataStream[T](dataStream: DataStream[T], fields: Expression*): Table = {
+  def connect(connectorDescriptor: ConnectorDescriptor): StreamTableDescriptor
 
-    val name = createUniqueTableName()
-    registerDataStreamInternal(name, dataStream.javaStream, fields.toArray)
-    scan(name)
-  }
+  def fromDataStream[T](dataStream: DataStream[T]): Table
 
-  /**
-    * Registers the given [[DataStream]] as table in the
-    * [[TableEnvironment]]'s catalog.
-    * Registered tables can be referenced in SQL queries.
-    *
-    * The field names of the [[Table]] are automatically derived
-    * from the type of the [[DataStream]].
-    *
-    * @param name The name under which the [[DataStream]] is registered in the catalog.
-    * @param dataStream The [[DataStream]] to register.
-    * @tparam T The type of the [[DataStream]] to register.
-    */
-  def registerDataStream[T](name: String, dataStream: DataStream[T]): Unit = {
+  def fromDataStream[T](dataStream: DataStream[T], fields: Expression*): Table
 
-    checkValidTableName(name)
-    registerDataStreamInternal(name, dataStream.javaStream)
-  }
+  def registerDataStream[T](name: String, dataStream: DataStream[T]): Unit
 
-  /**
-    * Registers the given [[DataStream]] as table with specified field names in the
-    * [[TableEnvironment]]'s catalog.
-    * Registered tables can be referenced in SQL queries.
-    *
-    * Example:
-    *
-    * {{{
-    *   val set: DataStream[(String, Long)] = ...
-    *   tableEnv.registerDataStream("myTable", set, 'a, 'b)
-    * }}}
-    *
-    * @param name The name under which the [[DataStream]] is registered in the catalog.
-    * @param dataStream The [[DataStream]] to register.
-    * @param fields The field names of the registered table.
-    * @tparam T The type of the [[DataStream]] to register.
-    */
-  def registerDataStream[T](name: String, dataStream: DataStream[T], fields: Expression*): Unit = {
+  def registerDataStream[T](name: String, dataStream: DataStream[T], fields: Expression*): Unit
 
-    checkValidTableName(name)
-    registerDataStreamInternal(name, dataStream.javaStream, fields.toArray)
-  }
+  def toAppendStream[T: TypeInformation](table: Table): DataStream[T]
 
-  /**
-    * Converts the given [[Table]] into an append [[DataStream]] of a specified type.
-    *
-    * The [[Table]] must only have insert (append) changes. If the [[Table]] is also modified
-    * by update or delete changes, the conversion will fail.
-    *
-    * The fields of the [[Table]] are mapped to [[DataStream]] fields as follows:
-    * - [[org.apache.flink.types.Row]] and Scala Tuple types: Fields are mapped by position, field
-    * types must match.
-    * - POJO [[DataStream]] types: Fields are mapped by field name, field types must match.
-    *
-    * @param table The [[Table]] to convert.
-    * @tparam T The type of the resulting [[DataStream]].
-    * @return The converted [[DataStream]].
-    */
-  def toAppendStream[T: TypeInformation](table: Table): DataStream[T] = {
-    toAppendStream(table, queryConfig)
-  }
-
-  /**
-    * Converts the given [[Table]] into an append [[DataStream]] of a specified type.
-    *
-    * The [[Table]] must only have insert (append) changes. If the [[Table]] is also modified
-    * by update or delete changes, the conversion will fail.
-    *
-    * The fields of the [[Table]] are mapped to [[DataStream]] fields as follows:
-    * - [[org.apache.flink.types.Row]] and Scala Tuple types: Fields are mapped by position, field
-    * types must match.
-    * - POJO [[DataStream]] types: Fields are mapped by field name, field types must match.
-    *
-    * @param table The [[Table]] to convert.
-    * @param queryConfig The configuration of the query to generate.
-    * @tparam T The type of the resulting [[DataStream]].
-    * @return The converted [[DataStream]].
-    */
   def toAppendStream[T: TypeInformation](
     table: Table,
-    queryConfig: StreamQueryConfig): DataStream[T] = {
-    val returnType = createTypeInformation[T]
-    asScalaStream(translate(
-      table, queryConfig, updatesAsRetraction = false, withChangeFlag = false)(returnType))
-  }
+    queryConfig: StreamQueryConfig): DataStream[T]
 
-/**
-  * Converts the given [[Table]] into a [[DataStream]] of add and retract messages.
-  * The message will be encoded as [[Tuple2]]. The first field is a [[Boolean]] flag,
-  * the second field holds the record of the specified type [[T]].
-  *
-  * A true [[Boolean]] flag indicates an add message, a false flag indicates a retract message.
-  *
-  * @param table The [[Table]] to convert.
-  * @tparam T The type of the requested data type.
-  * @return The converted [[DataStream]].
-  */
-  def toRetractStream[T: TypeInformation](table: Table): DataStream[(Boolean, T)] = {
-    toRetractStream(table, queryConfig)
-  }
+  def toRetractStream[T: TypeInformation](table: Table): DataStream[(Boolean, T)]
 
-  /**
-    * Converts the given [[Table]] into a [[DataStream]] of add and retract messages.
-    * The message will be encoded as [[Tuple2]]. The first field is a [[Boolean]] flag,
-    * the second field holds the record of the specified type [[T]].
-    *
-    * A true [[Boolean]] flag indicates an add message, a false flag indicates a retract message.
-    *
-    * @param table The [[Table]] to convert.
-    * @param queryConfig The configuration of the query to generate.
-    * @tparam T The type of the requested data type.
-    * @return The converted [[DataStream]].
-    */
   def toRetractStream[T: TypeInformation](
-      table: Table,
-      queryConfig: StreamQueryConfig): DataStream[(Boolean, T)] = {
-    val returnType = createTypeInformation[(Boolean, T)]
-    asScalaStream(
-      translate(table, queryConfig, updatesAsRetraction = true, withChangeFlag = true)(returnType))
-  }
-
-  /**
-    * Registers a [[TableFunction]] under a unique name in the TableEnvironment's catalog.
-    * Registered functions can be referenced in SQL queries.
-    *
-    * @param name The name under which the function is registered.
-    * @param tf The TableFunction to register
-    */
-  def registerFunction[T: TypeInformation](name: String, tf: TableFunction[T]): Unit = {
-    registerTableFunctionInternal(name, tf)
-  }
-
-  /**
-    * Registers an [[AggregateFunction]] under a unique name in the TableEnvironment's catalog.
-    * Registered functions can be referenced in Table API and SQL queries.
-    *
-    * @param name The name under which the function is registered.
-    * @param f The AggregateFunction to register.
-    * @tparam T The type of the output value.
-    * @tparam ACC The type of aggregate accumulator.
-    */
-  def registerFunction[T: TypeInformation, ACC: TypeInformation](
-      name: String,
-      f: AggregateFunction[T, ACC])
-  : Unit = {
-    registerAggregateFunctionInternal[T, ACC](name, f)
-  }
+    table: Table,
+    queryConfig: StreamQueryConfig): DataStream[(Boolean, T)]
 }
 
 object StreamTableEnvironment {
 
-  /**
-    * The [[TableEnvironment]] for a Scala [[StreamExecutionEnvironment]] that works with
-    * [[DataStream]]s.
-    *
-    * A TableEnvironment can be used to:
-    * - convert a [[DataStream]] to a [[Table]]
-    * - register a [[DataStream]] in the [[TableEnvironment]]'s catalog
-    * - register a [[Table]] in the [[TableEnvironment]]'s catalog
-    * - scan a registered table to obtain a [[Table]]
-    * - specify a SQL query on registered tables to obtain a [[Table]]
-    * - convert a [[Table]] into a [[DataStream]]
-    * - explain the AST and execution plan of a [[Table]]
-    *
-    * @param executionEnvironment The Scala [[StreamExecutionEnvironment]] of the TableEnvironment.
-    */
   def create(executionEnvironment: StreamExecutionEnvironment): StreamTableEnvironment = {
-    new StreamTableEnvironment(executionEnvironment, new TableConfig())
+    create(executionEnvironment, TableConfig.DEFAULT)
   }
 
-  /**
-    * The [[TableEnvironment]] for a Scala [[StreamExecutionEnvironment]] that works with
-    * [[DataStream]]s.
-    *
-    * A TableEnvironment can be used to:
-    * - convert a [[DataStream]] to a [[Table]]
-    * - register a [[DataStream]] in the [[TableEnvironment]]'s catalog
-    * - register a [[Table]] in the [[TableEnvironment]]'s catalog
-    * - scan a registered table to obtain a [[Table]]
-    * - specify a SQL query on registered tables to obtain a [[Table]]
-    * - convert a [[Table]] into a [[DataStream]]
-    * - explain the AST and execution plan of a [[Table]]
-    *
-    * @param executionEnvironment The Scala [[StreamExecutionEnvironment]] of the TableEnvironment.
-    * @param tableConfig The configuration of the TableEnvironment.
-    */
-  def create(
-    executionEnvironment: StreamExecutionEnvironment,
-    tableConfig: TableConfig): StreamTableEnvironment = {
-
-    new StreamTableEnvironment(executionEnvironment, tableConfig)
+  def create(executionEnvironment: StreamExecutionEnvironment, tableConfig: TableConfig)
+  : StreamTableEnvironment = {
+    val clazz = Class.forName("org.apache.flink.table.plan.env.scala.StreamTableEnvImpl")
+    val const = clazz.getConstructor(
+      classOf[StreamExecutionEnvironment], classOf[TableConfig])
+    const.newInstance(executionEnvironment, tableConfig).asInstanceOf[StreamTableEnvironment]
   }
 }

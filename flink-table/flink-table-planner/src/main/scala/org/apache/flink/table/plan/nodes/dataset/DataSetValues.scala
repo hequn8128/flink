@@ -25,9 +25,10 @@ import org.apache.calcite.rel.core.Values
 import org.apache.calcite.rel.{RelNode, RelWriter}
 import org.apache.calcite.rex.RexLiteral
 import org.apache.flink.api.java.DataSet
-import org.apache.flink.table.api.{BatchQueryConfig, BatchTableEnvironment}
+import org.apache.flink.table.api.BatchQueryConfig
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.InputFormatCodeGenerator
+import org.apache.flink.table.plan.env.BatchTableEnvImpl
 import org.apache.flink.table.runtime.io.ValuesInputFormat
 import org.apache.flink.types.Row
 
@@ -67,7 +68,7 @@ class DataSetValues(
   }
 
   override def translateToPlan(
-      tableEnv: BatchTableEnvironment,
+      tableEnv: BatchTableEnvImpl,
       queryConfig: BatchQueryConfig): DataSet[Row] = {
 
     val config = tableEnv.getConfig

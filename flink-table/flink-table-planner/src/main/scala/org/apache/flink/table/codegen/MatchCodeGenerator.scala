@@ -31,12 +31,13 @@ import org.apache.flink.cep.functions.PatternProcessFunction
 import org.apache.flink.cep.pattern.conditions.{IterativeCondition, RichIterativeCondition}
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.table.api.dataview.DataViewSpec
-import org.apache.flink.table.api.{TableConfig, TableException}
+import org.apache.flink.table.api.TableException
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.CodeGenUtils.{boxedTypeTermForTypeInfo, newName, primitiveDefaultValue, primitiveTypeTermForTypeInfo}
 import org.apache.flink.table.codegen.GeneratedExpression.{NEVER_NULL, NO_CODE}
 import org.apache.flink.table.codegen.Indenter.toISC
 import org.apache.flink.table.functions.{AggregateFunction => TableAggregateFunction}
+import org.apache.flink.table.plan.env.InternalTableConfig
 import org.apache.flink.table.plan.schema.RowSchema
 import org.apache.flink.table.runtime.`match`.{IterativeConditionRunner, PatternProcessFunctionRunner}
 import org.apache.flink.table.runtime.aggregate.AggregateUtil
@@ -151,7 +152,7 @@ import scala.collection.mutable
   *                       be applied to
   */
 class MatchCodeGenerator(
-    config: TableConfig,
+    config: InternalTableConfig,
     input: TypeInformation[_],
     patternNames: Seq[String],
     currentPattern: Option[String] = None)

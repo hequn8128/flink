@@ -22,8 +22,9 @@ import org.apache.calcite.rel.core.AggregateCall
 import org.apache.calcite.rel.{RelNode, RelWriter, SingleRel}
 import org.apache.flink.api.java.functions.NullByteKeySelector
 import org.apache.flink.streaming.api.datastream.DataStream
-import org.apache.flink.table.api.{StreamQueryConfig, StreamTableEnvironment}
+import org.apache.flink.table.api.StreamQueryConfig
 import org.apache.flink.table.codegen.AggregationCodeGenerator
+import org.apache.flink.table.plan.env.StreamTableEnvImpl
 import org.apache.flink.table.plan.nodes.CommonAggregate
 import org.apache.flink.table.plan.rules.datastream.DataStreamRetractionRules
 import org.apache.flink.table.plan.schema.RowSchema
@@ -100,7 +101,7 @@ class DataStreamGroupAggregate(
   }
 
   override def translateToPlan(
-      tableEnv: StreamTableEnvironment,
+      tableEnv: StreamTableEnvImpl,
       queryConfig: StreamQueryConfig): DataStream[CRow] = {
 
     if (groupings.length > 0 && queryConfig.getMinIdleStateRetentionTime < 0) {

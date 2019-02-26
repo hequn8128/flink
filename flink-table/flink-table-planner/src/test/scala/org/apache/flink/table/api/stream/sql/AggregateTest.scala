@@ -26,6 +26,7 @@ import org.apache.flink.table.api.Types
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.expressions.AggFunctionCall
 import org.apache.flink.table.functions.AggregateFunction
+import org.apache.flink.table.plan.env.TableEnvImpl
 import org.apache.flink.table.utils.TableTestUtil.{streamTableNode, term, unaryNode}
 import org.apache.flink.table.utils.{StreamTableTestUtil, TableTestBase}
 import org.apache.flink.types.Row
@@ -64,7 +65,7 @@ class AggregateTest extends TableTestBase {
   def testUserDefinedAggregateFunctionWithScalaAccumulator(): Unit = {
     streamUtil.addFunction("udag", new MyAgg)
     val call = streamUtil
-      .tableEnv
+      .tableEnv.asInstanceOf[TableEnvImpl]
       .functionCatalog
       .lookupFunction("udag", Seq())
       .asInstanceOf[AggFunctionCall]
@@ -78,7 +79,7 @@ class AggregateTest extends TableTestBase {
 
     streamUtil.addFunction("udag2", new MyAgg2)
     val call2 = streamUtil
-      .tableEnv
+      .tableEnv.asInstanceOf[TableEnvImpl]
       .functionCatalog
       .lookupFunction("udag2", Seq())
       .asInstanceOf[AggFunctionCall]

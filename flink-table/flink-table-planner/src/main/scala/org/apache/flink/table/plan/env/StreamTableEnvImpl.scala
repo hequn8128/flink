@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.api
+package org.apache.flink.table.plan.env
 
 import _root_.java.lang.{Boolean => JBool}
 import _root_.java.util.concurrent.atomic.AtomicInteger
@@ -36,6 +36,7 @@ import org.apache.flink.api.scala.typeutils.CaseClassTypeInfo
 import org.apache.flink.streaming.api.TimeCharacteristic
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
+import org.apache.flink.table.api._
 import org.apache.flink.table.calcite.{FlinkTypeFactory, RelTimeIndicatorConverter}
 import org.apache.flink.table.descriptors.{ConnectorDescriptor, StreamTableDescriptor}
 import org.apache.flink.table.explain.PlanJsonParser
@@ -66,13 +67,13 @@ import _root_.scala.collection.JavaConverters._
   * - convert a [[Table]] into a [[DataStream]]
   *
   * @param execEnv The [[StreamExecutionEnvironment]] which is wrapped in this
-  *                [[StreamTableEnvironment]].
-  * @param config The [[TableConfig]] of this [[StreamTableEnvironment]].
+  *                [[StreamTableEnvImpl]].
+  * @param config  The [[InternalTableConfig]] of this [[StreamTableEnvImpl]].
   */
-abstract class StreamTableEnvironment(
+abstract class StreamTableEnvImpl(
     private[flink] val execEnv: StreamExecutionEnvironment,
-    config: TableConfig)
-  extends TableEnvironment(config) {
+    config: InternalTableConfig)
+  extends TableEnvImpl(config) {
 
   // a counter for unique table names
   private val nameCntr: AtomicInteger = new AtomicInteger(0)
@@ -102,7 +103,7 @@ abstract class StreamTableEnvironment(
     "_DataStreamTable_" + nameCntr.getAndIncrement()
 
   /**
-    * Registers an internal [[StreamTableSource]] in this [[TableEnvironment]]'s catalog without
+    * Registers an internal [[StreamTableSource]] in this [[TableEnvImpl]]'s catalog without
     * name checking. Registered tables can be referenced in SQL queries.
     *
     * @param name        The name under which the [[TableSource]] is registered.
@@ -195,12 +196,12 @@ abstract class StreamTableEnvironment(
     * @param connectorDescriptor connector descriptor describing the external system
     */
   def connect(connectorDescriptor: ConnectorDescriptor): StreamTableDescriptor = {
-    new StreamTableDescriptor(this, connectorDescriptor)
+    new StreamTableDescriptor(this.asInstanceOf[TableEnvironment], connectorDescriptor)
   }
 
   /**
     * Registers an external [[TableSink]] with given field names and types in this
-    * [[TableEnvironment]]'s catalog.
+    * [[TableEnvImpl]]'s catalog.
     * Registered sink tables can be referenced in SQL DML statements.
     *
     * Example:
@@ -243,7 +244,7 @@ abstract class StreamTableEnvironment(
 
   /**
     * Registers an external [[TableSink]] with already configured field names and field types in
-    * this [[TableEnvironment]]'s catalog.
+    * this [[TableEnvImpl]]'s catalog.
     * Registered sink tables can be referenced in SQL DML statements.
     *
     * @param name The name under which the [[TableSink]] is registered.
@@ -505,7 +506,7 @@ abstract class StreamTableEnvironment(
   }
 
   /**
-    * Registers a [[DataStream]] as a table under a given name in the [[TableEnvironment]]'s
+    * Registers a [[DataStream]] as a table under a given name in the [[TableEnvImpl]]'s
     * catalog.
     *
     * @param name The name under which the table is registered in the catalog.
@@ -527,7 +528,7 @@ abstract class StreamTableEnvironment(
 
   /**
     * Registers a [[DataStream]] as a table under a given name with field names as specified by
-    * field expressions in the [[TableEnvironment]]'s catalog.
+    * field expressions in the [[TableEnvImpl]]'s catalog.
     *
     * @param name The name under which the table is registered in the catalog.
     * @param dataStream The [[DataStream]] to register as table in the catalog.

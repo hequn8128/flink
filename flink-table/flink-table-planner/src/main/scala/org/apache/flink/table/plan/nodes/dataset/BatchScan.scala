@@ -22,8 +22,8 @@ import org.apache.calcite.rex.RexNode
 import org.apache.flink.api.common.functions.MapFunction
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.DataSet
-import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.codegen.{FunctionCodeGenerator, GeneratedFunction}
+import org.apache.flink.table.plan.env.InternalTableConfig
 import org.apache.flink.table.plan.nodes.CommonScan
 import org.apache.flink.table.plan.schema.RowSchema
 import org.apache.flink.table.runtime.MapRunner
@@ -36,7 +36,7 @@ trait BatchScan extends CommonScan[Row] with DataSetRel {
       schema: RowSchema,
       input: DataSet[Any],
       fieldIdxs: Array[Int],
-      config: TableConfig,
+      config: InternalTableConfig,
       rowtimeExpression: Option[RexNode]): DataSet[Row] = {
 
     val inputType = input.getType
@@ -74,7 +74,7 @@ trait BatchScan extends CommonScan[Row] with DataSetRel {
   }
 
   private def generateConversionMapper(
-      config: TableConfig,
+      config: InternalTableConfig,
       inputType: TypeInformation[Any],
       outputType: TypeInformation[Row],
       conversionOperatorName: String,

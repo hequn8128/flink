@@ -23,6 +23,7 @@ import org.apache.flink.table.api.Types
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.calcite.RelTimeIndicatorConverter
 import org.apache.flink.table.expressions.Null
+import org.apache.flink.table.plan.env.{InternalTableConfig, TableEnvImpl}
 import org.apache.flink.table.plan.logical.TumblingGroupWindow
 import org.apache.flink.table.runtime.join.WindowJoinUtil
 import org.apache.flink.table.utils.TableTestUtil.{term, _}
@@ -991,7 +992,7 @@ class JoinTest extends TableTestBase {
     val resultTable = streamUtil.tableEnv.sqlQuery(query)
     val relNode = RelTimeIndicatorConverter.convert(
       resultTable.getRelNode,
-      streamUtil.tableEnv.getRelBuilder.getRexBuilder)
+      streamUtil.tableEnv.asInstanceOf[TableEnvImpl].getRelBuilder.getRexBuilder)
     val joinNode = relNode.getInput(0).asInstanceOf[LogicalJoin]
     val (windowBounds, _) =
       WindowJoinUtil.extractWindowBoundsFromPredicate(
@@ -999,7 +1000,7 @@ class JoinTest extends TableTestBase {
         4,
         joinNode.getRowType,
         joinNode.getCluster.getRexBuilder,
-        streamUtil.tableEnv.getConfig)
+        streamUtil.tableEnv.getConfig.asInstanceOf[InternalTableConfig])
 
     val timeTypeStr =
       if (windowBounds.get.isEventTime) "rowtime"
@@ -1016,7 +1017,7 @@ class JoinTest extends TableTestBase {
     val resultTable = streamUtil.tableEnv.sqlQuery(query)
     val relNode = RelTimeIndicatorConverter.convert(
       resultTable.getRelNode,
-      streamUtil.tableEnv.getRelBuilder.getRexBuilder)
+      streamUtil.tableEnv.asInstanceOf[TableEnvImpl].getRelBuilder.getRexBuilder)
     val joinNode = relNode.getInput(0).asInstanceOf[LogicalJoin]
     val (_, remainCondition) =
       WindowJoinUtil.extractWindowBoundsFromPredicate(
@@ -1024,7 +1025,7 @@ class JoinTest extends TableTestBase {
         4,
         joinNode.getRowType,
         joinNode.getCluster.getRexBuilder,
-        streamUtil.tableEnv.getConfig)
+        streamUtil.tableEnv.getConfig.asInstanceOf[InternalTableConfig])
 
     val actual: String = remainCondition.getOrElse("").toString
 

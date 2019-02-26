@@ -32,8 +32,9 @@ import org.apache.flink.streaming.api.operators.TwoInputStreamOperator
 import org.apache.flink.streaming.api.watermark.Watermark
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord
 import org.apache.flink.streaming.util.KeyedTwoInputStreamOperatorTestHarness
-import org.apache.flink.table.api.{TableConfig, Types, ValidationException}
+import org.apache.flink.table.api.{Types, ValidationException}
 import org.apache.flink.table.calcite.{FlinkTypeFactory, FlinkTypeSystem}
+import org.apache.flink.table.plan.env.InternalTableConfig
 import org.apache.flink.table.plan.logical.rel.LogicalTemporalTableJoin
 import org.apache.flink.table.plan.logical.rel.LogicalTemporalTableJoin.TEMPORAL_JOIN_CONDITION
 import org.apache.flink.table.plan.nodes.datastream.DataStreamTemporalJoinToCoProcessTranslator
@@ -54,7 +55,7 @@ class TemporalJoinHarnessTest extends HarnessTestBase {
 
   private val typeFactory = new FlinkTypeFactory(new FlinkTypeSystem)
 
-  private val tableConfig = new TableConfig
+  private val tableConfig = new InternalTableConfig
 
   private val queryConfig =
     new TestStreamQueryConfig(Time.milliseconds(2), Time.milliseconds(4))

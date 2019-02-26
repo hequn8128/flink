@@ -25,8 +25,9 @@ import org.apache.flink.cep.pattern.Pattern
 import org.apache.flink.streaming.api.datastream.{DataStream => JDataStream}
 import org.apache.flink.streaming.api.scala.{DataStream, StreamExecutionEnvironment}
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.calcite.FlinkPlannerImpl
+import org.apache.flink.table.plan.env.InternalTableConfig
+import org.apache.flink.table.plan.env.scala.StreamTableEnvImpl
 import org.apache.flink.table.plan.nodes.datastream.{DataStreamMatch, DataStreamScan}
 import org.apache.flink.types.Row
 import org.apache.flink.util.TestLogger
@@ -52,7 +53,7 @@ abstract class PatternTranslatorTestBase extends TestLogger{
     context._2.getTypeFactory)
 
   private def prepareContext(typeInfo: TypeInformation[Row])
-  : (RelBuilder, StreamTableEnvironment, StreamExecutionEnvironment) = {
+  : (RelBuilder, StreamTableEnvImpl, StreamExecutionEnvironment) = {
     // create DataStreamTable
     val dataStreamMock = mock(classOf[DataStream[Row]])
     val jDataStreamMock = mock(classOf[JDataStream[Row]])
@@ -60,7 +61,7 @@ abstract class PatternTranslatorTestBase extends TestLogger{
     when(jDataStreamMock.getType).thenReturn(typeInfo)
 
     val env = StreamExecutionEnvironment.getExecutionEnvironment
-    val tEnv = StreamTableEnvironment.create(env)
+    val tEnv = StreamTableEnvironment.create(env).asInstanceOf[StreamTableEnvImpl]
     tEnv.registerDataStream(tableName, dataStreamMock, 'f0, 'proctime.proctime)
 
     // prepare RelBuilder
@@ -90,7 +91,7 @@ abstract class PatternTranslatorTestBase extends TestLogger{
     }
 
     val dataMatch = optimized.asInstanceOf[DataStreamMatch]
-    val p = dataMatch.translatePattern(new TableConfig, testTableTypeInfo)._1
+    val p = dataMatch.translatePattern(new InternalTableConfig, testTableTypeInfo)._1
 
     compare(expected, p)
   }

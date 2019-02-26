@@ -33,6 +33,7 @@ import org.apache.flink.table.api.TableException;
 import org.apache.flink.table.api.java.BatchTableEnvironment;
 import org.apache.flink.table.calcite.CalciteConfig;
 import org.apache.flink.table.calcite.CalciteConfigBuilder;
+import org.apache.flink.table.plan.env.InternalTableConfig;
 import org.apache.flink.table.runtime.utils.TableProgramsCollectionTestBase;
 import org.apache.flink.table.runtime.utils.TableProgramsTestBase;
 import org.apache.flink.test.operators.util.CollectionDataSets;
@@ -549,7 +550,7 @@ public class JavaTableEnvironmentITCase extends TableProgramsCollectionTestBase 
 				.replaceLogicalOptRuleSet(RuleSets.ofList())
 				.replacePhysicalOptRuleSet(RuleSets.ofList())
 				.build();
-		tableEnv.getConfig().setCalciteConfig(cc);
+		((InternalTableConfig) tableEnv.getConfig()).setCalciteConfig(cc);
 
 		DataSet<Tuple3<Integer, Long, String>> ds = CollectionDataSets.get3TupleDataSet(env);
 		Table t = tableEnv.fromDataSet(ds);

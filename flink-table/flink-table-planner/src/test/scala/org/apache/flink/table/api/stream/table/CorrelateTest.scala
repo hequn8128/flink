@@ -23,6 +23,7 @@ import org.apache.flink.api.scala._
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.calcite.{CalciteConfig, CalciteConfigBuilder}
 import org.apache.flink.table.expressions.utils.Func13
+import org.apache.flink.table.plan.env.InternalTableConfig
 import org.apache.flink.table.plan.rules.FlinkRuleSets
 import org.apache.flink.table.utils.TableTestUtil._
 import org.apache.flink.table.utils._
@@ -283,7 +284,7 @@ class CorrelateTest extends TableTestBase {
       .replaceLogicalOptRuleSet(RuleSets.ofList(logicalRuleSet.toList))
       .build()
 
-    util.tableEnv.getConfig.setCalciteConfig(cc)
+    util.tableEnv.getConfig.asInstanceOf[InternalTableConfig].setCalciteConfig(cc)
 
     val sourceTable = util.addTable[(Int, Long, String)]("MyTable", 'a, 'b, 'c)
     val function = util.addFunction("func1", new TableFunc0)

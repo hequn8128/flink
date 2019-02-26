@@ -20,12 +20,13 @@ package org.apache.flink.table.utils
 
 import org.apache.calcite.tools.RuleSet
 import org.apache.flink.api.common.typeinfo.TypeInformation
-import org.apache.flink.table.api.{QueryConfig, Table, TableConfig, TableEnvironment}
+import org.apache.flink.table.api.{QueryConfig, Table}
 import org.apache.flink.table.descriptors.{ConnectorDescriptor, TableDescriptor}
+import org.apache.flink.table.plan.env.{InternalTableConfig, TableEnvImpl}
 import org.apache.flink.table.sinks.TableSink
 import org.apache.flink.table.sources.TableSource
 
-class MockTableEnvironment extends TableEnvironment(new TableConfig) {
+class MockTableEnvironment extends TableEnvImpl(new InternalTableConfig) {
 
   override private[flink] def writeToSink[T](
       table: Table,

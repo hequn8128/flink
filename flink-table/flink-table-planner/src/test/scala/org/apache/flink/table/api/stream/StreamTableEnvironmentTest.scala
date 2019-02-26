@@ -28,7 +28,8 @@ import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.{StreamExecutionEnvironment => JStreamExecEnv}
 import org.apache.flink.table.api.java.{StreamTableEnvironment => JStreamTableEnv}
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.Types
+import org.apache.flink.table.api.{TableConfig, Types}
+import org.apache.flink.table.plan.env.{InternalTableConfig, java}
 import org.apache.flink.table.utils.TableTestUtil.{binaryNode, streamTableNode, term, unaryNode}
 import org.apache.flink.table.utils.TableTestBase
 import org.junit.Test
@@ -175,14 +176,14 @@ class StreamTableEnvironmentTest extends TableTestBase {
 
     val jStreamExecEnv = mock(classOf[JStreamExecEnv])
     when(jStreamExecEnv.getStreamTimeCharacteristic).thenReturn(TimeCharacteristic.EventTime)
-    val jTEnv = JStreamTableEnv.create(jStreamExecEnv)
+    val jTEnv = new java.StreamTableEnvImpl(jStreamExecEnv, TableConfig.DEFAULT)
 
     val sType = new TupleTypeInfo(Types.LONG, Types.INT, Types.STRING, Types.INT, Types.LONG)
       .asInstanceOf[TupleTypeInfo[JTuple5[JLong, JInt, String, JInt, JLong]]]
     val ds = mock(classOf[DataStream[JTuple5[JLong, JInt, String, JInt, JLong]]])
     when(ds.getType).thenReturn(sType)
 
-    (jTEnv, ds)
+    (jTEnv.asInstanceOf[JStreamTableEnv], ds)
   }
 
 }

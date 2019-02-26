@@ -19,9 +19,9 @@ package org.apache.flink.table.codegen
 
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.configuration.Configuration
-import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.codegen.CodeGenUtils.{boxedTypeTermForTypeInfo, newName}
 import org.apache.flink.table.codegen.Indenter.toISC
+import org.apache.flink.table.plan.env.InternalTableConfig
 import org.apache.flink.table.runtime.TableFunctionCollector
 
 
@@ -38,7 +38,7 @@ import org.apache.flink.table.runtime.TableFunctionCollector
   *   (e.g. POJO types have no deterministic field order and some input fields might not be read)
   */
 class CollectorCodeGenerator(
-    config: TableConfig,
+    config: InternalTableConfig,
     nullableInput: Boolean,
     input1: TypeInformation[_ <: Any],
     input2: Option[TypeInformation[_ <: Any]] = None,

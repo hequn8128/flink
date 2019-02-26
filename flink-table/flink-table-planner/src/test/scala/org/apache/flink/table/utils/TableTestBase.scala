@@ -24,15 +24,16 @@ import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.{LocalEnvironment, DataSet => JDataSet}
 import org.apache.flink.api.scala.{DataSet, ExecutionEnvironment}
 import org.apache.flink.streaming.api.TimeCharacteristic
-import org.apache.flink.streaming.api.environment.{LocalStreamEnvironment}
+import org.apache.flink.streaming.api.environment.LocalStreamEnvironment
 import org.apache.flink.streaming.api.functions.source.SourceFunction
 import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
-import org.apache.flink.table.api.java.{BatchTableEnvironment => JavaBatchTableEnv, StreamTableEnvironment => JavaStreamTableEnv}
 import org.apache.flink.table.api.scala.{BatchTableEnvironment => ScalaBatchTableEnv, StreamTableEnvironment => ScalaStreamTableEnv}
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.{Table, TableSchema}
+import org.apache.flink.table.api.{Table, TableConfig, TableSchema}
 import org.apache.flink.table.expressions.Expression
 import org.apache.flink.table.functions.{AggregateFunction, ScalarFunction, TableFunction}
+import org.apache.flink.table.plan.env.{java}
+import org.apache.flink.table.plan.env.scala.{BatchTableEnvImpl, StreamTableEnvImpl}
 import org.junit.Assert.assertEquals
 import org.junit.{ComparisonFailure, Rule}
 import org.junit.rules.ExpectedException
@@ -188,7 +189,7 @@ object TableTestUtil {
 
 case class BatchTableTestUtil() extends TableTestUtil {
   val javaEnv = new LocalEnvironment()
-  val javaTableEnv = JavaBatchTableEnv.create(javaEnv)
+  val javaTableEnv = new java.BatchTableEnvImpl(javaEnv, TableConfig.DEFAULT)
   val env = new ExecutionEnvironment(javaEnv)
   val tableEnv = ScalaBatchTableEnv.create(env)
 
@@ -241,7 +242,7 @@ case class BatchTableTestUtil() extends TableTestUtil {
 
   def verifyTable(resultTable: Table, expected: String): Unit = {
     val relNode = resultTable.getRelNode
-    val optimized = tableEnv.optimize(relNode)
+    val optimized = tableEnv.asInstanceOf[BatchTableEnvImpl].optimize(relNode)
     verifyString(expected, optimized)
   }
 
@@ -251,13 +252,13 @@ case class BatchTableTestUtil() extends TableTestUtil {
 
   def verifyJavaTable(resultTable: Table, expected: String): Unit = {
     val relNode = resultTable.getRelNode
-    val optimized = javaTableEnv.optimize(relNode)
+    val optimized = javaTableEnv.asInstanceOf[java.BatchTableEnvImpl].optimize(relNode)
     verifyString(expected, optimized)
   }
 
   def printTable(resultTable: Table): Unit = {
     val relNode = resultTable.getRelNode
-    val optimized = tableEnv.optimize(relNode)
+    val optimized = tableEnv.asInstanceOf[BatchTableEnvImpl].optimize(relNode)
     println(RelOptUtil.toString(optimized))
   }
 
@@ -274,7 +275,7 @@ case class StreamTableTestUtil() extends TableTestUtil {
   val javaEnv = new LocalStreamEnvironment()
   javaEnv.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
 
-  val javaTableEnv = JavaStreamTableEnv.create(javaEnv)
+  val javaTableEnv = new java.StreamTableEnvImpl(javaEnv, TableConfig.DEFAULT)
   val env = new StreamExecutionEnvironment(javaEnv)
   val tableEnv = ScalaStreamTableEnv.create(env)
 
@@ -283,7 +284,8 @@ case class StreamTableTestUtil() extends TableTestUtil {
       fields: Expression*)
     : Table = {
 
-    val table = env.fromElements().toTable(tableEnv, fields: _*)
+    val table = env.fromElements()
+      .toTable(tableEnv.asInstanceOf[StreamTableEnvironment], fields: _*)
     tableEnv.registerTable(name, table)
     table
   }
@@ -324,15 +326,21 @@ case class StreamTableTestUtil() extends TableTestUtil {
 
   def verifyTable(resultTable: Table, expected: String): Unit = {
     val relNode = resultTable.getRelNode
-    val optimized = tableEnv.optimize(relNode, updatesAsRetraction = false)
+    val optimized = tableEnv
+      .asInstanceOf[StreamTableEnvImpl]
+      .optimize(relNode, updatesAsRetraction = false)
     verifyString(expected, optimized)
   }
 
   def verify2Tables(resultTable1: Table, resultTable2: Table): Unit = {
     val relNode1 = resultTable1.getRelNode
-    val optimized1 = tableEnv.optimize(relNode1, updatesAsRetraction = false)
+    val optimized1 = tableEnv
+      .asInstanceOf[StreamTableEnvImpl]
+      .optimize(relNode1, updatesAsRetraction = false)
     val relNode2 = resultTable2.getRelNode
-    val optimized2 = tableEnv.optimize(relNode2, updatesAsRetraction = false)
+    val optimized2 = tableEnv
+      .asInstanceOf[StreamTableEnvImpl]
+      .optimize(relNode2, updatesAsRetraction = false)
     assertEquals(RelOptUtil.toString(optimized1), RelOptUtil.toString(optimized2))
   }
 
@@ -342,14 +350,18 @@ case class StreamTableTestUtil() extends TableTestUtil {
 
   def verifyJavaTable(resultTable: Table, expected: String): Unit = {
     val relNode = resultTable.getRelNode
-    val optimized = javaTableEnv.optimize(relNode, updatesAsRetraction = false)
+    val optimized = javaTableEnv
+      .asInstanceOf[java.StreamTableEnvImpl]
+      .optimize(relNode, updatesAsRetraction = false)
     verifyString(expected, optimized)
   }
 
   // the print methods are for debugging purposes only
   def printTable(resultTable: Table): Unit = {
     val relNode = resultTable.getRelNode
-    val optimized = tableEnv.optimize(relNode, updatesAsRetraction = false)
+    val optimized = tableEnv
+      .asInstanceOf[StreamTableEnvImpl]
+      .optimize(relNode, updatesAsRetraction = false)
     println(RelOptUtil.toString(optimized))
   }
 

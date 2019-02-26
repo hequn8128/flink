@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.api
+package org.apache.flink.table.plan.env
 
 import _root_.java.lang.reflect.Modifier
 import _root_.java.util.concurrent.atomic.AtomicInteger
@@ -39,13 +39,8 @@ import org.apache.flink.api.common.functions.MapFunction
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.common.typeutils.CompositeType
 import org.apache.flink.api.java.typeutils.{RowTypeInfo, _}
-import org.apache.flink.api.java.{ExecutionEnvironment => JavaBatchExecEnv}
 import org.apache.flink.api.scala.typeutils.CaseClassTypeInfo
-import org.apache.flink.api.scala.{ExecutionEnvironment => ScalaBatchExecEnv}
-import org.apache.flink.streaming.api.environment.{StreamExecutionEnvironment => JavaStreamExecEnv}
-import org.apache.flink.streaming.api.scala.{StreamExecutionEnvironment => ScalaStreamExecEnv}
-import org.apache.flink.table.api.java.{BatchTableEnvironment => JavaBatchTableEnv, StreamTableEnvironment => JavaStreamTableEnv}
-import org.apache.flink.table.api.scala.{BatchTableEnvironment => ScalaBatchTableEnv, StreamTableEnvironment => ScalaStreamTableEnv}
+import org.apache.flink.table.api.{ValidationException => _, _}
 import org.apache.flink.table.calcite.{FlinkPlannerImpl, FlinkRelBuilder, FlinkTypeFactory, FlinkTypeSystem}
 import org.apache.flink.table.catalog.{ExternalCatalog, ExternalCatalogSchema}
 import org.apache.flink.table.codegen.{ExpressionReducer, FunctionCodeGenerator, GeneratedFunction}
@@ -73,7 +68,7 @@ import _root_.scala.collection.mutable
   *
   * @param config The configuration of the TableEnvironment
   */
-abstract class TableEnvironment(val config: TableConfig) {
+abstract class TableEnvImpl(val config: InternalTableConfig) {
 
   // the catalog to hold all registered and translated tables
   // we disable caching here to prevent side effects
@@ -111,12 +106,12 @@ abstract class TableEnvironment(val config: TableConfig) {
   private val externalCatalogs = new mutable.HashMap[String, ExternalCatalog]
 
   /** Returns the table config to define the runtime behavior of the Table API. */
-  def getConfig: TableConfig = config
+  def getConfig: InternalTableConfig = config
 
   /** Returns the [[QueryConfig]] depends on the concrete type of this TableEnvironment. */
   private[flink] def queryConfig: QueryConfig = this match {
-    case _: BatchTableEnvironment => new BatchQueryConfig
-    case _: StreamTableEnvironment => new StreamQueryConfig
+    case _: BatchTableEnvImpl => new BatchQueryConfig
+    case _: StreamTableEnvImpl => new StreamQueryConfig
     case _ => null
   }
 
@@ -416,7 +411,8 @@ abstract class TableEnvironment(val config: TableConfig) {
     }
     this.externalCatalogs.put(name, externalCatalog)
     // create an external catalog Calcite schema, register it on the root schema
-    ExternalCatalogSchema.registerCatalog(this, rootSchema, name, externalCatalog)
+    ExternalCatalogSchema
+      .registerCatalog(this.asInstanceOf[TableEnvironment], rootSchema, name, externalCatalog)
   }
 
   /**
@@ -530,7 +526,7 @@ abstract class TableEnvironment(val config: TableConfig) {
   }
 
   /**
-    * Registers an external [[TableSource]] in this [[TableEnvironment]]'s catalog.
+    * Registers an external [[TableSource]] in this [[TableEnvImpl]]'s catalog.
     * Registered tables can be referenced in SQL queries.
     *
     * @param name        The name under which the [[TableSource]] is registered.
@@ -542,7 +538,7 @@ abstract class TableEnvironment(val config: TableConfig) {
   }
 
   /**
-    * Registers an internal [[TableSource]] in this [[TableEnvironment]]'s catalog without
+    * Registers an internal [[TableSource]] in this [[TableEnvImpl]]'s catalog without
     * name checking. Registered tables can be referenced in SQL queries.
     *
     * @param name        The name under which the [[TableSource]] is registered.
@@ -552,7 +548,7 @@ abstract class TableEnvironment(val config: TableConfig) {
 
   /**
     * Registers an external [[TableSink]] with given field names and types in this
-    * [[TableEnvironment]]'s catalog.
+    * [[TableEnvImpl]]'s catalog.
     * Registered sink tables can be referenced in SQL DML statements.
     *
     * @param name The name under which the [[TableSink]] is registered.
@@ -568,7 +564,7 @@ abstract class TableEnvironment(val config: TableConfig) {
 
   /**
     * Registers an external [[TableSink]] with already configured field names and field types in
-    * this [[TableEnvironment]]'s catalog.
+    * this [[TableEnvImpl]]'s catalog.
     * Registered sink tables can be referenced in SQL DML statements.
     *
     * @param name The name under which the [[TableSink]] is registered.
@@ -723,7 +719,7 @@ abstract class TableEnvironment(val config: TableConfig) {
   /**
     * Evaluates a SQL query on registered tables and retrieves the result as a [[Table]].
     *
-    * All tables referenced by the query must be registered in the TableEnvironment.
+    * All tables referenced byå the query must be registered in the TableEnvironment.
     * A [[Table]] is automatically registered when its [[toString]] method is called, for example
     * when it is embedded into a String.
     * Hence, SQL queries can directly reference a [[Table]] as follows:
@@ -1032,7 +1028,7 @@ abstract class TableEnvironment(val config: TableConfig) {
         "An input of GenericTypeInfo<Row> cannot be converted to Table. " +
           "Please specify the type of the input with a RowTypeInfo.")
     } else {
-      (TableEnvironment.getFieldNames(inputType), TableEnvironment.getFieldIndices(inputType))
+      (TableEnvImpl.getFieldNames(inputType), TableEnvImpl.getFieldIndices(inputType))
     }
   }
 
@@ -1050,7 +1046,7 @@ abstract class TableEnvironment(val config: TableConfig) {
       exprs: Array[Expression])
     : (Array[String], Array[Int]) = {
 
-    TableEnvironment.validateType(inputType)
+    TableEnvImpl.validateType(inputType)
 
     def referenceByName(name: String, ct: CompositeType[_]): Option[Int] = {
       val inputIdx = ct.getFieldIndex(name)
@@ -1248,123 +1244,10 @@ abstract class TableEnvironment(val config: TableConfig) {
 }
 
 /**
-  * Object to instantiate a [[TableEnvironment]] depending on the batch or stream execution
+  * Object to instantiate a [[TableEnvImpl]] depending on the batch or stream execution
   * environment.
   */
-object TableEnvironment {
-
-  /**
-    * Returns a [[JavaBatchTableEnv]] for a Java [[JavaBatchExecEnv]].
-    *
-    * @param executionEnvironment The Java batch ExecutionEnvironment.
-    *
-    * @deprecated This method will be removed. Use BatchTableEnvironment.create() for Java instead.
-    */
-  @Deprecated
-  def getTableEnvironment(executionEnvironment: JavaBatchExecEnv): JavaBatchTableEnv = {
-    new JavaBatchTableEnv(executionEnvironment, new TableConfig())
-  }
-
-  /**
-    * Returns a [[JavaBatchTableEnv]] for a Java [[JavaBatchExecEnv]] and a given [[TableConfig]].
-    *
-    * @param executionEnvironment The Java batch ExecutionEnvironment.
-    * @param tableConfig The TableConfig for the new TableEnvironment.
-    *
-    * @deprecated This method will be removed. Use BatchTableEnvironment.create() for Java instead.
-    */
-  @Deprecated
-  def getTableEnvironment(
-    executionEnvironment: JavaBatchExecEnv,
-    tableConfig: TableConfig): JavaBatchTableEnv = {
-
-    new JavaBatchTableEnv(executionEnvironment, tableConfig)
-  }
-
-  /**
-    * Returns a [[ScalaBatchTableEnv]] for a Scala [[ScalaBatchExecEnv]].
-    *
-    * @param executionEnvironment The Scala batch ExecutionEnvironment.
-    */
-  @deprecated(
-    "This method will be removed. Use BatchTableEnvironment.create() for Scala instead.",
-    "1.8.0")
-  def getTableEnvironment(executionEnvironment: ScalaBatchExecEnv): ScalaBatchTableEnv = {
-    new ScalaBatchTableEnv(executionEnvironment, new TableConfig())
-  }
-
-  /**
-    * Returns a [[ScalaBatchTableEnv]] for a Scala [[ScalaBatchExecEnv]] and a given
-    * [[TableConfig]].
-    *
-    * @param executionEnvironment The Scala batch ExecutionEnvironment.
-    * @param tableConfig The TableConfig for the new TableEnvironment.
-    */
-  @deprecated(
-    "This method will be removed. Use BatchTableEnvironment.create() for Scala instead.",
-    "1.8.0")
-  def getTableEnvironment(
-    executionEnvironment: ScalaBatchExecEnv,
-    tableConfig: TableConfig): ScalaBatchTableEnv = {
-
-    new ScalaBatchTableEnv(executionEnvironment, tableConfig)
-  }
-
-  /**
-    * Returns a [[JavaStreamTableEnv]] for a Java [[JavaStreamExecEnv]].
-    *
-    * @param executionEnvironment The Java StreamExecutionEnvironment.
-    *
-    * @deprecated This method will be removed. Use StreamTableEnvironment.create() for Java instead.
-    */
-  @Deprecated
-  def getTableEnvironment(executionEnvironment: JavaStreamExecEnv): JavaStreamTableEnv = {
-    new JavaStreamTableEnv(executionEnvironment, new TableConfig())
-  }
-
-  /**
-    * Returns a [[JavaStreamTableEnv]] for a Java [[JavaStreamExecEnv]] and a given [[TableConfig]].
-    *
-    * @param executionEnvironment The Java StreamExecutionEnvironment.
-    * @param tableConfig The TableConfig for the new TableEnvironment.
-    *
-    * @deprecated This method will be removed. Use StreamTableEnvironment.create() for Java instead.
-    */
-  @Deprecated
-  def getTableEnvironment(
-    executionEnvironment: JavaStreamExecEnv,
-    tableConfig: TableConfig): JavaStreamTableEnv = {
-
-    new JavaStreamTableEnv(executionEnvironment, tableConfig)
-  }
-
-  /**
-    * Returns a [[ScalaStreamTableEnv]] for a Scala stream [[ScalaStreamExecEnv]].
-    *
-    * @param executionEnvironment The Scala StreamExecutionEnvironment.
-    */
-  @deprecated(
-    "This method will be removed. Use StreamTableEnvironment.create() for Scala instead.",
-    "1.8.0")
-  def getTableEnvironment(executionEnvironment: ScalaStreamExecEnv): ScalaStreamTableEnv = {
-    new ScalaStreamTableEnv(executionEnvironment, new TableConfig())
-  }
-
-  /**
-    * Returns a [[ScalaStreamTableEnv]] for a Scala stream [[ScalaStreamExecEnv]].
-    *
-    * @param executionEnvironment The Scala StreamExecutionEnvironment.
-    * @param tableConfig The TableConfig for the new TableEnvironment.
-    */
-  @deprecated(
-    "This method will be removed. Use StreamTableEnvironment.create() for Scala instead.",
-    "1.8.0")
-  def getTableEnvironment(
-    executionEnvironment: ScalaStreamExecEnv,
-    tableConfig: TableConfig): ScalaStreamTableEnv = {
-
-    new ScalaStreamTableEnv(executionEnvironment, tableConfig)
-  }
+object TableEnvImpl {
 
   /**
     * Returns field names for a given [[TypeInformation]].

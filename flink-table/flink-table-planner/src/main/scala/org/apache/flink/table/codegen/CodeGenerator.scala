@@ -32,7 +32,7 @@ import org.apache.flink.api.common.typeutils.CompositeType
 import org.apache.flink.api.java.typeutils._
 import org.apache.flink.api.scala.typeutils.CaseClassTypeInfo
 import org.apache.flink.streaming.api.functions.ProcessFunction
-import org.apache.flink.table.api.{TableConfig, TableException}
+import org.apache.flink.table.api.TableException
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.CodeGenUtils._
 import org.apache.flink.table.codegen.GeneratedExpression.{ALWAYS_NULL, NEVER_NULL, NO_CODE}
@@ -40,6 +40,7 @@ import org.apache.flink.table.codegen.calls.ScalarOperators._
 import org.apache.flink.table.codegen.calls.{CurrentTimePointCallGen, FunctionGenerator}
 import org.apache.flink.table.functions.sql.{ProctimeSqlFunction, ScalarSqlFunctions, StreamRecordTimestampSqlFunction}
 import org.apache.flink.table.functions.{FunctionContext, UserDefinedFunction}
+import org.apache.flink.table.plan.env.InternalTableConfig
 import org.apache.flink.table.typeutils.TimeIndicatorTypeInfo
 import org.apache.flink.table.typeutils.TypeCheckUtils._
 import org.apache.flink.table.utils.EncodingUtils
@@ -64,7 +65,7 @@ import scala.collection.mutable
   *   POJO types have no deterministic field order and some input fields might not be read.
   */
 abstract class CodeGenerator(
-    config: TableConfig,
+    config: InternalTableConfig,
     nullableInput: Boolean,
     input1: TypeInformation[_ <: Any],
     input2: Option[TypeInformation[_ <: Any]] = None,

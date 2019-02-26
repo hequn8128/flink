@@ -21,9 +21,9 @@ import org.apache.flink.api.common.functions._
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.streaming.api.functions.ProcessFunction
-import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.codegen.CodeGenUtils.{boxedTypeTermForTypeInfo, newName}
 import org.apache.flink.table.codegen.Indenter.toISC
+import org.apache.flink.table.plan.env.InternalTableConfig
 import org.apache.flink.util.Collector
 
 /**
@@ -40,7 +40,7 @@ import org.apache.flink.util.Collector
   *   (e.g. POJO types have no deterministic field order and some input fields might not be read)
   */
 class FunctionCodeGenerator(
-    config: TableConfig,
+    config: InternalTableConfig,
     nullableInput: Boolean,
     input1: TypeInformation[_ <: Any],
     input2: Option[TypeInformation[_ <: Any]] = None,
@@ -65,7 +65,7 @@ class FunctionCodeGenerator(
     *   (e.g. POJO types have no deterministic field order and some input fields might not be read)
     */
   def this(
-    config: TableConfig,
+    config: InternalTableConfig,
     nullableInput: Boolean,
     input: TypeInformation[Any],
     inputFieldMapping: Array[Int]) =

@@ -16,23 +16,29 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.plan.nodes.dataset
+package org.apache.flink.table.api;
 
-import org.apache.flink.api.java.DataSet
-import org.apache.flink.table.api.BatchQueryConfig
-import org.apache.flink.table.plan.env.BatchTableEnvImpl
-import org.apache.flink.table.plan.nodes.FlinkRelNode
-import org.apache.flink.types.Row
+import java.math.MathContext;
+import java.util.TimeZone;
 
-trait DataSetRel extends FlinkRelNode {
+/**
+ * Doc.
+ */
+public interface TableConfigInterface {
 
-  /**
-    * Translates the [[DataSetRel]] node into a [[DataSet]] operator.
-    *
-    * @param tableEnv    The [[BatchTableEnvImpl]] of the translated Table.
-    * @param queryConfig The configuration for the query to generate.
-    * @return DataSet of type [[Row]]
-    */
-  def translateToPlan(tableEnv: BatchTableEnvImpl, queryConfig: BatchQueryConfig): DataSet[Row]
+	void setTimeZone(TimeZone timeZone);
 
+	TimeZone getTimeZone();
+
+	Boolean getNullCheck();
+
+	void setNullCheck(Boolean nullCheck);
+
+	MathContext getDecimalContext();
+
+	void setDecimalContext(MathContext mathContext);
+
+	Integer getMaxGeneratedCodeLength();
+
+	void setMaxGeneratedCodeLength(Integer maxGeneratedCodeLength);
 }

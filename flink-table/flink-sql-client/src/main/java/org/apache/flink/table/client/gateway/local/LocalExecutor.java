@@ -35,6 +35,7 @@ import org.apache.flink.core.fs.Path;
 import org.apache.flink.runtime.jobgraph.JobGraph;
 import org.apache.flink.table.api.QueryConfig;
 import org.apache.flink.table.api.Table;
+import org.apache.flink.table.plan.env.TableEnvImpl;
 import org.apache.flink.table.api.TableEnvironment;
 import org.apache.flink.table.api.TableSchema;
 import org.apache.flink.table.calcite.FlinkTypeFactory;
@@ -245,7 +246,7 @@ public class LocalExecutor implements Executor {
 				.getTableEnvironment();
 
 		try {
-			return Arrays.asList(tableEnv.getCompletionHints(statement, position));
+			return Arrays.asList(((TableEnvImpl) tableEnv).getCompletionHints(statement, position));
 		} catch (Throwable t) {
 			// catch everything such that the query does not crash the executor
 			if (LOG.isDebugEnabled()) {

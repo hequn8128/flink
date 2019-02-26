@@ -23,6 +23,7 @@ import org.apache.calcite.tools.RuleSets
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.calcite.{CalciteConfig, CalciteConfigBuilder}
+import org.apache.flink.table.plan.env.InternalTableConfig
 import org.apache.flink.table.utils.TableTestBase
 import org.apache.flink.table.utils.TableTestUtil._
 import org.junit.Test
@@ -39,7 +40,7 @@ class NormalizationRulesTest extends TableTestBase {
         .replaceLogicalOptRuleSet(RuleSets.ofList())
         .replacePhysicalOptRuleSet(RuleSets.ofList())
         .build()
-    util.tableEnv.getConfig.setCalciteConfig(cc)
+    util.tableEnv.getConfig.asInstanceOf[InternalTableConfig].setCalciteConfig(cc)
 
     util.addTable[(Int, Long, String)]("MyTable", 'a, 'b, 'c)
 
@@ -73,7 +74,7 @@ class NormalizationRulesTest extends TableTestBase {
         .replaceLogicalOptRuleSet(RuleSets.ofList())
         .replacePhysicalOptRuleSet(RuleSets.ofList())
         .build()
-    util.tableEnv.getConfig.setCalciteConfig(cc)
+    util.tableEnv.getConfig.asInstanceOf[InternalTableConfig].setCalciteConfig(cc)
 
     util.addTable[(Int, Long, String)]("MyTable", 'a, 'b, 'c)
 

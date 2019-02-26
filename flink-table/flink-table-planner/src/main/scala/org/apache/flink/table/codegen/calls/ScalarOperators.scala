@@ -25,10 +25,10 @@ import org.apache.calcite.util.BuiltInMethod
 import org.apache.flink.api.common.typeinfo.BasicTypeInfo._
 import org.apache.flink.api.common.typeinfo._
 import org.apache.flink.api.java.typeutils.{MapTypeInfo, ObjectArrayTypeInfo, RowTypeInfo}
-import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.codegen.CodeGenUtils._
 import org.apache.flink.table.codegen.calls.CallGenerator.generateCallIfArgsNotNull
 import org.apache.flink.table.codegen.{CodeGenException, CodeGenerator, GeneratedExpression}
+import org.apache.flink.table.plan.env.InternalTableConfig
 import org.apache.flink.table.typeutils.TypeCheckUtils._
 import org.apache.flink.table.typeutils.{TimeIndicatorTypeInfo, TimeIntervalTypeInfo, TypeCoercion}
 
@@ -50,7 +50,7 @@ object ScalarOperators {
       resultType: TypeInformation[_],
       left: GeneratedExpression,
       right: GeneratedExpression,
-      config: TableConfig): GeneratedExpression = {
+      config: InternalTableConfig): GeneratedExpression = {
 
     val leftCasting = operator match {
       case "%" =>
@@ -866,7 +866,7 @@ object ScalarOperators {
       resultType: TypeInformation[_],
       left: GeneratedExpression,
       right: GeneratedExpression,
-      config: TableConfig)
+      config: InternalTableConfig)
     : GeneratedExpression = {
 
     val op = if (plus) "+" else "-"

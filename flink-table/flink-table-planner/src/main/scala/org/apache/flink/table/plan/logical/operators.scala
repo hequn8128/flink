@@ -29,13 +29,14 @@ import org.apache.calcite.tools.RelBuilder
 import org.apache.flink.api.common.typeinfo.BasicTypeInfo._
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.operators.join.JoinType
-import org.apache.flink.table.api.{StreamTableEnvironment, TableEnvironment, Types, UnresolvedException}
+import org.apache.flink.table.api.{Types, UnresolvedException}
 import org.apache.flink.table.calcite.{FlinkRelBuilder, FlinkTypeFactory}
 import org.apache.flink.table.expressions.ExpressionUtils.isRowCountLiteral
 import org.apache.flink.table.expressions._
 import org.apache.flink.table.functions.TableFunction
 import org.apache.flink.table.functions.utils.TableSqlFunction
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils._
+import org.apache.flink.table.plan.env.{StreamTableEnvImpl, TableEnvImpl}
 import org.apache.flink.table.plan.schema.FlinkTableFunctionImpl
 import org.apache.flink.table.validate.{ValidationFailure, ValidationSuccess}
 
@@ -50,7 +51,7 @@ case class Project(
 
   override def output: Seq[Attribute] = projectList.map(_.toAttribute)
 
-  override def resolveExpressions(tableEnv: TableEnvironment): LogicalNode = {
+  override def resolveExpressions(tableEnv: TableEnvImpl): LogicalNode = {
     val afterResolve = super.resolveExpressions(tableEnv).asInstanceOf[Project]
     val newProjectList =
       afterResolve.projectList.zipWithIndex.map { case (e, i) =>
@@ -69,7 +70,7 @@ case class Project(
     Project(newProjectList, child, explicitAlias)
   }
 
-  override def validate(tableEnv: TableEnvironment): LogicalNode = {
+  override def validate(tableEnv: TableEnvImpl): LogicalNode = {
     val resolvedProject = super.validate(tableEnv).asInstanceOf[Project]
     val names: mutable.Set[String] = mutable.Set()
 
@@ -120,7 +121,7 @@ case class AliasNode(aliasList: Seq[Expression], child: LogicalNode) extends Una
   override protected[logical] def construct(relBuilder: RelBuilder): RelBuilder =
     throw UnresolvedException("Invalid call to toRelNode on AliasNode")
 
-  override def resolveExpressions(tableEnv: TableEnvironment): LogicalNode = {
+  override def resolveExpressions(tableEnv: TableEnvImpl): LogicalNode = {
     if (aliasList.length > child.output.length) {
       failValidation("Aliasing more fields than we actually have")
     } else if (!aliasList.forall(_.isInstanceOf[UnresolvedFieldReference])) {
@@ -156,8 +157,8 @@ case class Sort(order: Seq[Ordering], child: LogicalNode) extends UnaryNode {
     relBuilder.sort(order.map(_.toRexNode(relBuilder)).asJava)
   }
 
-  override def validate(tableEnv: TableEnvironment): LogicalNode = {
-    if (tableEnv.isInstanceOf[StreamTableEnvironment]) {
+  override def validate(tableEnv: TableEnvImpl): LogicalNode = {
+    if (tableEnv.isInstanceOf[StreamTableEnvImpl]) {
       failValidation(s"Sort on stream tables is currently not supported.")
     }
     super.validate(tableEnv)
@@ -172,8 +173,8 @@ case class Limit(offset: Int, fetch: Int = -1, child: LogicalNode) extends Unary
     relBuilder.limit(offset, fetch)
   }
 
-  override def validate(tableEnv: TableEnvironment): LogicalNode = {
-    if (tableEnv.isInstanceOf[StreamTableEnvironment]) {
+  override def validate(tableEnv: TableEnvImpl): LogicalNode = {
+    if (tableEnv.isInstanceOf[StreamTableEnvImpl]) {
       failValidation(s"Limit on stream tables is currently not supported.")
     }
     if (!child.isInstanceOf[Sort]) {
@@ -194,7 +195,7 @@ case class Filter(condition: Expression, child: LogicalNode) extends UnaryNode {
     relBuilder.filter(condition.toRexNode(relBuilder))
   }
 
-  override def validate(tableEnv: TableEnvironment): LogicalNode = {
+  override def validate(tableEnv: TableEnvImpl): LogicalNode = {
     val resolvedFilter = super.validate(tableEnv).asInstanceOf[Filter]
     if (resolvedFilter.condition.resultType != BOOLEAN_TYPE_INFO) {
       failValidation(s"Filter operator requires a boolean expression as input," +
@@ -226,7 +227,7 @@ case class Aggregate(
       }.asJava)
   }
 
-  override def validate(tableEnv: TableEnvironment): LogicalNode = {
+  override def validate(tableEnv: TableEnvImpl): LogicalNode = {
     implicit val relBuilder: RelBuilder = tableEnv.getRelBuilder
     val resolvedAggregate = super.validate(tableEnv).asInstanceOf[Aggregate]
     val groupingExprs = resolvedAggregate.groupingExpressions
@@ -286,8 +287,8 @@ case class Minus(left: LogicalNode, right: LogicalNode, all: Boolean) extends Bi
     relBuilder.minus(all)
   }
 
-  override def validate(tableEnv: TableEnvironment): LogicalNode = {
-    if (tableEnv.isInstanceOf[StreamTableEnvironment]) {
+  override def validate(tableEnv: TableEnvImpl): LogicalNode = {
+    if (tableEnv.isInstanceOf[StreamTableEnvImpl]) {
       failValidation(s"Minus on stream tables is currently not supported.")
     }
 
@@ -317,8 +318,8 @@ case class Union(left: LogicalNode, right: LogicalNode, all: Boolean) extends Bi
     relBuilder.union(all)
   }
 
-  override def validate(tableEnv: TableEnvironment): LogicalNode = {
-    if (tableEnv.isInstanceOf[StreamTableEnvironment] && !all) {
+  override def validate(tableEnv: TableEnvImpl): LogicalNode = {
+    if (tableEnv.isInstanceOf[StreamTableEnvImpl] && !all) {
       failValidation(s"Union on stream tables is currently not supported.")
     }
 
@@ -348,8 +349,8 @@ case class Intersect(left: LogicalNode, right: LogicalNode, all: Boolean) extend
     relBuilder.intersect(all)
   }
 
-  override def validate(tableEnv: TableEnvironment): LogicalNode = {
-    if (tableEnv.isInstanceOf[StreamTableEnvironment]) {
+  override def validate(tableEnv: TableEnvImpl): LogicalNode = {
+    if (tableEnv.isInstanceOf[StreamTableEnvImpl]) {
       failValidation(s"Intersect on stream tables is currently not supported.")
     }
 
@@ -416,7 +417,7 @@ case class Join(
     }
   }
 
-  override def resolveExpressions(tableEnv: TableEnvironment): LogicalNode = {
+  override def resolveExpressions(tableEnv: TableEnvImpl): LogicalNode = {
     val node = super.resolveExpressions(tableEnv).asInstanceOf[Join]
     val partialFunction: PartialFunction[Expression, Expression] = {
       case field: ResolvedFieldReference => JoinFieldReference(
@@ -454,7 +455,7 @@ case class Join(
   private def ambiguousName: Set[String] =
     left.output.map(_.name).toSet.intersect(right.output.map(_.name).toSet)
 
-  override def validate(tableEnv: TableEnvironment): LogicalNode = {
+  override def validate(tableEnv: TableEnvImpl): LogicalNode = {
     val resolvedJoin = super.validate(tableEnv).asInstanceOf[Join]
     if (!resolvedJoin.condition.forall(_.resultType == BOOLEAN_TYPE_INFO)) {
       failValidation(s"Filter operator requires a boolean expression as input, " +
@@ -532,7 +533,7 @@ case class CatalogNode(
     relBuilder.scan(tablePath.asJava)
   }
 
-  override def validate(tableEnv: TableEnvironment): LogicalNode = this
+  override def validate(tableEnv: TableEnvImpl): LogicalNode = this
 }
 
 /**
@@ -549,7 +550,7 @@ case class LogicalRelNode(
     relBuilder.push(relNode)
   }
 
-  override def validate(tableEnv: TableEnvironment): LogicalNode = this
+  override def validate(tableEnv: TableEnvImpl): LogicalNode = this
 }
 
 case class WindowAggregate(
@@ -569,7 +570,7 @@ case class WindowAggregate(
 
   // resolve references of this operator's parameters
   override def resolveReference(
-      tableEnv: TableEnvironment,
+      tableEnv: TableEnvImpl,
       name: String)
     : Option[NamedExpression] = {
 
@@ -620,7 +621,7 @@ case class WindowAggregate(
       }.asJava)
   }
 
-  override def validate(tableEnv: TableEnvironment): LogicalNode = {
+  override def validate(tableEnv: TableEnvImpl): LogicalNode = {
     implicit val relBuilder: RelBuilder = tableEnv.getRelBuilder
     val resolvedWindowAggregate = super.validate(tableEnv).asInstanceOf[WindowAggregate]
     val groupingExprs = resolvedWindowAggregate.groupingExpressions
@@ -735,7 +736,7 @@ case class LogicalTableFunctionCall(
     }
   }
 
-  override def validate(tableEnv: TableEnvironment): LogicalNode = {
+  override def validate(tableEnv: TableEnvImpl): LogicalNode = {
     val node = super.validate(tableEnv).asInstanceOf[LogicalTableFunctionCall]
     // check if not Scala object
     checkNotSingleton(tableFunction.getClass)

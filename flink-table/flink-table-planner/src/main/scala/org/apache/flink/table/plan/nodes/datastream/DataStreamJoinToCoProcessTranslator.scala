@@ -24,8 +24,9 @@ import org.apache.flink.api.common.functions.FlatJoinFunction
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.streaming.api.operators.TwoInputStreamOperator
 import org.apache.flink.streaming.api.operators.co.KeyedCoProcessOperator
-import org.apache.flink.table.api.{StreamQueryConfig, TableConfig}
+import org.apache.flink.table.api.StreamQueryConfig
 import org.apache.flink.table.codegen.{FunctionCodeGenerator, GeneratedFunction}
+import org.apache.flink.table.plan.env.InternalTableConfig
 import org.apache.flink.table.plan.schema.RowSchema
 import org.apache.flink.table.runtime.CRowKeySelector
 import org.apache.flink.table.runtime.join._
@@ -33,7 +34,7 @@ import org.apache.flink.table.runtime.types.CRow
 import org.apache.flink.types.Row
 
 class DataStreamJoinToCoProcessTranslator(
-    config: TableConfig,
+    config: InternalTableConfig,
     returnType: TypeInformation[Row],
     leftSchema: RowSchema,
     rightSchema: RowSchema,

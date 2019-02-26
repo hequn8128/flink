@@ -24,8 +24,9 @@ import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.metadata.RelMetadataQuery
 import org.apache.calcite.rex.RexNode
 import org.apache.flink.api.java.DataSet
-import org.apache.flink.table.api.{BatchQueryConfig, BatchTableEnvironment, TableException, Types}
+import org.apache.flink.table.api.{BatchQueryConfig, TableException, Types}
 import org.apache.flink.table.calcite.FlinkTypeFactory
+import org.apache.flink.table.plan.env.BatchTableEnvImpl
 import org.apache.flink.table.plan.nodes.PhysicalTableSourceScan
 import org.apache.flink.table.plan.schema.RowSchema
 import org.apache.flink.table.sources._
@@ -79,7 +80,7 @@ class BatchTableSourceScan(
   }
 
   override def translateToPlan(
-      tableEnv: BatchTableEnvironment,
+      tableEnv: BatchTableEnvImpl,
       queryConfig: BatchQueryConfig): DataSet[Row] = {
 
     val fieldIndexes = TableSourceUtil.computeIndexMapping(

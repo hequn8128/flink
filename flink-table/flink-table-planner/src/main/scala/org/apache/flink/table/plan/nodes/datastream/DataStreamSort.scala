@@ -20,7 +20,7 @@ package org.apache.flink.table.plan.nodes.datastream
 
 import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
 import org.apache.calcite.rel.`type`.RelDataType
-import org.apache.calcite.rel.{ RelNode, RelWriter }
+import org.apache.calcite.rel.{RelNode, RelWriter}
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.runtime.aggregate._
@@ -30,10 +30,11 @@ import org.apache.calcite.rel.RelCollation
 import org.apache.calcite.rex.RexNode
 import org.apache.flink.api.common.ExecutionConfig
 import org.apache.flink.table.runtime.types.{CRow, CRowTypeInfo}
-import org.apache.flink.table.api.{StreamQueryConfig, StreamTableEnvironment, TableException}
+import org.apache.flink.table.api.{StreamQueryConfig, TableException}
 import org.apache.flink.table.plan.schema.RowSchema
 import org.apache.flink.table.plan.nodes.CommonSort
 import org.apache.calcite.rel.core.Sort
+import org.apache.flink.table.plan.env.StreamTableEnvImpl
 
 /**
  * Flink RelNode which matches along with Sort Rule.
@@ -88,7 +89,7 @@ class DataStreamSort(
   }
 
   override def translateToPlan(
-      tableEnv: StreamTableEnvironment,
+      tableEnv: StreamTableEnvImpl,
       queryConfig: StreamQueryConfig): DataStream[CRow] = {
     
     val inputDS = input.asInstanceOf[DataStreamRel].translateToPlan(tableEnv, queryConfig)

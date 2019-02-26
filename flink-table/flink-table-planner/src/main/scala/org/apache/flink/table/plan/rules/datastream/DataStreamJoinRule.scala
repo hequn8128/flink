@@ -21,8 +21,9 @@ package org.apache.flink.table.plan.rules.datastream
 import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall, RelTraitSet}
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.convert.ConverterRule
-import org.apache.flink.table.api.{TableConfig, TableException}
+import org.apache.flink.table.api.TableException
 import org.apache.flink.table.calcite.FlinkTypeFactory
+import org.apache.flink.table.plan.env.InternalTableConfig
 import org.apache.flink.table.plan.nodes.FlinkConventions
 import org.apache.flink.table.plan.nodes.datastream.DataStreamJoin
 import org.apache.flink.table.plan.nodes.logical.FlinkLogicalJoin
@@ -47,7 +48,7 @@ class DataStreamJoinRule
       join.getLeft.getRowType.getFieldCount,
       join.getRowType,
       join.getCluster.getRexBuilder,
-      TableConfig.DEFAULT)
+      InternalTableConfig.DEFAULT)
 
     if (windowBounds.isDefined) {
       return false

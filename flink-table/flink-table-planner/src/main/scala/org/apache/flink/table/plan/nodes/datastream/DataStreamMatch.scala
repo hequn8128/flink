@@ -46,6 +46,7 @@ import scala.collection.JavaConverters._
 import org.apache.flink.table.api._
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.MatchCodeGenerator
+import org.apache.flink.table.plan.env.{InternalTableConfig, StreamTableEnvImpl}
 import org.apache.flink.table.plan.logical.MatchRecognize
 import org.apache.flink.table.plan.nodes.CommonMatchRecognize
 import org.apache.flink.table.plan.rules.datastream.DataStreamRetractionRules
@@ -109,7 +110,7 @@ class DataStreamMatch(
 
   @VisibleForTesting
   private[flink] def translatePattern(
-    config: TableConfig,
+    config: InternalTableConfig,
     inputTypeInfo: TypeInformation[Row]
   ): (Pattern[Row, Row], Iterable[String]) = {
     val patternVisitor = new PatternVisitor(config, inputTypeInfo, logicalMatch)
@@ -123,7 +124,7 @@ class DataStreamMatch(
   }
 
   override def translateToPlan(
-      tableEnv: StreamTableEnvironment,
+      tableEnv: StreamTableEnvImpl,
       queryConfig: StreamQueryConfig)
     : DataStream[CRow] = {
 
@@ -192,7 +193,7 @@ class DataStreamMatch(
   }
 
   private def translateOrder(
-      tableEnv: StreamTableEnvironment,
+      tableEnv: StreamTableEnvImpl,
       crowInput: DataStream[CRow],
       orderKeys: RelCollation)
     : (DataStream[CRow], Option[RowComparator]) = {
@@ -250,7 +251,7 @@ class DataStreamMatch(
 }
 
 private class PatternVisitor(
-    config: TableConfig,
+    config: InternalTableConfig,
     inputTypeInfo: TypeInformation[Row],
     logicalMatch: MatchRecognize)
   extends RexDefaultVisitor[Pattern[Row, Row]] {

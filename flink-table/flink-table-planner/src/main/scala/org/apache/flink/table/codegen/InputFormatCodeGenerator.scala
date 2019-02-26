@@ -20,9 +20,9 @@ package org.apache.flink.table.codegen
 import org.apache.flink.api.common.io.GenericInputFormat
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.typeutils.RowTypeInfo
-import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.codegen.CodeGenUtils.newName
 import org.apache.flink.table.codegen.Indenter.toISC
+import org.apache.flink.table.plan.env.InternalTableConfig
 import org.apache.flink.types.Row
 
 /**
@@ -31,7 +31,7 @@ import org.apache.flink.types.Row
   * @param config configuration that determines runtime behavior
   */
 class InputFormatCodeGenerator(
-    config: TableConfig)
+    config: InternalTableConfig)
   extends CodeGenerator(config, false, new RowTypeInfo(), None, None) {
 
 

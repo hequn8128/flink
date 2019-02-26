@@ -22,8 +22,8 @@ import org.apache.calcite.plan.{RelOptCost, RelOptPlanner}
 import org.apache.calcite.rel.metadata.RelMdUtil
 import org.apache.calcite.rex._
 import org.apache.flink.api.common.functions.Function
-import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.codegen.{FunctionCodeGenerator, GeneratedFunction}
+import org.apache.flink.table.plan.env.InternalTableConfig
 import org.apache.flink.table.plan.schema.RowSchema
 import org.apache.flink.types.Row
 
@@ -38,7 +38,7 @@ trait CommonCalc {
       returnSchema: RowSchema,
       calcProjection: Seq[RexNode],
       calcCondition: Option[RexNode],
-      config: TableConfig,
+      config: InternalTableConfig,
       functionClass: Class[T]):
     GeneratedFunction[T, Row] = {
 

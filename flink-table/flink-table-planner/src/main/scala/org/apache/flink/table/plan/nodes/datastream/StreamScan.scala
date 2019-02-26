@@ -24,8 +24,8 @@ import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.functions.ProcessFunction
-import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.codegen.{FunctionCodeGenerator, GeneratedFunction}
+import org.apache.flink.table.plan.env.InternalTableConfig
 import org.apache.flink.table.plan.nodes.CommonScan
 import org.apache.flink.table.plan.schema.RowSchema
 import org.apache.flink.types.Row
@@ -39,7 +39,7 @@ trait StreamScan extends CommonScan[CRow] with DataStreamRel {
       schema: RowSchema,
       input: DataStream[Any],
       fieldIdxs: Array[Int],
-      config: TableConfig,
+      config: InternalTableConfig,
       rowtimeExpression: Option[RexNode]): DataStream[CRow] = {
 
     val inputType = input.getType
@@ -93,7 +93,7 @@ trait StreamScan extends CommonScan[CRow] with DataStreamRel {
   }
 
   private def generateConversionProcessFunction(
-      config: TableConfig,
+      config: InternalTableConfig,
       inputType: TypeInformation[Any],
       outputType: TypeInformation[Row],
       conversionOperatorName: String,

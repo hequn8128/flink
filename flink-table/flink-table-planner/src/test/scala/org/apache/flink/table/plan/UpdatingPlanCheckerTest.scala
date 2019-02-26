@@ -24,6 +24,7 @@ import org.apache.flink.table.utils.StreamTableTestUtil
 import org.junit.Assert._
 import org.apache.flink.table.api.scala._
 import org.apache.flink.api.scala._
+import org.apache.flink.table.plan.env.scala.StreamTableEnvImpl
 import org.junit.Test
 
 class UpdatingPlanCheckerTest {
@@ -317,7 +318,8 @@ class UpdatePlanCheckerUtil extends StreamTableTestUtil {
 
   def getKeyGroups(resultTable: Table): Option[Seq[(String, String)]] = {
     val relNode = resultTable.getRelNode
-    val optimized = tableEnv.optimize(relNode, updatesAsRetraction = false)
+    val optimized = tableEnv
+      .asInstanceOf[StreamTableEnvImpl].optimize(relNode, updatesAsRetraction = false)
     UpdatingPlanChecker.getUniqueKeyGroups(optimized)
   }
 

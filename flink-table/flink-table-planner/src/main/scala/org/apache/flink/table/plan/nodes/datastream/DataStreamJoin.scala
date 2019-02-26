@@ -24,7 +24,8 @@ import org.apache.calcite.rel.core.{JoinInfo, JoinRelType}
 import org.apache.calcite.rel.{BiRel, RelNode, RelWriter}
 import org.apache.calcite.rex.RexNode
 import org.apache.flink.streaming.api.datastream.DataStream
-import org.apache.flink.table.api.{StreamQueryConfig, StreamTableEnvironment, TableException}
+import org.apache.flink.table.api.{StreamQueryConfig, TableException}
+import org.apache.flink.table.plan.env.StreamTableEnvImpl
 import org.apache.flink.table.plan.nodes.CommonJoin
 import org.apache.flink.table.plan.schema.RowSchema
 import org.apache.flink.table.runtime.types.{CRow, CRowTypeInfo}
@@ -94,7 +95,7 @@ class DataStreamJoin(
   }
 
   override def translateToPlan(
-      tableEnv: StreamTableEnvironment,
+      tableEnv: StreamTableEnvImpl,
       queryConfig: StreamQueryConfig): DataStream[CRow] = {
 
     validateKeyTypes()
@@ -146,7 +147,7 @@ class DataStreamJoin(
   }
 
   protected def createTranslator(
-      tableEnv: StreamTableEnvironment): DataStreamJoinToCoProcessTranslator = {
+      tableEnv: StreamTableEnvImpl): DataStreamJoinToCoProcessTranslator = {
     new DataStreamJoinToCoProcessTranslator(
       tableEnv.getConfig,
       schema.typeInfo,

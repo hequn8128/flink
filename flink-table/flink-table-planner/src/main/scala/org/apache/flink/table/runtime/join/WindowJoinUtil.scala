@@ -27,10 +27,10 @@ import org.apache.calcite.sql.fun.SqlStdOperatorTable
 import org.apache.calcite.sql.{SqlKind, SqlOperatorTable}
 import org.apache.flink.api.common.functions.FlatJoinFunction
 import org.apache.flink.api.common.typeinfo.TypeInformation
-import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.calcite.{FlinkTypeFactory, RelTimeIndicatorConverter}
 import org.apache.flink.table.codegen.{ExpressionReducer, FunctionCodeGenerator, GeneratedFunction}
 import org.apache.flink.table.functions.sql.ProctimeSqlFunction
+import org.apache.flink.table.plan.env.InternalTableConfig
 import org.apache.flink.table.plan.schema.{RowSchema, TimeIndicatorRelDataType}
 import org.apache.flink.types.Row
 
@@ -75,7 +75,7 @@ object WindowJoinUtil {
       leftLogicalFieldCnt: Int,
       inputSchema: RelDataType,
       rexBuilder: RexBuilder,
-      config: TableConfig): (Option[WindowBounds], Option[RexNode]) = {
+      config: InternalTableConfig): (Option[WindowBounds], Option[RexNode]) = {
 
     // Converts the condition to conjunctive normal form (CNF)
     val cnfCondition = RexUtil.toCnf(rexBuilder, predicate)
@@ -320,7 +320,7 @@ object WindowJoinUtil {
   private def computeWindowBoundFromPredicate(
       timePred: TimePredicate,
       rexBuilder: RexBuilder,
-      config: TableConfig): Option[WindowBound] = {
+      config: InternalTableConfig): Option[WindowBound] = {
 
     val isLeftLowerBound: Boolean =
       timePred.pred.getKind match {
@@ -375,7 +375,7 @@ object WindowJoinUtil {
   private def reduceTimeExpression(
       timePred: TimePredicate,
       rexBuilder: RexBuilder,
-      config: TableConfig): (Option[Long], Option[Long]) = {
+      config: InternalTableConfig): (Option[Long], Option[Long]) = {
 
     /**
       * Replace the time attribute by zero literal.
@@ -430,7 +430,7 @@ object WindowJoinUtil {
     * @param  ruleDescription rule description
     */
   private[flink] def generateJoinFunction(
-      config: TableConfig,
+      config: InternalTableConfig,
       joinType: JoinRelType,
       leftType: TypeInformation[Row],
       rightType: TypeInformation[Row],

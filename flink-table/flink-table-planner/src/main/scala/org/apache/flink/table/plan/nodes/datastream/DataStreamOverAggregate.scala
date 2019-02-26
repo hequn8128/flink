@@ -28,9 +28,10 @@ import org.apache.calcite.rel.{RelNode, RelWriter, SingleRel}
 import org.apache.calcite.rex.RexLiteral
 import org.apache.flink.api.java.functions.NullByteKeySelector
 import org.apache.flink.streaming.api.datastream.DataStream
-import org.apache.flink.table.api.{StreamQueryConfig, StreamTableEnvironment, TableConfig, TableException}
+import org.apache.flink.table.api.{StreamQueryConfig, TableException}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.AggregationCodeGenerator
+import org.apache.flink.table.plan.env.{InternalTableConfig, StreamTableEnvImpl}
 import org.apache.flink.table.plan.nodes.OverAggregate
 import org.apache.flink.table.plan.rules.datastream.DataStreamRetractionRules
 import org.apache.flink.table.plan.schema.RowSchema
@@ -97,7 +98,7 @@ class DataStreamOverAggregate(
   }
 
   override def translateToPlan(
-      tableEnv: StreamTableEnvironment,
+      tableEnv: StreamTableEnvImpl,
       queryConfig: StreamQueryConfig): DataStream[CRow] = {
 
     if (logicWindow.groups.size > 1) {
@@ -198,7 +199,7 @@ class DataStreamOverAggregate(
 
   def createUnboundedAndCurrentRowOverWindow(
     queryConfig: StreamQueryConfig,
-    tableConfig: TableConfig,
+    tableConfig: InternalTableConfig,
     generator: AggregationCodeGenerator,
     inputDS: DataStream[CRow],
     rowTimeIdx: Option[Int],
@@ -254,7 +255,7 @@ class DataStreamOverAggregate(
     rowTimeIdx: Option[Int],
     aggregateInputType: RelDataType,
     isRowsClause: Boolean,
-    tableConfig: TableConfig): DataStream[CRow] = {
+    tableConfig: InternalTableConfig): DataStream[CRow] = {
 
     val overWindow: Group = logicWindow.groups.get(0)
 

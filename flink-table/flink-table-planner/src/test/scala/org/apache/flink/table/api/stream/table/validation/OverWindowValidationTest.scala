@@ -21,12 +21,15 @@ package org.apache.flink.table.api.stream.table.validation
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.{Table, ValidationException}
+import org.apache.flink.table.plan.env.scala.StreamTableEnvImpl
 import org.apache.flink.table.runtime.utils.JavaUserDefinedAggFunctions.{OverAgg0, WeightedAvgWithRetract}
 import org.apache.flink.table.utils.{StreamTableTestUtil, TableTestBase}
 import org.junit.Test
 
 class OverWindowValidationTest extends TableTestBase {
   private val streamUtil: StreamTableTestUtil = streamTestUtil()
+  private val tableEnvImpl = streamTestUtil().tableEnv.asInstanceOf[StreamTableEnvImpl]
+
   val table: Table = streamUtil.addTable[(Int, String, Long)]("MyTable",
     'a, 'b, 'c, 'proctime.proctime, 'rowtime.rowtime)
 
@@ -61,7 +64,7 @@ class OverWindowValidationTest extends TableTestBase {
     val result = table
       .window(Over partitionBy 'c orderBy 'rowtime preceding 2.rows as 'w)
       .select('c, 'b.count over 'x)
-    streamUtil.tableEnv.optimize(result.getRelNode, updatesAsRetraction = true)
+    tableEnvImpl.optimize(result.getRelNode, updatesAsRetraction = true)
   }
 
   @Test(expected = classOf[ValidationException])
@@ -69,7 +72,7 @@ class OverWindowValidationTest extends TableTestBase {
     val result = table
       .window(Over partitionBy 'c orderBy 'abc preceding 2.rows as 'w)
       .select('c, 'b.count over 'w)
-    streamUtil.tableEnv.optimize(result.getRelNode, updatesAsRetraction = true)
+    tableEnvImpl.optimize(result.getRelNode, updatesAsRetraction = true)
   }
 
   @Test(expected = classOf[ValidationException])
@@ -77,7 +80,7 @@ class OverWindowValidationTest extends TableTestBase {
     val result = table
       .window(Over partitionBy 'c orderBy 'rowtime preceding 2 following "xx" as 'w)
       .select('c, 'b.count over 'w)
-    streamUtil.tableEnv.optimize(result.getRelNode, updatesAsRetraction = true)
+    tableEnvImpl.optimize(result.getRelNode, updatesAsRetraction = true)
   }
 
   @Test(expected = classOf[ValidationException])
@@ -85,7 +88,7 @@ class OverWindowValidationTest extends TableTestBase {
     val result = table
       .window(Over partitionBy 'c orderBy 'rowtime preceding 2.rows following CURRENT_RANGE as 'w)
       .select('c, 'b.count over 'w)
-    streamUtil.tableEnv.optimize(result.getRelNode, updatesAsRetraction = true)
+    tableEnvImpl.optimize(result.getRelNode, updatesAsRetraction = true)
   }
 
   @Test(expected = classOf[ValidationException])
@@ -93,7 +96,7 @@ class OverWindowValidationTest extends TableTestBase {
     val result = table
       .window(Over partitionBy 'a + 'b orderBy 'rowtime preceding 2.rows as 'w)
       .select('c, 'b.count over 'w)
-    streamUtil.tableEnv.optimize(result.getRelNode, updatesAsRetraction = true)
+    tableEnvImpl.optimize(result.getRelNode, updatesAsRetraction = true)
   }
 
   @Test(expected = classOf[ValidationException])
@@ -103,7 +106,7 @@ class OverWindowValidationTest extends TableTestBase {
     val result = table2
       .window(Over partitionBy 'c orderBy 'rowtime preceding 2.rows as 'w)
       .select('c, 'b.count over 'w)
-    streamUtil.tableEnv.optimize(result.getRelNode, updatesAsRetraction = true)
+    tableEnvImpl.optimize(result.getRelNode, updatesAsRetraction = true)
   }
 
   @Test(expected = classOf[ValidationException])
@@ -111,7 +114,7 @@ class OverWindowValidationTest extends TableTestBase {
     val result = table
       .window(Over orderBy 'rowtime preceding -1.rows as 'w)
       .select('c, 'b.count over 'w)
-    streamUtil.tableEnv.optimize(result.getRelNode, updatesAsRetraction = true)
+    tableEnvImpl.optimize(result.getRelNode, updatesAsRetraction = true)
   }
 
   @Test(expected = classOf[ValidationException])
@@ -119,7 +122,7 @@ class OverWindowValidationTest extends TableTestBase {
     val result = table
       .window(Over orderBy 'rowtime preceding 1.rows following -2.rows as 'w)
       .select('c, 'b.count over 'w)
-    streamUtil.tableEnv.optimize(result.getRelNode, updatesAsRetraction = true)
+    tableEnvImpl.optimize(result.getRelNode, updatesAsRetraction = true)
   }
 
   @Test(expected = classOf[ValidationException])
@@ -129,7 +132,7 @@ class OverWindowValidationTest extends TableTestBase {
     val result = table
       .window(Over orderBy 'rowtime preceding 1.minutes as 'w)
       .select('c, weightedAvg('b, 'a) over 'w)
-    streamUtil.tableEnv.optimize(result.getRelNode, updatesAsRetraction = true)
+    tableEnvImpl.optimize(result.getRelNode, updatesAsRetraction = true)
   }
 
   @Test

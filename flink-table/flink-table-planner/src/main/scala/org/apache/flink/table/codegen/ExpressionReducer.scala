@@ -26,8 +26,8 @@ import org.apache.calcite.sql.`type`.SqlTypeName
 import org.apache.flink.api.common.functions.MapFunction
 import org.apache.flink.api.common.typeinfo.BasicTypeInfo
 import org.apache.flink.api.java.typeutils.RowTypeInfo
-import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.calcite.FlinkTypeFactory
+import org.apache.flink.table.plan.env.InternalTableConfig
 import org.apache.flink.types.Row
 
 import scala.collection.JavaConverters._
@@ -35,7 +35,7 @@ import scala.collection.JavaConverters._
 /**
   * Evaluates constant expressions using Flink's [[FunctionCodeGenerator]].
   */
-class ExpressionReducer(config: TableConfig)
+class ExpressionReducer(config: InternalTableConfig)
   extends RelOptPlanner.Executor with Compiler[MapFunction[Row, Row]] {
 
   private val EMPTY_ROW_INFO = new RowTypeInfo()

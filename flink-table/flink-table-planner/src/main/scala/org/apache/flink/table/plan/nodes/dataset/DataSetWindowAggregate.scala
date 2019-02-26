@@ -25,11 +25,12 @@ import org.apache.calcite.rel.{RelNode, RelWriter, SingleRel}
 import org.apache.flink.api.common.operators.Order
 import org.apache.flink.api.java.DataSet
 import org.apache.flink.api.java.typeutils.{ResultTypeQueryable, RowTypeInfo}
-import org.apache.flink.table.api.{BatchQueryConfig, BatchTableEnvironment, TableConfig}
+import org.apache.flink.table.api.BatchQueryConfig
 import org.apache.flink.table.calcite.FlinkRelBuilder.NamedWindowProperty
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.AggregationCodeGenerator
 import org.apache.flink.table.expressions.ExpressionUtils._
+import org.apache.flink.table.plan.env.{BatchTableEnvImpl, InternalTableConfig}
 import org.apache.flink.table.plan.logical._
 import org.apache.flink.table.plan.nodes.CommonAggregate
 import org.apache.flink.table.runtime.aggregate.AggregateUtil.{CalcitePair, _}
@@ -106,7 +107,7 @@ class DataSetWindowAggregate(
   }
 
   override def translateToPlan(
-      tableEnv: BatchTableEnvironment,
+      tableEnv: BatchTableEnvImpl,
       queryConfig: BatchQueryConfig): DataSet[Row] = {
 
     val inputDS = getInput.asInstanceOf[DataSetRel].translateToPlan(tableEnv, queryConfig)
@@ -156,7 +157,7 @@ class DataSetWindowAggregate(
       inputDS: DataSet[Row],
       isTimeWindow: Boolean,
       isParserCaseSensitive: Boolean,
-      tableConfig: TableConfig): DataSet[Row] = {
+      tableConfig: InternalTableConfig): DataSet[Row] = {
 
     val input = inputNode.asInstanceOf[DataSetRel]
 
@@ -221,7 +222,7 @@ class DataSetWindowAggregate(
       generator: AggregationCodeGenerator,
       inputDS: DataSet[Row],
       isParserCaseSensitive: Boolean,
-      tableConfig: TableConfig): DataSet[Row] = {
+      tableConfig: InternalTableConfig): DataSet[Row] = {
 
     val input = inputNode.asInstanceOf[DataSetRel]
 
@@ -375,7 +376,7 @@ class DataSetWindowAggregate(
       size: Long,
       slide: Long,
       isParserCaseSensitive: Boolean,
-      tableConfig: TableConfig)
+      tableConfig: InternalTableConfig)
     : DataSet[Row] = {
 
     val input = inputNode.asInstanceOf[DataSetRel]

@@ -58,7 +58,7 @@ public class GroupingSetsITCase extends TableProgramsClusterTestBase {
 	@Before
 	public void setupTables() {
 		ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
-		tableEnv = BatchTableEnvironment.create(env, new TableConfig());
+		tableEnv = BatchTableEnvironment.create(env, TableConfig.DEFAULT);
 
 		DataSet<Tuple3<Integer, Long, String>> dataSet = CollectionDataSets.get3TupleDataSet(env);
 		tableEnv.registerDataSet(TABLE_NAME, dataSet);

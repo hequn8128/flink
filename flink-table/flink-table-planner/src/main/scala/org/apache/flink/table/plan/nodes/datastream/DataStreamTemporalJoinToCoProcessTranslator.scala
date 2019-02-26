@@ -23,9 +23,10 @@ import org.apache.calcite.rex._
 import org.apache.flink.api.common.functions.FlatJoinFunction
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.streaming.api.operators.TwoInputStreamOperator
-import org.apache.flink.table.api.{StreamQueryConfig, TableConfig, ValidationException}
+import org.apache.flink.table.api.{StreamQueryConfig, ValidationException}
 import org.apache.flink.table.calcite.FlinkTypeFactory._
 import org.apache.flink.table.codegen.GeneratedFunction
+import org.apache.flink.table.plan.env.InternalTableConfig
 import org.apache.flink.table.plan.logical.rel.LogicalTemporalTableJoin
 import org.apache.flink.table.plan.logical.rel.LogicalTemporalTableJoin._
 import org.apache.flink.table.plan.schema.RowSchema
@@ -40,7 +41,7 @@ import org.apache.flink.util.Preconditions.checkState
   */
 class DataStreamTemporalJoinToCoProcessTranslator private (
     textualRepresentation: String,
-    config: TableConfig,
+    config: InternalTableConfig,
     returnType: TypeInformation[Row],
     leftSchema: RowSchema,
     rightSchema: RowSchema,
@@ -95,7 +96,7 @@ class DataStreamTemporalJoinToCoProcessTranslator private (
 object DataStreamTemporalJoinToCoProcessTranslator {
   def create(
     textualRepresentation: String,
-    config: TableConfig,
+    config: InternalTableConfig,
     returnType: TypeInformation[Row],
     leftSchema: RowSchema,
     rightSchema: RowSchema,
