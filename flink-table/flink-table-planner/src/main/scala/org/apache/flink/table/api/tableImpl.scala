@@ -54,16 +54,16 @@ import _root_.scala.collection.JavaConverters._
   *   val set2: DataSet[MyType] = table2.toDataSet[MyType]
   * }}}
   *
-  * Operations such as [[join]], [[select]], [[where]] and [[groupBy]] either take arguments
+  * Operations such as [[joinInternal]], [[select]], [[where]] and [[groupBy]] either take arguments
   * in a Scala DSL or as an expression String. Please refer to the documentation for the expression
   * syntax.
   *
   * @param tableEnv The [[TableEnvironment]] to which the table is bound.
   * @param logicalPlan logical representation
   */
-class Table(
+class TableImpl(
     private[flink] val tableEnv: TableEnvironment,
-    private[flink] val logicalPlan: LogicalNode) {
+    private[flink] val logicalPlan: LogicalNode) extends Table {
 
   // Check if the plan has an unbounded TableFunctionCall as child node.
   //   A TableFunctionCall is tolerated as root node because the Table holds the initial call.
@@ -71,25 +71,6 @@ class Table(
     !logicalPlan.isInstanceOf[LogicalTableFunctionCall]) {
     throw new ValidationException(
       "Table functions can only be used in table.joinLateral() and table.leftOuterJoinLateral().")
-  }
-
-  /**
-    * Creates a [[Table]] for a TableFunction call from a String expression.
-    *
-    * @param tableEnv The TableEnvironment in which the call is created.
-    * @param tableFunctionCall A string expression of a table function call.
-    *
-    * @deprecated This constructor will be removed. Use table.joinLateral() or
-    *             table.leftOuterJoinLateral() instead.
-    */
-  @Deprecated
-  @deprecated(
-    "This constructor will be removed. Use table.joinLateral() or " +
-      "table.leftOuterJoinLateral() instead.",
-    "1.8")
-  def this(tableEnv: TableEnvironment, tableFunctionCall: String) {
-    this(tableEnv, UserDefinedFunctionUtils
-      .createLogicalFunctionCall(tableEnv, ExpressionParser.parseExpression(tableFunctionCall)))
   }
 
   private lazy val tableSchema: TableSchema = new TableSchema(
@@ -103,6 +84,8 @@ class Table(
   } else {
     logicalPlan.toRelNode(relBuilder)
   }
+
+  override def getTableEnvironment(): TableEnvironment = tableEnv
 
   /**
     * Returns the schema of this table.
@@ -136,7 +119,7 @@ class Table(
         expandedFields, tableEnv, aggNames, propNames)
       val projectFields = extractFieldReferences(expandedFields)
 
-      new Table(tableEnv,
+      new TableImpl(tableEnv,
         Project(projectsOnAgg,
           Aggregate(Nil, aggNames.map(a => Alias(a._1, a._2)).toSeq,
             Project(projectFields, logicalPlan).validate(tableEnv)
@@ -144,7 +127,7 @@ class Table(
         ).validate(tableEnv)
       )
     } else {
-      new Table(tableEnv,
+      new TableImpl(tableEnv,
         Project(expandedFields.map(UnresolvedAlias), logicalPlan).validate(tableEnv))
     }
   }
@@ -260,7 +243,7 @@ class Table(
             "Alias field must be an instance of UnresolvedFieldReference"
           )
         }
-        new Table(
+        new TableImpl(
           tableEnv,
           LogicalTableFunctionCall(
             functionCall.functionName,
@@ -272,7 +255,7 @@ class Table(
         )
       case _ =>
         // prepend an AliasNode
-        new Table(tableEnv, AliasNode(fields, logicalPlan).validate(tableEnv))
+        new TableImpl(tableEnv, AliasNode(fields, logicalPlan).validate(tableEnv))
     }
   }
 
@@ -302,7 +285,7 @@ class Table(
     * }}}
     */
   def filter(predicate: Expression): Table = {
-    new Table(tableEnv, Filter(predicate, logicalPlan).validate(tableEnv))
+    new TableImpl(tableEnv, Filter(predicate, logicalPlan).validate(tableEnv))
   }
 
   /**
@@ -387,7 +370,7 @@ class Table(
     * }}}
     */
   def distinct(): Table = {
-    new Table(tableEnv, Distinct(logicalPlan).validate(tableEnv))
+    new TableImpl(tableEnv, Distinct(logicalPlan).validate(tableEnv))
   }
 
   /**
@@ -404,7 +387,7 @@ class Table(
     * }}}
     */
   def join(right: Table): Table = {
-    join(right, None, JoinType.INNER)
+    joinInternal(right, None, JoinType.INNER)
   }
 
   /**
@@ -420,7 +403,7 @@ class Table(
     * }}}
     */
   def join(right: Table, joinPredicate: String): Table = {
-    join(right, joinPredicate, JoinType.INNER)
+    joinInternal(right, joinPredicate, JoinType.INNER)
   }
 
   /**
@@ -436,7 +419,7 @@ class Table(
     * }}}
     */
   def join(right: Table, joinPredicate: Expression): Table = {
-    join(right, Some(joinPredicate), JoinType.INNER)
+    joinInternal(right, Some(joinPredicate), JoinType.INNER)
   }
 
   /**
@@ -453,7 +436,7 @@ class Table(
     * }}}
     */
   def leftOuterJoin(right: Table): Table = {
-    join(right, None, JoinType.LEFT_OUTER)
+    joinInternal(right, None, JoinType.LEFT_OUTER)
   }
 
   /**
@@ -470,7 +453,7 @@ class Table(
     * }}}
     */
   def leftOuterJoin(right: Table, joinPredicate: String): Table = {
-    join(right, joinPredicate, JoinType.LEFT_OUTER)
+    joinInternal(right, joinPredicate, JoinType.LEFT_OUTER)
   }
 
   /**
@@ -487,7 +470,7 @@ class Table(
     * }}}
     */
   def leftOuterJoin(right: Table, joinPredicate: Expression): Table = {
-    join(right, Some(joinPredicate), JoinType.LEFT_OUTER)
+    joinInternal(right, Some(joinPredicate), JoinType.LEFT_OUTER)
   }
 
   /**
@@ -504,7 +487,7 @@ class Table(
     * }}}
     */
   def rightOuterJoin(right: Table, joinPredicate: String): Table = {
-    join(right, joinPredicate, JoinType.RIGHT_OUTER)
+    joinInternal(right, joinPredicate, JoinType.RIGHT_OUTER)
   }
 
   /**
@@ -521,7 +504,7 @@ class Table(
     * }}}
     */
   def rightOuterJoin(right: Table, joinPredicate: Expression): Table = {
-    join(right, Some(joinPredicate), JoinType.RIGHT_OUTER)
+    joinInternal(right, Some(joinPredicate), JoinType.RIGHT_OUTER)
   }
 
   /**
@@ -538,7 +521,7 @@ class Table(
     * }}}
     */
   def fullOuterJoin(right: Table, joinPredicate: String): Table = {
-    join(right, joinPredicate, JoinType.FULL_OUTER)
+    joinInternal(right, joinPredicate, JoinType.FULL_OUTER)
   }
 
   /**
@@ -555,16 +538,18 @@ class Table(
     * }}}
     */
   def fullOuterJoin(right: Table, joinPredicate: Expression): Table = {
-    join(right, Some(joinPredicate), JoinType.FULL_OUTER)
+    joinInternal(right, Some(joinPredicate), JoinType.FULL_OUTER)
   }
 
-  private def join(right: Table, joinPredicate: String, joinType: JoinType): Table = {
+  private def joinInternal(right: Table, joinPredicate: String, joinType: JoinType): Table = {
     val joinPredicateExpr = ExpressionParser.parseExpression(joinPredicate)
-    join(right, Some(joinPredicateExpr), joinType)
+    joinInternal(right, Some(joinPredicateExpr), joinType)
   }
 
-  private def join(right: Table, joinPredicate: Option[Expression], joinType: JoinType): Table = {
+  private def joinInternal(
+    rightTable: Table, joinPredicate: Option[Expression], joinType: JoinType): Table = {
 
+    val right = rightTable.asInstanceOf[TableImpl]
     // check if we join with a table or a table function
     if (!containsUnboundedUDTFCall(right.logicalPlan)) {
       // regular table-table join
@@ -575,7 +560,7 @@ class Table(
         throw new ValidationException("Only tables from the same TableEnvironment can be joined.")
       }
 
-      new Table(
+      new TableImpl(
         tableEnv,
         Join(this.logicalPlan, right.logicalPlan, joinType, joinPredicate, correlated = false)
           .validate(tableEnv))
@@ -599,7 +584,7 @@ class Table(
         this.logicalPlan
       ).validate(tableEnv)
 
-      new Table(
+      new TableImpl(
         tableEnv,
         Join(this.logicalPlan, udtfCall, joinType, joinPredicate, correlated = true)
           .validate(tableEnv))
@@ -626,7 +611,7 @@ class Table(
     */
   def joinLateral(tableFunctionCall: String): Table = {
     val callExpr = ExpressionParser.parseExpression(tableFunctionCall)
-    joinLateral(callExpr, None, JoinType.INNER)
+    joinLateralInternal(callExpr, None, JoinType.INNER)
   }
 
   /**
@@ -650,7 +635,7 @@ class Table(
   def joinLateral(tableFunctionCall: String, joinPredicate: String): Table = {
     val callExpr = ExpressionParser.parseExpression(tableFunctionCall)
     val joinPredicateExpr = ExpressionParser.parseExpression(joinPredicate)
-    joinLateral(callExpr, Some(joinPredicateExpr), JoinType.INNER)
+    joinLateralInternal(callExpr, Some(joinPredicateExpr), JoinType.INNER)
   }
 
   /**
@@ -671,7 +656,7 @@ class Table(
     * }}}
     */
   def joinLateral(tableFunctionCall: Expression): Table = {
-    joinLateral(tableFunctionCall, None, JoinType.INNER)
+    joinLateralInternal(tableFunctionCall, None, JoinType.INNER)
   }
 
   /**
@@ -692,7 +677,7 @@ class Table(
     * }}}
     */
   def joinLateral(tableFunctionCall: Expression, joinPredicate: Expression): Table = {
-    joinLateral(tableFunctionCall, Some(joinPredicate), JoinType.INNER)
+    joinLateralInternal(tableFunctionCall, Some(joinPredicate), JoinType.INNER)
   }
 
   /**
@@ -716,7 +701,7 @@ class Table(
     */
   def leftOuterJoinLateral(tableFunctionCall: String): Table = {
     val callExpr = ExpressionParser.parseExpression(tableFunctionCall)
-    joinLateral(callExpr, None, JoinType.LEFT_OUTER)
+    joinLateralInternal(callExpr, None, JoinType.LEFT_OUTER)
   }
 
   /**
@@ -741,7 +726,7 @@ class Table(
   def leftOuterJoinLateral(tableFunctionCall: String, joinPredicate: String): Table = {
     val callExpr = ExpressionParser.parseExpression(tableFunctionCall)
     val joinPredicateExpr = ExpressionParser.parseExpression(joinPredicate)
-    joinLateral(callExpr, Some(joinPredicateExpr), JoinType.LEFT_OUTER)
+    joinLateralInternal(callExpr, Some(joinPredicateExpr), JoinType.LEFT_OUTER)
   }
 
   /**
@@ -763,7 +748,7 @@ class Table(
     * }}}
     */
   def leftOuterJoinLateral(tableFunctionCall: Expression): Table = {
-    joinLateral(tableFunctionCall, None, JoinType.LEFT_OUTER)
+    joinLateralInternal(tableFunctionCall, None, JoinType.LEFT_OUTER)
   }
 
   /**
@@ -785,10 +770,10 @@ class Table(
     * }}}
     */
   def leftOuterJoinLateral(tableFunctionCall: Expression, joinPredicate: Expression): Table = {
-    joinLateral(tableFunctionCall, Some(joinPredicate), JoinType.LEFT_OUTER)
+    joinLateralInternal(tableFunctionCall, Some(joinPredicate), JoinType.LEFT_OUTER)
   }
 
-  private def joinLateral(
+  private def joinLateralInternal(
       callExpr: Expression,
       joinPredicate: Option[Expression],
       joinType: JoinType): Table = {
@@ -810,7 +795,7 @@ class Table(
       this.logicalPlan
     ).validate(tableEnv)
 
-    new Table(
+    new TableImpl(
       tableEnv,
       Join(
         this.logicalPlan,
@@ -837,11 +822,12 @@ class Table(
     */
   def minus(right: Table): Table = {
     // check that right table belongs to the same TableEnvironment
-    if (right.tableEnv != this.tableEnv) {
+    if (right.asInstanceOf[TableImpl].tableEnv != this.tableEnv) {
       throw new ValidationException("Only tables from the same TableEnvironment can be " +
         "subtracted.")
     }
-    new Table(tableEnv, Minus(logicalPlan, right.logicalPlan, all = false)
+    new TableImpl(
+      tableEnv, Minus(logicalPlan, right.asInstanceOf[TableImpl].logicalPlan, all = false)
       .validate(tableEnv))
   }
 
@@ -862,11 +848,12 @@ class Table(
     */
   def minusAll(right: Table): Table = {
     // check that right table belongs to the same TableEnvironment
-    if (right.tableEnv != this.tableEnv) {
+    if (right.asInstanceOf[TableImpl].tableEnv != this.tableEnv) {
       throw new ValidationException("Only tables from the same TableEnvironment can be " +
         "subtracted.")
     }
-    new Table(tableEnv, Minus(logicalPlan, right.logicalPlan, all = true)
+    new TableImpl(
+      tableEnv, Minus(logicalPlan, right.asInstanceOf[TableImpl].logicalPlan, all = true)
       .validate(tableEnv))
   }
 
@@ -884,10 +871,12 @@ class Table(
     */
   def union(right: Table): Table = {
     // check that right table belongs to the same TableEnvironment
-    if (right.tableEnv != this.tableEnv) {
+    if (right.asInstanceOf[TableImpl].tableEnv != this.tableEnv) {
       throw new ValidationException("Only tables from the same TableEnvironment can be unioned.")
     }
-    new Table(tableEnv, Union(logicalPlan, right.logicalPlan, all = false).validate(tableEnv))
+    new TableImpl(
+      tableEnv, Union(logicalPlan, right.asInstanceOf[TableImpl].logicalPlan, all = false)
+        .validate(tableEnv))
   }
 
   /**
@@ -904,10 +893,12 @@ class Table(
     */
   def unionAll(right: Table): Table = {
     // check that right table belongs to the same TableEnvironment
-    if (right.tableEnv != this.tableEnv) {
+    if (right.asInstanceOf[TableImpl].tableEnv != this.tableEnv) {
       throw new ValidationException("Only tables from the same TableEnvironment can be unioned.")
     }
-    new Table(tableEnv, Union(logicalPlan, right.logicalPlan, all = true).validate(tableEnv))
+    new TableImpl(
+      tableEnv, Union(logicalPlan, right.asInstanceOf[TableImpl].logicalPlan, all = true)
+        .validate(tableEnv))
   }
 
   /**
@@ -926,11 +917,13 @@ class Table(
     */
   def intersect(right: Table): Table = {
     // check that right table belongs to the same TableEnvironment
-    if (right.tableEnv != this.tableEnv) {
+    if (right.asInstanceOf[TableImpl].tableEnv != this.tableEnv) {
       throw new ValidationException(
         "Only tables from the same TableEnvironment can be intersected.")
     }
-    new Table(tableEnv, Intersect(logicalPlan, right.logicalPlan, all = false).validate(tableEnv))
+    new TableImpl(
+      tableEnv, Intersect(logicalPlan, right.asInstanceOf[TableImpl].logicalPlan, all = false)
+        .validate(tableEnv))
   }
 
   /**
@@ -949,11 +942,13 @@ class Table(
     */
   def intersectAll(right: Table): Table = {
     // check that right table belongs to the same TableEnvironment
-    if (right.tableEnv != this.tableEnv) {
+    if (right.asInstanceOf[TableImpl].tableEnv != this.tableEnv) {
       throw new ValidationException(
         "Only tables from the same TableEnvironment can be intersected.")
     }
-    new Table(tableEnv, Intersect(logicalPlan, right.logicalPlan, all = true).validate(tableEnv))
+    new TableImpl(
+      tableEnv, Intersect(logicalPlan, right.asInstanceOf[TableImpl].logicalPlan, all = true)
+        .validate(tableEnv))
   }
 
   /**
@@ -971,7 +966,7 @@ class Table(
       case o: Ordering => o
       case e => Asc(e)
     }
-    new Table(tableEnv, Sort(order, logicalPlan).validate(tableEnv))
+    new TableImpl(tableEnv, Sort(order, logicalPlan).validate(tableEnv))
   }
 
   /**
@@ -1007,7 +1002,7 @@ class Table(
     * @param offset number of records to skip
     */
   def offset(offset: Int): Table = {
-    new Table(tableEnv, Limit(offset, -1, logicalPlan).validate(tableEnv))
+    new TableImpl(tableEnv, Limit(offset, -1, logicalPlan).validate(tableEnv))
   }
 
   /**
@@ -1034,11 +1029,11 @@ class Table(
     this.logicalPlan match {
       case Limit(o, -1, c) =>
         // replace LIMIT without FETCH by LIMIT with FETCH
-        new Table(tableEnv, Limit(o, fetch, c).validate(tableEnv))
+        new TableImpl(tableEnv, Limit(o, fetch, c).validate(tableEnv))
       case Limit(_, _, _) =>
         throw new ValidationException("FETCH is already defined.")
       case _ =>
-        new Table(tableEnv, Limit(0, fetch, logicalPlan).validate(tableEnv))
+        new TableImpl(tableEnv, Limit(0, fetch, logicalPlan).validate(tableEnv))
     }
   }
 
@@ -1241,8 +1236,10 @@ class Table(
   * A table that has been grouped on a set of grouping keys.
   */
 class GroupedTable(
-  private[flink] val table: Table,
+  private[flink] val tableInterface: Table,
   private[flink] val groupKey: Seq[Expression]) {
+
+  private val table = tableInterface.asInstanceOf[TableImpl]
 
   /**
     * Performs a selection operation on a grouped table. Similar to an SQL SELECT statement.
@@ -1265,7 +1262,7 @@ class GroupedTable(
       expandedFields, table.tableEnv, aggNames, propNames)
     val projectFields = extractFieldReferences(expandedFields ++ groupKey)
 
-    new Table(table.tableEnv,
+    new TableImpl(table.tableEnv,
       Project(projectsOnAgg,
         Aggregate(groupKey, aggNames.map(a => Alias(a._1, a._2)).toSeq,
           Project(projectFields, table.logicalPlan).validate(table.tableEnv)
@@ -1344,8 +1341,10 @@ class WindowedTable(
 }
 
 class OverWindowedTable(
-    private[flink] val table: Table,
+    private[flink] val tableInterface: Table,
     private[flink] val overWindows: Array[OverWindow]) {
+
+  val table = tableInterface.asInstanceOf[TableImpl]
 
   def select(fields: Expression*): Table = {
     val expandedFields = expandProjectList(
@@ -1360,7 +1359,7 @@ class OverWindowedTable(
 
     val expandedOverFields = resolveOverWindows(expandedFields, overWindows, table.tableEnv)
 
-    new Table(
+    new TableImpl(
       table.tableEnv,
       Project(
         expandedOverFields.map(UnresolvedAlias),
@@ -1380,9 +1379,11 @@ class OverWindowedTable(
 }
 
 class WindowGroupedTable(
-    private[flink] val table: Table,
+    private[flink] val tableInterface: Table,
     private[flink] val groupKeys: Seq[Expression],
     private[flink] val window: Window) {
+
+  val table = tableInterface.asInstanceOf[TableImpl]
 
   /**
     * Performs a selection operation on a window grouped table. Similar to an SQL SELECT statement.
@@ -1403,7 +1404,7 @@ class WindowGroupedTable(
 
     val projectFields = extractFieldReferences(expandedFields ++ groupKeys :+ window.timeField)
 
-    new Table(table.tableEnv,
+    new TableImpl(table.tableEnv,
       Project(
         projectsOnAgg,
         WindowAggregate(

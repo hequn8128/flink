@@ -44,90 +44,6 @@ class CorrelateValidationTest extends TableTestBase {
   }
 
   @Test
-  def testInvalidTableFunctions(): Unit = {
-    val util = streamTestUtil()
-
-    val func1 = new TableFunc1
-    util.javaTableEnv.registerFunction("func1", func1)
-    util.javaTableEnv.registerTableSink(
-      "testSink", new TestAppendSink().configure(
-        Array[String]("f"), Array[TypeInformation[_]](Types.INT)))
-
-    // table function call select
-    expectExceptionThrown(
-      func1('c).select("f0"),
-      "Table functions can only be used in table.joinLateral() and table.leftOuterJoinLateral()."
-    )
-
-    // table function call select
-    expectExceptionThrown(
-      func1('c).select('f0),
-      "Table functions can only be used in table.joinLateral() and table.leftOuterJoinLateral()."
-    )
-
-    // table function call insertInto
-    expectExceptionThrown(
-      func1('c).insertInto("testSink"),
-      "Table functions can only be used in table.joinLateral() and table.leftOuterJoinLateral()."
-    )
-
-    // table function call distinct
-    expectExceptionThrown(
-      func1('c).distinct(),
-      "Table functions can only be used in table.joinLateral() and table.leftOuterJoinLateral()."
-    )
-
-    // table function call filter
-    expectExceptionThrown(
-      func1('c).filter('f0 === "?"),
-      "Table functions can only be used in table.joinLateral() and table.leftOuterJoinLateral()."
-    )
-
-    // table function call filter
-    expectExceptionThrown(
-      func1('c).filter("f0 = '?'"),
-      "Table functions can only be used in table.joinLateral() and table.leftOuterJoinLateral()."
-    )
-
-    // table function call limit
-    expectExceptionThrown(
-      func1('c).orderBy('f0).offset(3),
-      "Table functions can only be used in table.joinLateral() and table.leftOuterJoinLateral()."
-    )
-
-    // table function call limit
-    expectExceptionThrown(
-      func1('c).orderBy('f0).fetch(3),
-      "Table functions can only be used in table.joinLateral() and table.leftOuterJoinLateral()."
-    )
-
-    // table function call orderBy
-    expectExceptionThrown(
-      func1('c).orderBy("f0"),
-      "Table functions can only be used in table.joinLateral() and table.leftOuterJoinLateral()."
-    )
-
-    // table function call orderBy
-    expectExceptionThrown(
-      func1('c).orderBy('f0),
-      "Table functions can only be used in table.joinLateral() and table.leftOuterJoinLateral()."
-    )
-
-    // table function call where
-    expectExceptionThrown(
-      func1('c).where("f0 = '?'"),
-      "Table functions can only be used in table.joinLateral() and table.leftOuterJoinLateral()."
-    )
-
-    // table function call where
-    expectExceptionThrown(
-      func1('c).where('f0 === "?"),
-      "Table functions can only be used in table.joinLateral() and table.leftOuterJoinLateral()."
-    )
-
-  }
-
-  @Test
   def testInvalidTableFunction(): Unit = {
     val util = streamTestUtil()
     val t = util.addTable[(Int, Long, String)]("MyTable", 'a, 'b, 'c)
@@ -190,7 +106,9 @@ class CorrelateValidationTest extends TableTestBase {
     val table = util.addTable[(Int, Long, String)]("MyTable", 'a, 'b, 'c)
     val function = util.addFunction("func1", new TableFunc1)
 
-    val result = table.leftOuterJoin(function('c) as 's, 'c === 's).select('c, 's).where('a > 10)
+    val result = table
+      .leftOuterJoinLateral(function('c) as 's, 'c === 's)
+      .select('c, 's).where('a > 10)
 
     util.verifyTable(result, "")
   }

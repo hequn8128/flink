@@ -139,7 +139,8 @@ case class WindowReference(name: String, tpe: Option[TypeInformation[_]] = None)
   override def toString: String = s"'$name"
 }
 
-case class TableReference(name: String, table: Table) extends LeafExpression with NamedExpression {
+case class TableReference(name: String, table: TableImpl)
+  extends LeafExpression with NamedExpression {
 
   override private[flink] def toRexNode(implicit relBuilder: RelBuilder): RexNode =
     throw new UnsupportedOperationException(s"Table reference '$name' can not be used solely.")

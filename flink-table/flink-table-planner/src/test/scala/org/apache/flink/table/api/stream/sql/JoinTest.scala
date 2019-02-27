@@ -19,7 +19,7 @@ package org.apache.flink.table.api.stream.sql
 
 import org.apache.calcite.rel.logical.LogicalJoin
 import org.apache.flink.api.scala._
-import org.apache.flink.table.api.Types
+import org.apache.flink.table.api.{TableImpl, Types}
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.calcite.RelTimeIndicatorConverter
 import org.apache.flink.table.expressions.Null
@@ -988,7 +988,7 @@ class JoinTest extends TableTestBase {
     val query =
       "SELECT t1.a, t2.b FROM MyTable as t1 join MyTable2 as t2 on t1.a = t2.a and " + timeSql
 
-    val resultTable = streamUtil.tableEnv.sqlQuery(query)
+    val resultTable = streamUtil.tableEnv.sqlQuery(query).asInstanceOf[TableImpl]
     val relNode = RelTimeIndicatorConverter.convert(
       resultTable.getRelNode,
       streamUtil.tableEnv.getRelBuilder.getRexBuilder)
@@ -1013,7 +1013,7 @@ class JoinTest extends TableTestBase {
       query: String,
       expectCondStr: String): Unit = {
 
-    val resultTable = streamUtil.tableEnv.sqlQuery(query)
+    val resultTable = streamUtil.tableEnv.sqlQuery(query).asInstanceOf[TableImpl]
     val relNode = RelTimeIndicatorConverter.convert(
       resultTable.getRelNode,
       streamUtil.tableEnv.getRelBuilder.getRexBuilder)

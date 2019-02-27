@@ -22,15 +22,14 @@ import java.sql.{Date, Time, Timestamp}
 
 import org.apache.calcite.avatica.util.DateTimeUtils._
 import org.apache.flink.api.common.typeinfo.{SqlTimeTypeInfo, TypeInformation}
-import org.apache.flink.table.api.{CurrentRange, CurrentRow, TableException, UnboundedRange, UnboundedRow}
+import org.apache.flink.table.api._
 import org.apache.flink.table.expressions.ExpressionUtils.{convertArray, toMilliInterval, toMonthInterval, toRowInterval}
-import org.apache.flink.table.api.Table
 import org.apache.flink.table.expressions.TimeIntervalUnit.TimeIntervalUnit
 import org.apache.flink.table.expressions.TimePointUnit.TimePointUnit
 import org.apache.flink.table.expressions._
 import org.apache.flink.table.functions.{AggregateFunction, DistinctAggregateFunction, ScalarFunction, TableFunction}
 
-import scala.language.implicitConversions
+import _root_.scala.language.implicitConversions
 
 /**
  * These are all the operations that can be used to construct an [[Expression]] AST for expression
@@ -268,7 +267,8 @@ trait ImplicitExpressionOperations {
     *
     * Note: This operation is not supported in a streaming environment yet.
     */
-  def in(table: Table) = In(expr, Seq(TableReference(table.toString, table)))
+  def in(table: Table) =
+    In(expr, Seq(TableReference(table.toString, table.asInstanceOf[TableImpl])))
 
   /**
     * Returns the start time (inclusive) of a window when applied on a window reference.
@@ -1012,12 +1012,12 @@ trait ImplicitExpressionConversions {
     def expr = Literal(bool)
   }
 
-  implicit class LiteralJavaDecimalExpression(javaDecimal: java.math.BigDecimal)
+  implicit class LiteralJavaDecimalExpression(javaDecimal: _root_.java.math.BigDecimal)
       extends ImplicitExpressionOperations {
     def expr = Literal(javaDecimal)
   }
 
-  implicit class LiteralScalaDecimalExpression(scalaDecimal: scala.math.BigDecimal)
+  implicit class LiteralScalaDecimalExpression(scalaDecimal: _root_.scala.math.BigDecimal)
       extends ImplicitExpressionOperations {
     def expr = Literal(scalaDecimal.bigDecimal)
   }
@@ -1050,14 +1050,6 @@ trait ImplicitExpressionConversions {
       }
       TableFunctionCall(t.getClass.getCanonicalName, t, params, resultType)
     }
-  }
-
-  @deprecated("Please use Table.joinLateral() or Table.leftOuterJoinLateral() instead.", "1.8")
-  implicit def tableFunctionCall2Table(tfc: TableFunctionCall): Table = {
-    new Table(
-      tableEnv = null, // table environment will be set later.
-      tfc.toLogicalTableFunctionCall(child = null) // child will be set later.
-    )
   }
 
   implicit def symbol2FieldExpression(sym: Symbol): Expression = UnresolvedFieldReference(sym.name)
