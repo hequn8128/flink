@@ -20,7 +20,9 @@ package org.apache.flink.table.expressions
 
 import org.apache.flink.table.api._
 import org.apache.flink.table.expressions.FunctionDefinitions._
-import org.apache.flink.table.expressions.{UUID => PlannerUUID, E => PlannerE, Call => PlannerCall, Literal => PlannerLiteral, TableFunctionCall => PlannerTableFunctionCall, TableReference => PlannerTableReference}
+import org.apache.flink.table.expressions.{Call => PlannerCall, E => PlannerE, Literal => PlannerLiteral, TableFunctionCall => PlannerTableFunctionCall, TableReference => PlannerTableReference, UUID => PlannerUUID}
+import org.apache.flink.table.plan.{CurrentRange, CurrentRow, UnboundedRange, UnboundedRow}
+
 import _root_.scala.collection.JavaConverters._
 
 /**

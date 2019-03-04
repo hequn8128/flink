@@ -27,6 +27,7 @@ import org.apache.flink.streaming.api.watermark.Watermark
 import org.apache.flink.table.runtime.utils.JavaUserDefinedAggFunctions.{CountDistinct, CountDistinctWithRetractAndReset, WeightedAvg}
 import org.apache.flink.table.runtime.utils.JavaUserDefinedScalarFunctions.JavaFunc0
 import org.apache.flink.table.api.scala._
+import org.apache.flink.table.api.window.Over
 import org.apache.flink.table.functions.aggfunctions.CountAggFunction
 import org.apache.flink.table.runtime.stream.table.OverWindowITCase._
 import org.apache.flink.table.runtime.utils.{StreamITCase, StreamingWithStateTestBase}

@@ -26,6 +26,7 @@ import org.apache.calcite.rex._
 import org.apache.calcite.util.ImmutableBitSet
 import org.apache.flink.table.api._
 import org.apache.flink.table.calcite.FlinkRelBuilder.NamedWindowProperty
+import org.apache.flink.table.plan.PlannerGroupWindow
 import org.apache.flink.table.plan.logical.rel.LogicalWindowAggregate
 import org.apache.flink.table.validate.BasicOperatorTable
 
@@ -147,6 +148,6 @@ abstract class LogicalWindowAggregateRule(ruleName: String)
 
   /** translate the group window expression in to a Flink Table window. */
   private[table] def translateWindowExpression(
-    windowExpr: RexCall, rowType: RelDataType): PlannerWindow
+    windowExpr: RexCall, rowType: RelDataType): PlannerGroupWindow
 
 }

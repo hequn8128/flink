@@ -22,10 +22,10 @@ import java.math.BigDecimal
 
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rex._
-import org.apache.flink.table.api.scala.{Session, Slide, Tumble}
 import org.apache.flink.table.api._
 import org.apache.flink.table.calcite.FlinkTypeFactory
-import org.apache.flink.table.expressions.{PlannerExpression, Literal, ResolvedFieldReference, WindowReference}
+import org.apache.flink.table.expressions.{Literal, PlannerExpression, ResolvedFieldReference, WindowReference}
+import org.apache.flink.table.plan.{PlannerGroupWindow, SessionWithGapOnTimeWithAlias, SlideWithSizeAndSlideOnTimeWithAlias, TumbleWithSizeOnTimeWithAlias}
 import org.apache.flink.table.plan.rules.common.LogicalWindowAggregateRule
 import org.apache.flink.table.typeutils.TimeIntervalTypeInfo
 import org.apache.flink.table.validate.BasicOperatorTable
@@ -49,7 +49,7 @@ class DataSetLogicalWindowAggregateRule
 
   override private[table] def translateWindowExpression(
       windowExpr: RexCall,
-      rowType: RelDataType): PlannerWindow = {
+      rowType: RelDataType): PlannerGroupWindow = {
 
     def getOperandAsLong(call: RexCall, idx: Int): Long =
       call.getOperands.get(idx) match {

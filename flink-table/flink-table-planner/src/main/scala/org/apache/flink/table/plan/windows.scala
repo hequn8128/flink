@@ -16,25 +16,21 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.api
+package org.apache.flink.table.plan
 
 import org.apache.flink.table.expressions._
 import org.apache.flink.table.plan.logical._
 import org.apache.flink.table.typeutils.{RowIntervalTypeInfo, TimeIntervalTypeInfo}
 
-trait UnresolvedOverWindow
-
-abstract class Window
-
 /**
   * Over window is similar to the traditional OVER SQL.
   */
-case class OverWindow(
+case class PlannerOverWindow(
     private[flink] val alias: PlannerExpression,
     private[flink] val partitionBy: Seq[PlannerExpression],
     private[flink] val orderBy: PlannerExpression,
     private[flink] val preceding: PlannerExpression,
-    private[flink] val following: PlannerExpression) extends UnresolvedOverWindow
+    private[flink] val following: PlannerExpression)
 
 case class CurrentRow() extends PlannerExpression {
   override private[flink] def resultType = RowIntervalTypeInfo.INTERVAL_ROWS
@@ -100,7 +96,7 @@ case class OverWindowWithOrderBy(partitionBy: Seq[PlannerExpression], orderBy: P
     * @param alias alias for this over window
     * @return over window
     */
-  def as(alias: String): OverWindow = as(ExpressionParser.parseExpression(alias))
+  def as(alias: String): PlannerOverWindow = as(ExpressionParser.parseExpression(alias))
 
   /**
     * Assigns an alias for this window that the following `select()` clause can refer to.
@@ -108,8 +104,8 @@ case class OverWindowWithOrderBy(partitionBy: Seq[PlannerExpression], orderBy: P
     * @param alias alias for this over window
     * @return over window
     */
-  def as(alias: PlannerExpression): OverWindow = {
-    OverWindow(alias, partitionBy, orderBy, UnboundedRange(), CurrentRange())
+  def as(alias: PlannerExpression): PlannerOverWindow = {
+    PlannerOverWindow(alias, partitionBy, orderBy, UnboundedRange(), CurrentRange())
   }
 }
 
@@ -129,7 +125,7 @@ class OverWindowWithPreceding(
     * @param alias alias for this over window
     * @return over window
     */
-  def as(alias: String): OverWindow = as(ExpressionParser.parseExpression(alias))
+  def as(alias: String): PlannerOverWindow = as(ExpressionParser.parseExpression(alias))
 
   /**
     * Assigns an alias for this window that the following `select()` clause can refer to.
@@ -137,7 +133,7 @@ class OverWindowWithPreceding(
     * @param alias alias for this over window
     * @return over window
     */
-  def as(alias: PlannerExpression): OverWindow = {
+  def as(alias: PlannerExpression): PlannerOverWindow = {
 
     // set following to CURRENT_ROW / CURRENT_RANGE if not defined
     if (null == following) {
@@ -147,7 +143,7 @@ class OverWindowWithPreceding(
         following = CurrentRange()
       }
     }
-    OverWindow(alias, partitionBy, orderBy, preceding, following)
+    PlannerOverWindow(alias, partitionBy, orderBy, preceding, following)
   }
 
   /**
@@ -185,7 +181,7 @@ class OverWindowWithPreceding(
   * For finite batch tables, window provides shortcuts for time-based groupBy.
   *
   */
-abstract class PlannerWindow(val alias: PlannerExpression, val timeField: PlannerExpression) {
+abstract class PlannerGroupWindow(val alias: PlannerExpression, val timeField: PlannerExpression) {
 
   /**
     * Converts an API class to a logical window for planning.
@@ -282,7 +278,7 @@ class TumbleWithSizeOnTimeWithAlias(
     alias: PlannerExpression,
     timeField: PlannerExpression,
     size: PlannerExpression)
-  extends PlannerWindow(
+  extends PlannerGroupWindow(
     alias,
     timeField) {
 
@@ -421,7 +417,7 @@ class SlideWithSizeAndSlideOnTimeWithAlias(
     timeField: PlannerExpression,
     size: PlannerExpression,
     slide: PlannerExpression)
-  extends PlannerWindow(
+  extends PlannerGroupWindow(
     alias,
     timeField) {
 
@@ -521,7 +517,7 @@ class SessionWithGapOnTimeWithAlias(
     alias: PlannerExpression,
     timeField: PlannerExpression,
     gap: PlannerExpression)
-  extends PlannerWindow(
+  extends PlannerGroupWindow(
     alias,
     timeField) {
 

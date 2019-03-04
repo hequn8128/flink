@@ -22,6 +22,7 @@ import org.apache.flink.api.scala._
 import org.apache.flink.table.api.ValidationException
 import org.apache.flink.table.runtime.utils.JavaUserDefinedAggFunctions.WeightedAvgWithMerge
 import org.apache.flink.table.api.scala._
+import org.apache.flink.table.api.window.{Session, Slide, Tumble}
 import org.apache.flink.table.utils.TableTestBase
 import org.junit.Test
 
@@ -63,17 +64,6 @@ class GroupWindowValidationTest extends TableTestBase {
   }
 
   @Test(expected = classOf[ValidationException])
-  def testInvalidTumblingSize(): Unit = {
-    val util = streamTestUtil()
-    val table = util.addTable[(Long, Int, String)]('long.rowtime, 'int, 'string)
-
-    table
-      .window(Tumble over "WRONG" on 'long as 'w) // string is not a valid interval
-      .groupBy('w, 'string)
-      .select('string, 'int.count)
-  }
-
-  @Test(expected = classOf[ValidationException])
   def testTumbleUdAggWithInvalidArgs(): Unit = {
     val util = streamTestUtil()
     val weightedAvg = new WeightedAvgWithMerge
@@ -83,17 +73,6 @@ class GroupWindowValidationTest extends TableTestBase {
       .window(Tumble over 2.hours on 'rowtime as 'w)
       .groupBy('w, 'string)
       .select('string, weightedAvg('string, 'int)) // invalid UDAGG args
-  }
-
-  @Test(expected = classOf[ValidationException])
-  def testInvalidSlidingSize(): Unit = {
-    val util = streamTestUtil()
-    val table = util.addTable[(Long, Int, String)]('long.rowtime, 'int, 'string)
-
-    table
-      .window(Slide over "WRONG" every "WRONG" on 'long as 'w) // string is not a valid interval
-      .groupBy('w, 'string)
-      .select('string, 'int.count)
   }
 
   @Test(expected = classOf[ValidationException])

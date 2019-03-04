@@ -20,58 +20,37 @@ package org.apache.flink.table.api
 import org.apache.calcite.rel.RelNode
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.operators.join.JoinType
-import org.apache.flink.table.api.java.{OverWindow => JOverWindow, SessionWithGapOnTimeWithAlias => JSessionWithGapOnTimeWithAlias, SlideWithSizeAndSlideOnTimeWithAlias => JSlideWithSizeAndSlideOnTimeWithAlias, TumbleWithSizeOnTimeWithAlias => JTumbleWithSizeOnTimeWithAlias}
+import org.apache.flink.table.plan.{SessionWithGapOnTimeWithAlias, SlideWithSizeAndSlideOnTimeWithAlias, TumbleWithSizeOnTimeWithAlias}
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.scala.{OverWindow =>SOverWindow, SessionWithGapOnTimeWithAlias => SSessionWithGapOnTimeWithAlias, SlideWithSizeAndSlideOnTimeWithAlias => SSlideWithSizeAndSlideOnTimeWithAlias, TumbleWithSizeOnTimeWithAlias => STumbleWithSizeOnTimeWithAlias}
+import org.apache.flink.table.api.window.Over.{OverWithExpression, OverWithString}
+import org.apache.flink.table.api.window.Session.{SessionWithExpressionGapOnTimeWithAlias, SessionWithStringGapOnTimeWithAlias}
+import org.apache.flink.table.api.window.Slide.{SlideWithExpressionSizeAndSlideOnTimeWithAlias, SlideWithStringSizeAndSlideOnTimeWithAlias}
+import org.apache.flink.table.api.window.Tumble.{TumbleWithExpressionSizeOnTimeWithAlias, TumbleWithStringSizeOnTimeWithAlias}
 import org.apache.flink.table.calcite.{FlinkRelBuilder, FlinkTypeFactory}
 import org.apache.flink.table.expressions.Expression
-import org.apache.flink.table.expressions.{Asc, Desc, ExpressionParser, Ordering, Alias, Call, PlannerExpression, ResolvedFieldReference, UnresolvedAlias, UnresolvedFieldReference, WindowProperty}
+import org.apache.flink.table.expressions.{Alias, Asc, Call, Desc, ExpressionParser, Ordering, PlannerExpression, ResolvedFieldReference, UnresolvedAlias, UnresolvedFieldReference, WindowProperty}
 import org.apache.flink.table.functions.{TableFunction, TemporalTableFunction}
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils
+import org.apache.flink.table.plan.{OverWindowWithPreceding, PlannerOverWindow, PlannerGroupWindow}
 import org.apache.flink.table.plan.ProjectionTranslator._
 import org.apache.flink.table.plan.logical.{Minus, _}
 import org.apache.flink.table.sinks.TableSink
 import org.apache.flink.types.Row
 
-import _root_.scala.annotation.varargs
 import _root_.scala.collection.JavaConverters._
 
 /**
-  * A Table is the core component of the Table API.
-  * Similar to how the batch and streaming APIs have DataSet and DataStream,
-  * the Table API is built around [[Table]].
-  *
-  * Use the methods of [[Table]] to transform data. Use [[TableEnvironment]] to convert a [[Table]]
-  * back to a DataSet or DataStream.
-  *
-  * When using Scala a [[Table]] can also be converted using implicit conversions.
-  *
-  * Example:
-  *
-  * {{{
-  *   val env = ExecutionEnvironment.getExecutionEnvironment
-  *   val tEnv = TableEnvironment.getTableEnvironment(env)
-  *
-  *   val set: DataSet[(String, Int)] = ...
-  *   val table = set.toTable(tEnv, 'a, 'b)
-  *   ...
-  *   val table2 = ...
-  *   val set2: DataSet[MyType] = table2.toDataSet[MyType]
-  * }}}
-  *
-  * Operations such as [[join]], [[select]], [[where]] and [[groupBy]] either take arguments
-  * in a Scala DSL or as an expression String. Please refer to the documentation for the expression
-  * syntax.
+  * The default implementation of the [[Table]].
   *
   * @param tableEnv The [[TableEnvironment]] to which the table is bound.
   * @param logicalPlan logical representation
   */
-class Table(
+class TableImpl(
     private[flink] val tableEnv: TableEnvironment,
-    private[flink] val logicalPlan: LogicalNode) {
+    private[flink] val logicalPlan: LogicalNode) extends Table {
 
   // Check if the plan has an unbounded TableFunctionCall as child node.
-  //   A TableFunctionCall is tolerated as root node because the Table holds the initial call.
+  // A TableFunctionCall is tolerated as root node because the Table holds the initial call.
   if (containsUnboundedUDTFCall(logicalPlan) &&
     !logicalPlan.isInstanceOf[LogicalTableFunctionCall]) {
     throw new ValidationException(
@@ -143,7 +122,7 @@ class Table(
         expandedFields, tableEnv, aggNames, propNames)
       val projectFields = extractFieldReferences(expandedFields)
 
-      new Table(tableEnv,
+      new TableImpl(tableEnv,
         Project(projectsOnAgg,
           Aggregate(Nil, aggNames.map(a => Alias(a._1, a._2)).toSeq,
             Project(projectFields, logicalPlan).validate(tableEnv)
@@ -151,7 +130,7 @@ class Table(
         ).validate(tableEnv)
       )
     } else {
-      new Table(tableEnv,
+      new TableImpl(tableEnv,
         Project(expandedFields.map(UnresolvedAlias), logicalPlan).validate(tableEnv))
     }
   }
@@ -275,7 +254,7 @@ class Table(
             "Alias field must be an instance of UnresolvedFieldReference"
           )
         }
-        new Table(
+        new TableImpl(
           tableEnv,
           LogicalTableFunctionCall(
             functionCall.functionName,
@@ -287,7 +266,7 @@ class Table(
         )
       case _ =>
         // prepend an AliasNode
-        new Table(tableEnv, AliasNode(fields, logicalPlan).validate(tableEnv))
+        new TableImpl(tableEnv, AliasNode(fields, logicalPlan).validate(tableEnv))
     }
   }
 
@@ -321,7 +300,7 @@ class Table(
   }
 
   private def filterInternal(predicate: PlannerExpression): Table = {
-    new Table(tableEnv, Filter(predicate, logicalPlan).validate(tableEnv))
+    new TableImpl(tableEnv, Filter(predicate, logicalPlan).validate(tableEnv))
   }
 
   /**
@@ -382,7 +361,7 @@ class Table(
   }
 
   private def groupByInternal(fields: PlannerExpression*): GroupedTable = {
-    new GroupedTable(this, fields)
+    new GroupedTableImpl(this, fields)
   }
 
   /**
@@ -395,7 +374,7 @@ class Table(
     * }}}
     */
   def distinct(): Table = {
-    new Table(tableEnv, Distinct(logicalPlan).validate(tableEnv))
+    new TableImpl(tableEnv, Distinct(logicalPlan).validate(tableEnv))
   }
 
   /**
@@ -582,14 +561,18 @@ class Table(
 
     // check that the TableEnvironment of right table is not null
     // and right table belongs to the same TableEnvironment
-    if (right.tableEnv != this.tableEnv) {
+    if (right.asInstanceOf[TableImpl].tableEnv != this.tableEnv) {
       throw new ValidationException("Only tables from the same TableEnvironment can be joined.")
     }
 
-    new Table(
+    new TableImpl(
       tableEnv,
-      Join(this.logicalPlan, right.logicalPlan, joinType, joinPredicate, correlated = false)
-        .validate(tableEnv))
+      Join(
+        this.logicalPlan,
+        right.asInstanceOf[TableImpl].logicalPlan,
+        joinType,
+        joinPredicate,
+        correlated = false).validate(tableEnv))
   }
 
   /**
@@ -796,7 +779,7 @@ class Table(
       this.logicalPlan
     ).validate(tableEnv)
 
-    new Table(
+    new TableImpl(
       tableEnv,
       Join(
         this.logicalPlan,
@@ -823,11 +806,12 @@ class Table(
     */
   def minus(right: Table): Table = {
     // check that right table belongs to the same TableEnvironment
-    if (right.tableEnv != this.tableEnv) {
+    if (right.asInstanceOf[TableImpl].tableEnv != this.tableEnv) {
       throw new ValidationException("Only tables from the same TableEnvironment can be " +
         "subtracted.")
     }
-    new Table(tableEnv, Minus(logicalPlan, right.logicalPlan, all = false)
+    new TableImpl(
+      tableEnv, Minus(logicalPlan, right.asInstanceOf[TableImpl].logicalPlan, all = false)
       .validate(tableEnv))
   }
 
@@ -848,11 +832,12 @@ class Table(
     */
   def minusAll(right: Table): Table = {
     // check that right table belongs to the same TableEnvironment
-    if (right.tableEnv != this.tableEnv) {
+    if (right.asInstanceOf[TableImpl].tableEnv != this.tableEnv) {
       throw new ValidationException("Only tables from the same TableEnvironment can be " +
         "subtracted.")
     }
-    new Table(tableEnv, Minus(logicalPlan, right.logicalPlan, all = true)
+    new TableImpl(
+      tableEnv, Minus(logicalPlan, right.asInstanceOf[TableImpl].logicalPlan, all = true)
       .validate(tableEnv))
   }
 
@@ -870,10 +855,12 @@ class Table(
     */
   def union(right: Table): Table = {
     // check that right table belongs to the same TableEnvironment
-    if (right.tableEnv != this.tableEnv) {
+    if (right.asInstanceOf[TableImpl].tableEnv != this.tableEnv) {
       throw new ValidationException("Only tables from the same TableEnvironment can be unioned.")
     }
-    new Table(tableEnv, Union(logicalPlan, right.logicalPlan, all = false).validate(tableEnv))
+    new TableImpl(
+      tableEnv, Union(logicalPlan, right.asInstanceOf[TableImpl].logicalPlan, all = false)
+        .validate(tableEnv))
   }
 
   /**
@@ -890,10 +877,12 @@ class Table(
     */
   def unionAll(right: Table): Table = {
     // check that right table belongs to the same TableEnvironment
-    if (right.tableEnv != this.tableEnv) {
+    if (right.asInstanceOf[TableImpl].tableEnv != this.tableEnv) {
       throw new ValidationException("Only tables from the same TableEnvironment can be unioned.")
     }
-    new Table(tableEnv, Union(logicalPlan, right.logicalPlan, all = true).validate(tableEnv))
+    new TableImpl(
+      tableEnv, Union(logicalPlan, right.asInstanceOf[TableImpl].logicalPlan, all = true)
+        .validate(tableEnv))
   }
 
   /**
@@ -912,11 +901,13 @@ class Table(
     */
   def intersect(right: Table): Table = {
     // check that right table belongs to the same TableEnvironment
-    if (right.tableEnv != this.tableEnv) {
+    if (right.asInstanceOf[TableImpl].tableEnv != this.tableEnv) {
       throw new ValidationException(
         "Only tables from the same TableEnvironment can be intersected.")
     }
-    new Table(tableEnv, Intersect(logicalPlan, right.logicalPlan, all = false).validate(tableEnv))
+    new TableImpl(
+      tableEnv, Intersect(logicalPlan, right.asInstanceOf[TableImpl].logicalPlan, all = false)
+        .validate(tableEnv))
   }
 
   /**
@@ -935,11 +926,13 @@ class Table(
     */
   def intersectAll(right: Table): Table = {
     // check that right table belongs to the same TableEnvironment
-    if (right.tableEnv != this.tableEnv) {
+    if (right.asInstanceOf[TableImpl].tableEnv != this.tableEnv) {
       throw new ValidationException(
         "Only tables from the same TableEnvironment can be intersected.")
     }
-    new Table(tableEnv, Intersect(logicalPlan, right.logicalPlan, all = true).validate(tableEnv))
+    new TableImpl(
+      tableEnv, Intersect(logicalPlan, right.asInstanceOf[TableImpl].logicalPlan, all = true)
+        .validate(tableEnv))
   }
 
   /**
@@ -980,7 +973,7 @@ class Table(
         Desc(desc.args.head)
       case e => Asc(e)
     }
-    new Table(tableEnv, Sort(order, logicalPlan).validate(tableEnv))
+    new TableImpl(tableEnv, Sort(order, logicalPlan).validate(tableEnv))
   }
 
   /**
@@ -988,7 +981,7 @@ class Table(
     * Similar to a SQL OFFSET clause. Offset is technically part of the Order By operator and
     * thus must be preceded by it.
     *
-    * [[Table.offset(o)]] can be combined with a subsequent [[Table.fetch(n)]] call to return n rows
+    * [[Table#offset(o)]] can be combined with a subsequent [[Table#fetch(n)]] call to return n rows
     * after skipping the first o rows.
     *
     * {{{
@@ -1000,8 +993,8 @@ class Table(
     *
     * @param offset number of records to skip
     */
-  def offset(offset: Int): Table = {
-    new Table(tableEnv, Limit(offset, -1, logicalPlan).validate(tableEnv))
+  def offset(offset: Integer): Table = {
+    new TableImpl(tableEnv, Limit(offset, -1, logicalPlan).validate(tableEnv))
   }
 
   /**
@@ -1009,7 +1002,7 @@ class Table(
     * Similar to a SQL FETCH clause. Fetch is technically part of the Order By operator and
     * thus must be preceded by it.
     *
-    * [[Table.fetch(n)]] can be combined with a preceding [[Table.offset(o)]] call to return n rows
+    * [[Table#fetch(n)]] can be combined with a preceding [[Table#offset(o)]] call to return n rows
     * after skipping the first o rows.
     *
     * {{{
@@ -1021,18 +1014,18 @@ class Table(
     *
     * @param fetch the number of records to return. Fetch must be >= 0.
     */
-  def fetch(fetch: Int): Table = {
+  def fetch(fetch: Integer): Table = {
     if (fetch < 0) {
       throw new ValidationException("FETCH count must be equal or larger than 0.")
     }
     this.logicalPlan match {
       case Limit(o, -1, c) =>
         // replace LIMIT without FETCH by LIMIT with FETCH
-        new Table(tableEnv, Limit(o, fetch, c).validate(tableEnv))
+        new TableImpl(tableEnv, Limit(o, fetch, c).validate(tableEnv))
       case Limit(_, _, _) =>
         throw new ValidationException("FETCH is already defined.")
       case _ =>
-        new Table(tableEnv, Limit(0, fetch, logicalPlan).validate(tableEnv))
+        new TableImpl(tableEnv, Limit(0, fetch, logicalPlan).validate(tableEnv))
     }
   }
 
@@ -1160,42 +1153,42 @@ class Table(
     * @param window window that specifies how elements are grouped.
     * @return A windowed table.
     */
-  def window(window: PlannerWindow): WindowedTable = {
-    new WindowedTable(this, window)
+  private def window(window: PlannerGroupWindow): GroupWindowedTable = {
+    new GroupWindowedTableImpl(this, window)
   }
 
-  def window(window: Window): WindowedTable = {
-    val windowImpl: PlannerWindow = window match {
-      case STumbleWithSizeOnTimeWithAlias(
-      alias: Expression, timeField: Expression, size: Expression) =>
-        new TumbleWithSizeOnTimeWithAlias(alias, timeField, size)
-
-      case SSlideWithSizeAndSlideOnTimeWithAlias(
-      alias: Expression, timeField: Expression, size: Expression, slide: Expression) =>
-        new SlideWithSizeAndSlideOnTimeWithAlias(alias, timeField, size, slide)
-
-      case SSessionWithGapOnTimeWithAlias(
-      alias: Expression, timeField: Expression, gap: Expression) =>
-        new SessionWithGapOnTimeWithAlias(alias, timeField, gap)
-
-      case JTumbleWithSizeOnTimeWithAlias(alias, timeField, size) =>
+  def window(window: GroupWindow): GroupWindowedTable = {
+    val windowImpl: PlannerGroupWindow = window match {
+      case eTumble: TumbleWithExpressionSizeOnTimeWithAlias =>
         new TumbleWithSizeOnTimeWithAlias(
-          ExpressionParser.parseExpression(alias),
-          ExpressionParser.parseExpression(timeField),
-          ExpressionParser.parseExpression(size))
+          eTumble.getAlias, eTumble.getTimeField, eTumble.getSize)
 
-      case JSlideWithSizeAndSlideOnTimeWithAlias(alias, timeField, size, slide) =>
+      case eSlide: SlideWithExpressionSizeAndSlideOnTimeWithAlias =>
         new SlideWithSizeAndSlideOnTimeWithAlias(
-          ExpressionParser.parseExpression(alias),
-          ExpressionParser.parseExpression(timeField),
-          ExpressionParser.parseExpression(size),
-          ExpressionParser.parseExpression(slide))
+          eSlide.getAlias, eSlide.getTimeField, eSlide.getSize, eSlide.getSlide)
 
-      case JSessionWithGapOnTimeWithAlias(alias, timeField, gap) =>
+      case eSession: SessionWithExpressionGapOnTimeWithAlias =>
         new SessionWithGapOnTimeWithAlias(
-          ExpressionParser.parseExpression(alias),
-          ExpressionParser.parseExpression(timeField),
-          ExpressionParser.parseExpression(gap))
+          eSession.getAlias, eSession.getTimeField, eSession.getGap)
+
+      case sTumble: TumbleWithStringSizeOnTimeWithAlias =>
+        new TumbleWithSizeOnTimeWithAlias(
+          ExpressionParser.parseExpression(sTumble.getAlias),
+          ExpressionParser.parseExpression(sTumble.getTimeField),
+          ExpressionParser.parseExpression(sTumble.getSize))
+
+      case sSlide: SlideWithStringSizeAndSlideOnTimeWithAlias =>
+        new SlideWithSizeAndSlideOnTimeWithAlias(
+          ExpressionParser.parseExpression(sSlide.getAlias),
+          ExpressionParser.parseExpression(sSlide.getTimeField),
+          ExpressionParser.parseExpression(sSlide.getSize),
+          ExpressionParser.parseExpression(sSlide.getSlide))
+
+      case sSession: SessionWithStringGapOnTimeWithAlias =>
+        new SessionWithGapOnTimeWithAlias(
+          ExpressionParser.parseExpression(sSession.getAlias),
+          ExpressionParser.parseExpression(sSession.getTimeField),
+          ExpressionParser.parseExpression(sSession.getGap))
     }
     this.window(windowImpl)
   }
@@ -1224,8 +1217,7 @@ class Table(
     *                    computed.
     * @return An OverWindowedTable to specify the aggregations.
     */
-  @varargs
-  def window(overWindows: UnresolvedOverWindow*): OverWindowedTable = {
+  def window(overWindows: OverWindow*): OverWindowedTable = {
 
     if (tableEnv.isInstanceOf[BatchTableEnvironment]) {
       throw new TableException("Over-windows for batch tables are currently not supported.")
@@ -1235,40 +1227,40 @@ class Table(
       throw new TableException("Over-Windows are currently only supported single window.")
     }
 
-    val overWindowImpls: Seq[OverWindow] = overWindows.map {
-      case w: SOverWindow =>
-        val following = if (w.following != null) {
-          w.following
+    val overWindowImpls: Seq[PlannerOverWindow] = overWindows.map {
+      case w: OverWithExpression =>
+        val following = if (w.getFollowing != null) {
+          w.getFollowing
         } else {
           null
         }
         new OverWindowWithPreceding(
-          w.partitionBy,
-          w.orderBy,
-          w.preceding
-        ).following(following).as(w.alias)
-      case w: JOverWindow =>
-        val partitionBy = if ("" != w.partitionBy) {
-          ExpressionParser.parseExpressionList(w.partitionBy)
+          w.getPartitionBy.asScala,
+          w.getOrderBy,
+          w.getPreceding
+        ).following(following).as(w.getAlias)
+      case w: OverWithString =>
+        val partitionBy = if ("" != w.getPartitionBy) {
+          ExpressionParser.parseExpressionList(w.getPartitionBy)
         } else {
           Seq()
         }
-        val following = if (w.following != null) {
-          ExpressionParser.parseExpression(w.following)
+        val following = if (w.getFollowing != null) {
+          ExpressionParser.parseExpression(w.getFollowing)
         } else {
           null
         }
         new OverWindowWithPreceding(
           partitionBy,
-          ExpressionParser.parseExpression(w.orderBy),
-          ExpressionParser.parseExpression(w.preceding)
+          ExpressionParser.parseExpression(w.getOrderBy),
+          ExpressionParser.parseExpression(w.getPreceding)
         ).following(following)
-          .as(ExpressionParser.parseExpression(w.alias))
+          .as(ExpressionParser.parseExpression(w.getAlias))
       case _ =>
-        overWindows.head.asInstanceOf[OverWindow]
+        overWindows.head.asInstanceOf[PlannerOverWindow]
     }
 
-    new OverWindowedTable(this, overWindowImpls.toArray)
+    new OverWindowedTableImpl(this, overWindowImpls.toArray)
   }
 
   var tableName: String = _
@@ -1303,9 +1295,11 @@ class Table(
 /**
   * A table that has been grouped on a set of grouping keys.
   */
-class GroupedTable(
+class GroupedTableImpl(
   private[flink] val table: Table,
-  private[flink] val groupKey: Seq[PlannerExpression]) {
+  private[flink] val groupKey: Seq[PlannerExpression]) extends GroupedTable {
+
+  val tableImpl = table.asInstanceOf[TableImpl]
 
   /**
     * Performs a selection operation on a grouped table. Similar to an SQL SELECT statement.
@@ -1320,7 +1314,7 @@ class GroupedTable(
   def select(fields: String): Table = {
     val fieldExprs = ExpressionParser.parseExpressionList(fields)
     // get the correct expression for AggFunctionCall
-    val withResolvedAggFunctionCall = fieldExprs.map(replaceAggFunctionCall(_, table.tableEnv))
+    val withResolvedAggFunctionCall = fieldExprs.map(replaceAggFunctionCall(_, tableImpl.tableEnv))
     selectInternal(withResolvedAggFunctionCall: _*)
   }
 
@@ -1336,33 +1330,33 @@ class GroupedTable(
     */
   def select(fields: Expression*): Table = {
     // get the correct expression for AggFunctionCall
-    val withResolvedAggFunctionCall = fields.map(replaceAggFunctionCall(_, table.tableEnv))
+    val withResolvedAggFunctionCall = fields.map(replaceAggFunctionCall(_, tableImpl.tableEnv))
     selectInternal(withResolvedAggFunctionCall: _*)
   }
 
   private def selectInternal(fields: PlannerExpression*): Table = {
-    val expandedFields = expandProjectList(fields, table.logicalPlan, table.tableEnv)
-    val (aggNames, propNames) = extractAggregationsAndProperties(expandedFields, table.tableEnv)
+    val expandedFields = expandProjectList(fields, tableImpl.logicalPlan, tableImpl.tableEnv)
+    val (aggNames, propNames) = extractAggregationsAndProperties(expandedFields, tableImpl.tableEnv)
     if (propNames.nonEmpty) {
       throw new ValidationException("Window properties can only be used on windowed tables.")
     }
 
     val projectsOnAgg = replaceAggregationsAndProperties(
-      expandedFields, table.tableEnv, aggNames, propNames)
+      expandedFields, tableImpl.tableEnv, aggNames, propNames)
     val projectFields = extractFieldReferences(expandedFields ++ groupKey)
 
-    new Table(table.tableEnv,
+    new TableImpl(tableImpl.tableEnv,
       Project(projectsOnAgg,
         Aggregate(groupKey, aggNames.map(a => Alias(a._1, a._2)).toSeq,
-          Project(projectFields, table.logicalPlan).validate(table.tableEnv)
-        ).validate(table.tableEnv)
-      ).validate(table.tableEnv))
+          Project(projectFields, tableImpl.logicalPlan).validate(tableImpl.tableEnv)
+        ).validate(tableImpl.tableEnv)
+      ).validate(tableImpl.tableEnv))
   }
 }
 
-class WindowedTable(
+class GroupWindowedTableImpl(
     private[flink] val table: Table,
-    private[flink] val window: PlannerWindow) {
+    private[flink] val window: PlannerGroupWindow) extends GroupWindowedTable {
 
   /**
     * Groups the elements by a mandatory window and one or more optional grouping attributes.
@@ -1411,57 +1405,61 @@ class WindowedTable(
       throw new ValidationException("GroupBy must contain exactly one window alias.")
     }
 
-    new WindowGroupedTable(table, fieldsWithoutWindow, window)
+    new WindowGroupedTableImpl(table, fieldsWithoutWindow, window)
   }
 
 }
 
-class OverWindowedTable(
+class OverWindowedTableImpl(
     private[flink] val table: Table,
-    private[flink] val overWindows: Array[OverWindow]) {
+    private[flink] val overWindows: Array[PlannerOverWindow]) extends OverWindowedTable {
 
-  def select(fields: String): Table = {
+  val tableImpl = table.asInstanceOf[TableImpl]
+
+  def select(fields: String): TableImpl = {
     val fieldExprs = ExpressionParser.parseExpressionList(fields)
     // get the correct expression for AggFunctionCall
-    val withResolvedAggFunctionCall = fieldExprs.map(replaceAggFunctionCall(_, table.tableEnv))
+    val withResolvedAggFunctionCall = fieldExprs.map(replaceAggFunctionCall(_, tableImpl.tableEnv))
     selectInternal(withResolvedAggFunctionCall: _*)
   }
 
-  def select(fields: Expression*): Table = {
+  def select(fields: Expression*): TableImpl = {
     // get the correct expression for AggFunctionCall
-    val withResolvedAggFunctionCall = fields.map(replaceAggFunctionCall(_, table.tableEnv))
+    val withResolvedAggFunctionCall = fields.map(replaceAggFunctionCall(_, tableImpl.tableEnv))
     selectInternal(withResolvedAggFunctionCall: _*)
   }
 
-  private def selectInternal(fields: PlannerExpression*): Table = {
+  private def selectInternal(fields: PlannerExpression*): TableImpl = {
     val expandedFields = expandProjectList(
       fields,
-      table.logicalPlan,
-      table.tableEnv)
+      tableImpl.logicalPlan,
+      tableImpl.tableEnv)
 
     if(fields.exists(_.isInstanceOf[WindowProperty])){
       throw new ValidationException(
         "Window start and end properties are not available for Over windows.")
     }
 
-    val expandedOverFields = resolveOverWindows(expandedFields, overWindows, table.tableEnv)
+    val expandedOverFields = resolveOverWindows(expandedFields, overWindows, tableImpl.tableEnv)
 
-    new Table(
-      table.tableEnv,
+    new TableImpl(
+      tableImpl.tableEnv,
       Project(
         expandedOverFields.map(UnresolvedAlias),
-        table.logicalPlan,
+        tableImpl.logicalPlan,
         // required for proper projection push down
         explicitAlias = true)
-      .validate(table.tableEnv)
+      .validate(tableImpl.tableEnv)
     )
   }
 }
 
-class WindowGroupedTable(
+class WindowGroupedTableImpl(
     private[flink] val table: Table,
     private[flink] val groupKeys: Seq[PlannerExpression],
-    private[flink] val window: PlannerWindow) {
+    private[flink] val window: PlannerGroupWindow) extends WindowGroupedTable {
+
+  val tableImpl = table.asInstanceOf[TableImpl]
 
   /**
     * Performs a selection operation on a window grouped  table. Similar to an SQL SELECT statement.
@@ -1476,7 +1474,7 @@ class WindowGroupedTable(
   def select(fields: String): Table = {
     val fieldExprs = ExpressionParser.parseExpressionList(fields)
     // get the correct expression for AggFunctionCall
-    val withResolvedAggFunctionCall = fieldExprs.map(replaceAggFunctionCall(_, table.tableEnv))
+    val withResolvedAggFunctionCall = fieldExprs.map(replaceAggFunctionCall(_, tableImpl.tableEnv))
     selectInternal(withResolvedAggFunctionCall: _*)
   }
 
@@ -1492,21 +1490,21 @@ class WindowGroupedTable(
     */
   def select(fields: Expression*): Table = {
     // get the correct expression for AggFunctionCall
-    val withResolvedAggFunctionCall = fields.map(replaceAggFunctionCall(_, table.tableEnv))
+    val withResolvedAggFunctionCall = fields.map(replaceAggFunctionCall(_, tableImpl.tableEnv))
     selectInternal(withResolvedAggFunctionCall: _*)
   }
 
   private def selectInternal(fields: PlannerExpression*): Table = {
-    val expandedFields = expandProjectList(fields, table.logicalPlan, table.tableEnv)
-    val (aggNames, propNames) = extractAggregationsAndProperties(expandedFields, table.tableEnv)
+    val expandedFields = expandProjectList(fields, tableImpl.logicalPlan, tableImpl.tableEnv)
+    val (aggNames, propNames) = extractAggregationsAndProperties(expandedFields, tableImpl.tableEnv)
 
     val projectsOnAgg = replaceAggregationsAndProperties(
-      expandedFields, table.tableEnv, aggNames, propNames)
+      expandedFields, tableImpl.tableEnv, aggNames, propNames)
 
     val projectFields = extractFieldReferences(expandedFields ++ groupKeys :+ window.timeField)
 
-    new Table(
-      table.tableEnv,
+    new TableImpl(
+      tableImpl.tableEnv,
       Project(
         projectsOnAgg,
         WindowAggregate(
@@ -1514,10 +1512,10 @@ class WindowGroupedTable(
           window.toLogicalWindow,
           propNames.map(a => Alias(a._1, a._2)).toSeq,
           aggNames.map(a => Alias(a._1, a._2)).toSeq,
-          Project(projectFields, table.logicalPlan).validate(table.tableEnv)
-        ).validate(table.tableEnv),
+          Project(projectFields, tableImpl.logicalPlan).validate(tableImpl.tableEnv)
+        ).validate(tableImpl.tableEnv),
         // required for proper resolution of the time attribute in multi-windows
         explicitAlias = true
-      ).validate(table.tableEnv))
+      ).validate(tableImpl.tableEnv))
   }
 }

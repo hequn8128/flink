@@ -27,9 +27,7 @@ import org.apache.flink.table.expressions.ExpressionUtils._
 import org.apache.flink.table.expressions.FunctionDefinitions.{E => FDE, UUID => FDUUID, _}
 import org.apache.flink.table.expressions._
 import org.apache.flink.table.functions.{AggregateFunction, DistinctAggregateFunction, ScalarFunction, TableFunction}
-import org.apache.flink.table.plan.logical.LogicalTableFunctionCall
 
-import _root_.scala.collection.JavaConversions._
 import _root_.scala.language.implicitConversions
 
 /**

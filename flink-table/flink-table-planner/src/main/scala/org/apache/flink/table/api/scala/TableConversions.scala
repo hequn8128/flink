@@ -21,7 +21,7 @@ package org.apache.flink.table.api.scala
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.scala._
 import org.apache.flink.streaming.api.scala.DataStream
-import org.apache.flink.table.api.{BatchQueryConfig, StreamQueryConfig, Table, TableException}
+import org.apache.flink.table.api.{BatchQueryConfig, StreamQueryConfig, Table, TableException, TableImpl}
 import org.apache.flink.table.api.scala.{BatchTableEnvironment => ScalaBatchTableEnv}
 import org.apache.flink.table.api.scala.{StreamTableEnvironment => ScalaStreamTableEnv}
 
@@ -31,6 +31,8 @@ import org.apache.flink.table.api.scala.{StreamTableEnvironment => ScalaStreamTa
   * @param table The table to convert.
   */
 class TableConversions(table: Table) {
+
+  val tableImpl = table.asInstanceOf[TableImpl]
 
   /**
     * Converts the given [[Table]] into a [[DataSet]] of a specified type.
@@ -45,9 +47,9 @@ class TableConversions(table: Table) {
     */
   def toDataSet[T: TypeInformation]: DataSet[T] = {
 
-    table.tableEnv match {
+    tableImpl.tableEnv match {
       case tEnv: ScalaBatchTableEnv =>
-        tEnv.toDataSet(table)
+        tEnv.toDataSet(tableImpl)
       case _ =>
         throw new TableException(
           "Only tables that originate from Scala DataSets can be converted to Scala DataSets.")
@@ -68,9 +70,9 @@ class TableConversions(table: Table) {
     */
   def toDataSet[T: TypeInformation](queryConfig: BatchQueryConfig): DataSet[T] = {
 
-    table.tableEnv match {
+    tableImpl.tableEnv match {
       case tEnv: ScalaBatchTableEnv =>
-        tEnv.toDataSet(table, queryConfig)
+        tEnv.toDataSet(tableImpl, queryConfig)
       case _ =>
         throw new TableException(
           "Only tables that originate from Scala DataSets can be converted to Scala DataSets.")
@@ -93,9 +95,9 @@ class TableConversions(table: Table) {
     */
   def toAppendStream[T: TypeInformation]: DataStream[T] = {
 
-    table.tableEnv match {
+    tableImpl.tableEnv match {
       case tEnv: ScalaStreamTableEnv =>
-        tEnv.toAppendStream(table)
+        tEnv.toAppendStream(tableImpl)
       case _ =>
         throw new TableException(
           "Only tables that originate from Scala DataStreams " +
@@ -119,9 +121,9 @@ class TableConversions(table: Table) {
     * @return The converted [[DataStream]].
     */
   def toAppendStream[T: TypeInformation](queryConfig: StreamQueryConfig): DataStream[T] = {
-    table.tableEnv match {
+    tableImpl.tableEnv match {
       case tEnv: ScalaStreamTableEnv =>
-        tEnv.toAppendStream(table, queryConfig)
+        tEnv.toAppendStream(tableImpl, queryConfig)
       case _ =>
         throw new TableException(
           "Only tables that originate from Scala DataStreams " +
@@ -138,9 +140,9 @@ class TableConversions(table: Table) {
     */
   def toRetractStream[T: TypeInformation]: DataStream[(Boolean, T)] = {
 
-    table.tableEnv match {
+    tableImpl.tableEnv match {
       case tEnv: ScalaStreamTableEnv =>
-        tEnv.toRetractStream(table)
+        tEnv.toRetractStream(tableImpl)
       case _ =>
         throw new TableException(
           "Only tables that originate from Scala DataStreams " +
@@ -160,9 +162,9 @@ class TableConversions(table: Table) {
   def toRetractStream[T: TypeInformation](
       queryConfig: StreamQueryConfig): DataStream[(Boolean, T)] = {
 
-    table.tableEnv match {
+    tableImpl.tableEnv match {
       case tEnv: ScalaStreamTableEnv =>
-        tEnv.toRetractStream(table, queryConfig)
+        tEnv.toRetractStream(tableImpl, queryConfig)
       case _ =>
         throw new TableException(
           "Only tables that originate from Scala DataStreams " +

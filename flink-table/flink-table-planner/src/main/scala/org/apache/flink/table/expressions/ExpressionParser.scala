@@ -21,6 +21,7 @@ import org.apache.calcite.avatica.util.DateTimeUtils.{MILLIS_PER_DAY, MILLIS_PER
 import org.apache.flink.api.common.typeinfo.{SqlTimeTypeInfo, TypeInformation}
 import org.apache.flink.table.api._
 import org.apache.flink.table.expressions.PlannerExpressionUtils.{toMilliInterval, toMonthInterval}
+import org.apache.flink.table.plan.{CurrentRange, CurrentRow, UnboundedRange, UnboundedRow}
 
 import _root_.scala.language.implicitConversions
 import _root_.scala.util.parsing.combinator.{JavaTokenParsers, PackratParsers}

@@ -30,7 +30,7 @@ import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
 import org.apache.flink.table.api.java.{BatchTableEnvironment => JavaBatchTableEnv, StreamTableEnvironment => JavaStreamTableEnv}
 import org.apache.flink.table.api.scala.{BatchTableEnvironment => ScalaBatchTableEnv, StreamTableEnvironment => ScalaStreamTableEnv}
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.{Table, TableSchema}
+import org.apache.flink.table.api.{Table, TableImpl, TableSchema}
 import org.apache.flink.table.expressions.{DefaultExpressionVisitor, Expression}
 import org.apache.flink.table.functions.{AggregateFunction, ScalarFunction, TableFunction}
 import org.apache.flink.table.expressions.PlannerExpression
@@ -68,8 +68,10 @@ class TableTestBase {
   def verifyTableEquals(expected: Table, actual: Table): Unit = {
     assertEquals(
       "Logical plans do not match",
-      LogicalPlanFormatUtils.formatTempTableId(RelOptUtil.toString(expected.getRelNode)),
-      LogicalPlanFormatUtils.formatTempTableId(RelOptUtil.toString(actual.getRelNode)))
+      LogicalPlanFormatUtils.formatTempTableId(RelOptUtil.toString(
+        expected.asInstanceOf[TableImpl].getRelNode)),
+      LogicalPlanFormatUtils.formatTempTableId(RelOptUtil.toString(
+        actual.asInstanceOf[TableImpl].getRelNode)))
   }
 }
 
@@ -93,7 +95,7 @@ abstract class TableTestUtil {
   def verifyTable(resultTable: Table, expected: String): Unit
 
   def verifySchema(resultTable: Table, fields: Seq[(String, TypeInformation[_])]): Unit = {
-    val actual = resultTable.getSchema
+    val actual = resultTable.asInstanceOf[TableImpl].getSchema
     val expected = new TableSchema(fields.map(_._1).toArray, fields.map(_._2).toArray)
     assertEquals(expected, actual)
   }
@@ -246,7 +248,7 @@ case class BatchTableTestUtil() extends TableTestUtil {
   }
 
   def verifyTable(resultTable: Table, expected: String): Unit = {
-    val relNode = resultTable.getRelNode
+    val relNode = resultTable.asInstanceOf[TableImpl].getRelNode
     val optimized = tableEnv.optimize(relNode)
     verifyString(expected, optimized)
   }
@@ -256,13 +258,13 @@ case class BatchTableTestUtil() extends TableTestUtil {
   }
 
   def verifyJavaTable(resultTable: Table, expected: String): Unit = {
-    val relNode = resultTable.getRelNode
+    val relNode = resultTable.asInstanceOf[TableImpl].getRelNode
     val optimized = javaTableEnv.optimize(relNode)
     verifyString(expected, optimized)
   }
 
   def printTable(resultTable: Table): Unit = {
-    val relNode = resultTable.getRelNode
+    val relNode = resultTable.asInstanceOf[TableImpl].getRelNode
     val optimized = tableEnv.optimize(relNode)
     println(RelOptUtil.toString(optimized))
   }
@@ -329,15 +331,15 @@ case class StreamTableTestUtil() extends TableTestUtil {
   }
 
   def verifyTable(resultTable: Table, expected: String): Unit = {
-    val relNode = resultTable.getRelNode
+    val relNode = resultTable.asInstanceOf[TableImpl].getRelNode
     val optimized = tableEnv.optimize(relNode, updatesAsRetraction = false)
     verifyString(expected, optimized)
   }
 
   def verify2Tables(resultTable1: Table, resultTable2: Table): Unit = {
-    val relNode1 = resultTable1.getRelNode
+    val relNode1 = resultTable1.asInstanceOf[TableImpl].getRelNode
     val optimized1 = tableEnv.optimize(relNode1, updatesAsRetraction = false)
-    val relNode2 = resultTable2.getRelNode
+    val relNode2 = resultTable2.asInstanceOf[TableImpl].getRelNode
     val optimized2 = tableEnv.optimize(relNode2, updatesAsRetraction = false)
     assertEquals(RelOptUtil.toString(optimized1), RelOptUtil.toString(optimized2))
   }
@@ -347,14 +349,14 @@ case class StreamTableTestUtil() extends TableTestUtil {
   }
 
   def verifyJavaTable(resultTable: Table, expected: String): Unit = {
-    val relNode = resultTable.getRelNode
+    val relNode = resultTable.asInstanceOf[TableImpl].getRelNode
     val optimized = javaTableEnv.optimize(relNode, updatesAsRetraction = false)
     verifyString(expected, optimized)
   }
 
   // the print methods are for debugging purposes only
   def printTable(resultTable: Table): Unit = {
-    val relNode = resultTable.getRelNode
+    val relNode = resultTable.asInstanceOf[TableImpl].getRelNode
     val optimized = tableEnv.optimize(relNode, updatesAsRetraction = false)
     println(RelOptUtil.toString(optimized))
   }

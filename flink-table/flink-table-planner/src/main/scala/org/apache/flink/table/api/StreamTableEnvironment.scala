@@ -323,6 +323,7 @@ abstract class StreamTableEnvironment(
       sink: TableSink[T],
       queryConfig: QueryConfig): Unit = {
 
+    val tableImpl = table.asInstanceOf[TableImpl]
     // Check query configuration
     val streamQueryConfig = queryConfig match {
       case streamConfig: StreamQueryConfig => streamConfig
@@ -348,7 +349,7 @@ abstract class StreamTableEnvironment(
 
       case upsertSink: UpsertStreamTableSink[_] =>
         // optimize plan
-        val optimizedPlan = optimize(table.getRelNode, updatesAsRetraction = false)
+        val optimizedPlan = optimize(tableImpl.getRelNode, updatesAsRetraction = false)
         // check for append only table
         val isAppendOnlyTable = UpdatingPlanChecker.isAppendOnly(optimizedPlan)
         upsertSink.setIsAppendOnly(isAppendOnlyTable)
@@ -362,7 +363,7 @@ abstract class StreamTableEnvironment(
             "UpsertStreamTableSink requires that Table has full primary keys if it is updated.")
         }
         val outputType = sink.getOutputType
-        val resultType = getResultType(table.getRelNode, optimizedPlan)
+        val resultType = getResultType(tableImpl.getRelNode, optimizedPlan)
         // translate the Table into a DataStream and provide the type that the TableSink expects.
         val result: DataStream[T] =
           translate(
@@ -376,14 +377,14 @@ abstract class StreamTableEnvironment(
 
       case appendSink: AppendStreamTableSink[_] =>
         // optimize plan
-        val optimizedPlan = optimize(table.getRelNode, updatesAsRetraction = false)
+        val optimizedPlan = optimize(tableImpl.getRelNode, updatesAsRetraction = false)
         // verify table is an insert-only (append-only) table
         if (!UpdatingPlanChecker.isAppendOnly(optimizedPlan)) {
           throw new TableException(
             "AppendStreamTableSink requires that Table has only insert changes.")
         }
         val outputType = sink.getOutputType
-        val resultType = getResultType(table.getRelNode, optimizedPlan)
+        val resultType = getResultType(tableImpl.getRelNode, optimizedPlan)
         // translate the Table into a DataStream and provide the type that the TableSink expects.
         val result: DataStream[T] =
           translate(
@@ -531,7 +532,7 @@ abstract class StreamTableEnvironment(
     *
     * @param name The name under which the table is registered in the catalog.
     * @param dataStream The [[DataStream]] to register as table in the catalog.
-    * @param fields The field expressions to define the field names of the table.
+    * @param fieldsExpr The field expressions to define the field names of the table.
     * @tparam T The type of the [[DataStream]].
     */
   protected def registerDataStreamInternal[T](
@@ -859,7 +860,7 @@ abstract class StreamTableEnvironment(
       queryConfig: StreamQueryConfig,
       updatesAsRetraction: Boolean,
       withChangeFlag: Boolean)(implicit tpe: TypeInformation[A]): DataStream[A] = {
-    val relNode = table.getRelNode
+    val relNode = table.asInstanceOf[TableImpl].getRelNode
     val dataStreamPlan = optimize(relNode, updatesAsRetraction)
 
     val rowType = getResultType(relNode, dataStreamPlan)
@@ -1000,7 +1001,7 @@ abstract class StreamTableEnvironment(
     * @param table The table for which the AST and execution plan will be returned.
     */
   def explain(table: Table): String = {
-    val ast = table.getRelNode
+    val ast = table.asInstanceOf[TableImpl].getRelNode
     val optimizedPlan = optimize(ast, updatesAsRetraction = false)
     val dataStream = translateToCRow(optimizedPlan, queryConfig)
 

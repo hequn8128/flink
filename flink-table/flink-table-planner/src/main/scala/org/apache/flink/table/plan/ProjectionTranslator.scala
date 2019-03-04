@@ -19,7 +19,7 @@
 package org.apache.flink.table.plan
 
 import org.apache.flink.api.common.typeutils.CompositeType
-import org.apache.flink.table.api.{OverWindow, TableEnvironment, ValidationException}
+import org.apache.flink.table.api.{TableEnvironment, ValidationException}
 import org.apache.flink.table.expressions._
 import org.apache.flink.table.plan.logical.{LogicalNode, Project}
 
@@ -237,7 +237,7 @@ object ProjectionTranslator {
 
   def resolveOverWindows(
       exprs: Seq[PlannerExpression],
-      overWindows: Array[OverWindow],
+      overWindows: Array[PlannerOverWindow],
       tEnv: TableEnvironment): Seq[PlannerExpression] = {
 
     exprs.map(e => replaceOverCall(e, overWindows, tEnv))
@@ -251,7 +251,7 @@ object ProjectionTranslator {
     */
   private def replaceOverCall(
       expr: PlannerExpression,
-      overWindows: Array[OverWindow],
+      overWindows: Array[PlannerOverWindow],
       tableEnv: TableEnvironment): PlannerExpression = {
 
     expr match {

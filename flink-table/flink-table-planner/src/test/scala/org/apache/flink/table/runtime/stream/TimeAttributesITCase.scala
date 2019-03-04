@@ -30,6 +30,7 @@ import org.apache.flink.streaming.api.functions.AssignerWithPunctuatedWatermarks
 import org.apache.flink.streaming.api.scala.{DataStream, StreamExecutionEnvironment}
 import org.apache.flink.streaming.api.watermark.Watermark
 import org.apache.flink.table.api.scala._
+import org.apache.flink.table.api.window.Tumble
 import org.apache.flink.table.api.{Table, TableSchema, Types}
 import org.apache.flink.table.expressions.{Expression, ExpressionParser, TimeIntervalUnit}
 import org.apache.flink.table.plan.TimeIndicatorConversionTest.TableFunc

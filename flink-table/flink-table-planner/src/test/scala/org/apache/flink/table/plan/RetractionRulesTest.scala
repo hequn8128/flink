@@ -20,8 +20,9 @@ package org.apache.flink.table.plan
 
 import org.apache.calcite.rel.RelNode
 import org.apache.flink.api.scala._
-import org.apache.flink.table.api.Table
+import org.apache.flink.table.api.{Table, TableImpl}
 import org.apache.flink.table.api.scala._
+import org.apache.flink.table.api.window.Tumble
 import org.apache.flink.table.plan.nodes.datastream._
 import org.apache.flink.table.runtime.utils.JavaUserDefinedAggFunctions.CountDistinct
 import org.apache.flink.table.utils.TableTestUtil._
@@ -506,7 +507,7 @@ class StreamTableTestForRetractionUtil extends StreamTableTestUtil {
   }
 
   def verifyTableTrait(resultTable: Table, expected: String): Unit = {
-    val relNode = resultTable.getRelNode
+    val relNode = resultTable.asInstanceOf[TableImpl].getRelNode
     val optimized = tableEnv.optimize(relNode, updatesAsRetraction = false)
     val actual = TraitUtil.toString(optimized)
     assertEquals(
