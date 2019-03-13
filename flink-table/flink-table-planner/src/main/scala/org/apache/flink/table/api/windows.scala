@@ -20,28 +20,34 @@ package org.apache.flink.table.api
 
 import org.apache.flink.table.expressions._
 
+import _root_.scala.collection.JavaConversions._
+import _root_.java.util.{List => JList, Optional => JOptional}
+
+import org.apache.flink.table.util.JavaScalaConversionUtil
+
 /**
   * An over window specification.
   *
   * Similar to SQL, over window aggregates compute an aggregate for each input row over a range
   * of its neighboring rows.
   */
-class OverWindow(
+class OverWindowImpl(
     alias: Expression,
     partitionBy: Seq[Expression],
     orderBy: Expression,
     preceding: Expression,
-    following: Option[Expression]) {
+    following: Option[Expression])
+  extends OverWindow {
 
-  def getAlias: Expression = alias
+  override def getAlias: Expression = alias
 
-  def getPartitioning: Seq[Expression] = partitionBy
+  override def getPartitioning: JList[Expression] = partitionBy
 
-  def getOrder: Expression = orderBy
+  override def getOrder: Expression = orderBy
 
-  def getPreceding: Expression = preceding
+  override def getPreceding: Expression = preceding
 
-  def getFollowing: Option[Expression] = following
+  override def getFollowing: JOptional[Expression] = JavaScalaConversionUtil.toJava(following)
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -51,7 +57,11 @@ class OverWindow(
 /**
   * Partially defined over window with partitioning.
   */
-class OverWindowPartitioned(partitionBy: Seq[Expression]) {
+class OverWindowPartitionedImpl(partitionBy: JList[Expression]) extends OverWindowPartitioned {
+
+  def this(partitionBy: String) {
+    this(ExpressionParser.parseExpressionList(partitionBy))
+  }
 
   /**
     * Specifies the time attribute on which rows are ordered.
@@ -80,14 +90,17 @@ class OverWindowPartitioned(partitionBy: Seq[Expression]) {
     * @return an over window with defined order
     */
   def orderBy(orderBy: Expression): OverWindowPartitionedOrdered = {
-    new OverWindowPartitionedOrdered(partitionBy, orderBy)
+    new OverWindowPartitionedOrderedImpl(partitionBy, orderBy)
   }
 }
 
 /**
   * Partially defined over window with (optional) partitioning and order.
   */
-class OverWindowPartitionedOrdered(partitionBy: Seq[Expression], orderBy: Expression) {
+class OverWindowPartitionedOrderedImpl(
+    partitionBy: Seq[Expression],
+    orderBy: Expression)
+  extends OverWindowPartitionedOrdered {
 
   /**
     * Set the preceding offset (based on time or row-count intervals) for over window.
@@ -106,7 +119,7 @@ class OverWindowPartitionedOrdered(partitionBy: Seq[Expression], orderBy: Expres
     * @return an over window with defined preceding
     */
   def preceding(preceding: Expression): OverWindowPartitionedOrderedPreceding = {
-    new OverWindowPartitionedOrderedPreceding(partitionBy, orderBy, preceding)
+    new OverWindowPartitionedOrderedPrecedingImpl(partitionBy, orderBy, preceding)
   }
 
   /**
@@ -124,17 +137,18 @@ class OverWindowPartitionedOrdered(partitionBy: Seq[Expression], orderBy: Expres
     * @return the fully defined over window
     */
   def as(alias: Expression): OverWindow = {
-    new OverWindow(alias, partitionBy, orderBy, UnboundedRange(), None)
+    new OverWindowImpl(alias, partitionBy, orderBy, UnboundedRange(), None)
   }
 }
 
 /**
   * Partially defined over window with (optional) partitioning, order, and preceding.
   */
-class OverWindowPartitionedOrderedPreceding(
+class OverWindowPartitionedOrderedPrecedingImpl(
     private val partitionBy: Seq[Expression],
     private val orderBy: Expression,
-    private val preceding: Expression) {
+    private val preceding: Expression)
+  extends OverWindowPartitionedOrderedPreceding {
 
   private var optionalFollowing: Option[Expression] = None
 
@@ -153,7 +167,7 @@ class OverWindowPartitionedOrderedPreceding(
     * @return the fully defined over window
     */
   def as(alias: Expression): OverWindow = {
-    new OverWindow(alias, partitionBy, orderBy, preceding, optionalFollowing)
+    new OverWindowImpl(alias, partitionBy, orderBy, preceding, optionalFollowing)
   }
 
   /**
@@ -194,13 +208,13 @@ class OverWindowPartitionedOrderedPreceding(
   *
   * For finite batch tables, group windows provide shortcuts for time-based groupBy.
   */
-abstract class Window(alias: Expression, timeField: Expression) {
+abstract class WindowImpl(alias: Expression, timeField: Expression) extends GroupWindow {
 
-  def getAlias: Expression = {
+  override def getAlias: Expression = {
     alias
   }
 
-  def getTimeField: Expression = {
+  override def getTimeField: Expression = {
     timeField
   }
 }
@@ -218,7 +232,7 @@ abstract class Window(alias: Expression, timeField: Expression) {
   *
   * @param size the size of the window either as time or row-count interval.
   */
-class TumbleWithSize(size: Expression) {
+class TumbleWithSizeImpl(size: Expression) extends TumbleWithSize {
 
   /**
     * Tumbling window.
@@ -242,7 +256,7 @@ class TumbleWithSize(size: Expression) {
     * @return a tumbling window on event-time
     */
   def on(timeField: Expression): TumbleWithSizeOnTime =
-    new TumbleWithSizeOnTime(timeField, size)
+    new TumbleWithSizeOnTimeImpl(timeField, size)
 
   /**
     * Specifies the time attribute on which rows are grouped.
@@ -261,7 +275,7 @@ class TumbleWithSize(size: Expression) {
 /**
   * Tumbling window on time.
   */
-class TumbleWithSizeOnTime(time: Expression, size: Expression) {
+class TumbleWithSizeOnTimeImpl(time: Expression, size: Expression) extends TumbleWithSizeOnTime {
 
   /**
     * Assigns an alias for this window that the following `groupBy()` and `select()` clause can
@@ -271,7 +285,7 @@ class TumbleWithSizeOnTime(time: Expression, size: Expression) {
     * @return this window
     */
   def as(alias: Expression): TumbleWithSizeOnTimeWithAlias = {
-    new TumbleWithSizeOnTimeWithAlias(alias, time, size)
+    new TumbleWithSizeOnTimeWithAliasImpl(alias, time, size)
   }
 
   /**
@@ -289,13 +303,14 @@ class TumbleWithSizeOnTime(time: Expression, size: Expression) {
 /**
   * Tumbling window on time with alias. Fully specifies a window.
   */
-class TumbleWithSizeOnTimeWithAlias(
+class TumbleWithSizeOnTimeWithAliasImpl(
     alias: Expression,
     timeField: Expression,
     size: Expression)
-  extends Window(
+  extends WindowImpl(
     alias,
-    timeField) {
+    timeField)
+    with TumbleWithSizeOnTimeWithAlias {
 
   def getSize: Expression = {
     size
@@ -311,7 +326,7 @@ class TumbleWithSizeOnTimeWithAlias(
   *
   * @param size the size of the window either as time or row-count interval.
   */
-class SlideWithSize(size: Expression) {
+class SlideWithSizeImpl(size: Expression) extends SlideWithSize {
 
   /**
     * Partially specified sliding window.
@@ -333,7 +348,8 @@ class SlideWithSize(size: Expression) {
     * @param slide the slide of the window either as time or row-count interval.
     * @return a sliding window
     */
-  def every(slide: Expression): SlideWithSizeAndSlide = new SlideWithSizeAndSlide(size, slide)
+  def every(slide: Expression): SlideWithSizeAndSlide =
+    new SlideWithSizeAndSlideImpl(size, slide)
 
   /**
     * Specifies the window's slide as time or row-count interval.
@@ -348,7 +364,8 @@ class SlideWithSize(size: Expression) {
     * @param slide the slide of the window either as time or row-count interval.
     * @return a sliding window
     */
-  def every(slide: String): SlideWithSizeAndSlide = every(ExpressionParser.parseExpression(slide))
+  def every(slide: String): SlideWithSizeAndSlide =
+    every(ExpressionParser.parseExpression(slide))
 }
 
 /**
@@ -360,7 +377,7 @@ class SlideWithSize(size: Expression) {
   *
   * @param size the size of the window either as time or row-count interval.
   */
-class SlideWithSizeAndSlide(size: Expression, slide: Expression) {
+class SlideWithSizeAndSlideImpl(size: Expression, slide: Expression) extends SlideWithSizeAndSlide {
 
   /**
     * Specifies the time attribute on which rows are grouped.
@@ -373,7 +390,7 @@ class SlideWithSizeAndSlide(size: Expression, slide: Expression) {
     * @return a tumbling window on event-time
     */
   def on(timeField: Expression): SlideWithSizeAndSlideOnTime =
-    new SlideWithSizeAndSlideOnTime(timeField, size, slide)
+    new SlideWithSizeAndSlideOnTimeImpl(timeField, size, slide)
 
   /**
     * Specifies the time attribute on which rows are grouped.
@@ -392,7 +409,11 @@ class SlideWithSizeAndSlide(size: Expression, slide: Expression) {
 /**
   * Sliding window on time.
   */
-class SlideWithSizeAndSlideOnTime(timeField: Expression, size: Expression, slide: Expression) {
+class SlideWithSizeAndSlideOnTimeImpl(
+    timeField: Expression,
+    size: Expression,
+    slide: Expression)
+  extends SlideWithSizeAndSlideOnTime {
 
   /**
     * Assigns an alias for this window that the following `groupBy()` and `select()` clause can
@@ -402,7 +423,7 @@ class SlideWithSizeAndSlideOnTime(timeField: Expression, size: Expression, slide
     * @return this window
     */
   def as(alias: Expression): SlideWithSizeAndSlideOnTimeWithAlias = {
-    new SlideWithSizeAndSlideOnTimeWithAlias(alias, timeField, size, slide)
+    new SlideWithSizeAndSlideOnTimeWithAliasImpl(alias, timeField, size, slide)
   }
 
   /**
@@ -420,14 +441,15 @@ class SlideWithSizeAndSlideOnTime(timeField: Expression, size: Expression, slide
 /**
   * Sliding window on time with alias. Fully specifies a window.
   */
-class SlideWithSizeAndSlideOnTimeWithAlias(
+class SlideWithSizeAndSlideOnTimeWithAliasImpl(
     alias: Expression,
     timeField: Expression,
     size: Expression,
     slide: Expression)
-  extends Window(
+  extends WindowImpl(
     alias,
-    timeField) {
+    timeField)
+    with SlideWithSizeAndSlideOnTimeWithAlias {
 
   def getSize: Expression = {
     size
@@ -451,7 +473,7 @@ class SlideWithSizeAndSlideOnTimeWithAlias(
   *
   * @param gap the time interval of inactivity before a window is closed.
   */
-class SessionWithGap(gap: Expression) {
+class SessionWithGapImpl(gap: Expression) extends SessionWithGap {
 
   /**
     * Session window.
@@ -475,7 +497,7 @@ class SessionWithGap(gap: Expression) {
     * @return a tumbling window on event-time
     */
   def on(timeField: Expression): SessionWithGapOnTime =
-    new SessionWithGapOnTime(timeField, gap)
+    new SessionWithGapOnTimeImpl(timeField, gap)
 
   /**
     * Specifies the time attribute on which rows are grouped.
@@ -494,7 +516,10 @@ class SessionWithGap(gap: Expression) {
 /**
   * Session window on time.
   */
-class SessionWithGapOnTime(timeField: Expression, gap: Expression) {
+class SessionWithGapOnTimeImpl(
+    timeField: Expression,
+    gap: Expression)
+  extends SessionWithGapOnTime {
 
   /**
     * Assigns an alias for this window that the following `groupBy()` and `select()` clause can
@@ -504,7 +529,7 @@ class SessionWithGapOnTime(timeField: Expression, gap: Expression) {
     * @return this window
     */
   def as(alias: Expression): SessionWithGapOnTimeWithAlias = {
-    new SessionWithGapOnTimeWithAlias(alias, timeField, gap)
+    new SessionWithGapOnTimeWithAliasImpl(alias, timeField, gap)
   }
 
   /**
@@ -522,13 +547,14 @@ class SessionWithGapOnTime(timeField: Expression, gap: Expression) {
 /**
   * Session window on time with alias. Fully specifies a window.
   */
-class SessionWithGapOnTimeWithAlias(
+class SessionWithGapOnTimeWithAliasImpl(
     alias: Expression,
     timeField: Expression,
     gap: Expression)
-  extends Window(
+  extends WindowImpl(
     alias,
-    timeField) {
+    timeField)
+    with SessionWithGapOnTimeWithAlias {
 
   def getGap: Expression = {
     gap

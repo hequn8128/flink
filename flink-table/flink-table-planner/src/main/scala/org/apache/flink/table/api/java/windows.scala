@@ -26,6 +26,7 @@ import org.apache.flink.table.expressions.ExpressionParser
   * windows of a specified fixed length. For example, a tumbling window of 5 minutes size groups
   * elements in 5 minutes intervals.
   */
+@Deprecated
 object Tumble {
 
   /**
@@ -36,7 +37,7 @@ object Tumble {
     * @param size the size of the window as time or row-count interval.
     * @return a partially defined tumbling window
     */
-  def over(size: String): TumbleWithSize = new TumbleWithSize(size)
+  def over(size: String): TumbleWithSize = new TumbleWithSizeImpl(size)
 }
 
 /**
@@ -48,6 +49,7 @@ object Tumble {
   * of 15 minutes and evaluates every five minutes. Each element is contained in three consecutive
   * window evaluations.
   */
+@Deprecated
 object Slide {
 
   /**
@@ -62,7 +64,7 @@ object Slide {
     * @param size the size of the window as time or row-count interval
     * @return a partially specified sliding window
     */
-  def over(size: String): SlideWithSize = new SlideWithSize(size)
+  def over(size: String): SlideWithSize = new SlideWithSizeImpl(size)
 }
 
 /**
@@ -70,6 +72,7 @@ object Slide {
   * intervals of inactivity, i.e., a session window is closes if no event appears for a defined
   * gap period.
   */
+@Deprecated
 object Session {
 
   /**
@@ -81,13 +84,14 @@ object Session {
     *            closing the session window.
     * @return a partially defined session window
     */
-  def withGap(gap: String): SessionWithGap = new SessionWithGap(gap)
+  def withGap(gap: String): SessionWithGap = new SessionWithGapImpl(gap)
 }
 
 /**
   * Helper class for creating an over window. Similar to SQL, over window aggregates compute an
   * aggregate for each input row over a range of its neighboring rows.
   */
+@Deprecated
 object Over {
 
   /**
@@ -102,7 +106,7 @@ object Over {
     * @return an over window with defined order
     */
   def orderBy(orderBy: String): OverWindowPartitionedOrdered = {
-    new OverWindowPartitionedOrdered(Seq(), ExpressionParser.parseExpression(orderBy))
+    new OverWindowPartitionedOrderedImpl(Seq(), ExpressionParser.parseExpression(orderBy))
   }
 
   /**
@@ -115,6 +119,6 @@ object Over {
     * @return an over window with defined partitioning
     */
   def partitionBy(partitionBy: String): OverWindowPartitioned = {
-    new OverWindowPartitioned(ExpressionParser.parseExpressionList(partitionBy))
+    new OverWindowPartitionedImpl(partitionBy)
   }
 }

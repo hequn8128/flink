@@ -20,12 +20,16 @@ package org.apache.flink.table.api.scala
 
 import org.apache.flink.table.api._
 import org.apache.flink.table.expressions.Expression
+import _root_.scala.collection.JavaConversions._
 
 /**
   * Helper object for creating a tumbling window. Tumbling windows are consecutive, non-overlapping
   * windows of a specified fixed length. For example, a tumbling window of 5 minutes size groups
   * elements in 5 minutes intervals.
   */
+@deprecated(
+  "This class will be removed. Use org.apache.flink.table.api.Tumble instead.",
+  "1.9.0")
 object Tumble {
 
   /**
@@ -36,7 +40,7 @@ object Tumble {
     * @param size the size of the window as time or row-count interval.
     * @return a partially defined tumbling window
     */
-  def over(size: Expression): TumbleWithSize = new TumbleWithSize(size)
+  def over(size: Expression): TumbleWithSize = new TumbleWithSizeImpl(size)
 }
 
 /**
@@ -48,6 +52,9 @@ object Tumble {
   * of 15 minutes and evaluates every five minutes. Each element is contained in three consecutive
   * window evaluations.
   */
+@deprecated(
+  "This class will be removed. Use org.apache.flink.table.api.Slide instead.",
+  "1.9.0")
 object Slide {
 
   /**
@@ -62,7 +69,7 @@ object Slide {
     * @param size the size of the window as time or row-count interval
     * @return a partially specified sliding window
     */
-  def over(size: Expression): SlideWithSize = new SlideWithSize(size)
+  def over(size: Expression): SlideWithSize = new SlideWithSizeImpl(size)
 }
 
 /**
@@ -70,6 +77,9 @@ object Slide {
   * intervals of inactivity, i.e., a session window is closes if no event appears for a defined
   * gap period.
   */
+@deprecated(
+  "This class will be removed. Use org.apache.flink.table.api.Session instead.",
+  "1.9.0")
 object Session {
 
   /**
@@ -81,13 +91,16 @@ object Session {
     *            closing the session window.
     * @return a partially defined session window
     */
-  def withGap(gap: Expression): SessionWithGap = new SessionWithGap(gap)
+  def withGap(gap: Expression): SessionWithGap = new SessionWithGapImpl(gap)
 }
 
 /**
   * Helper class for creating an over window. Similar to SQL, over window aggregates compute an
   * aggregate for each input row over a range of its neighboring rows.
   */
+@deprecated(
+  "This class will be removed. Use org.apache.flink.table.api.Over instead.",
+  "1.9.0")
 object Over {
 
   /**
@@ -102,7 +115,7 @@ object Over {
     * @return an over window with defined order
     */
   def orderBy(orderBy: Expression): OverWindowPartitionedOrdered = {
-    new OverWindowPartitionedOrdered(Seq(), orderBy)
+    new OverWindowPartitionedOrderedImpl(Seq(), orderBy)
   }
 
   /**
@@ -115,6 +128,6 @@ object Over {
     * @return an over window with defined partitioning
     */
   def partitionBy(partitionBy: Expression*): OverWindowPartitioned = {
-    new OverWindowPartitioned(partitionBy)
+    new OverWindowPartitionedImpl(partitionBy)
   }
 }

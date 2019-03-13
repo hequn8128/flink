@@ -27,9 +27,11 @@ import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils
 import org.apache.flink.table.plan.ProjectionTranslator._
 import org.apache.flink.table.plan.logical.{Minus, _}
 import org.apache.flink.table.sinks.TableSink
+import org.apache.flink.table.util.JavaScalaConversionUtil
 
 import _root_.scala.annotation.varargs
 import _root_.scala.collection.JavaConverters._
+import _root_.scala.collection.JavaConversions._
 
 /**
   * A Table is the core component of the Table API.
@@ -1092,8 +1094,33 @@ class Table(
     * @param window window that specifies how elements are grouped.
     * @return A windowed table.
     */
+  @Deprecated
+  @deprecated(
+    "This method will be removed. Use table.window(window: GroupWindow) instead",
+    "1.9.0")
   def window(window: Window): WindowedTable = {
     new WindowedTable(this, window)
+  }
+
+  /**
+    * Groups the records of a table by assigning them to windows defined by a time or row interval.
+    *
+    * For streaming tables of infinite size, grouping into windows is required to define finite
+    * groups on which group-based aggregates can be computed.
+    *
+    * For batch tables of finite size, windowing essentially provides shortcuts for time-based
+    * groupBy.
+    *
+    * __Note__: Computing windowed aggregates on a streaming table is only a parallel operation
+    * if additional grouping attributes are added to the `groupBy(...)` clause.
+    * If the `groupBy(...)` only references a window alias, the streamed table will be processed
+    * by a single task, i.e., with parallelism 1.
+    *
+    * @param window groupWindow that specifies how elements are grouped.
+    * @return A group windowed table.
+    */
+  def window(window: GroupWindow): GroupWindowedTable = {
+    new GroupWindowedTable(this, window)
   }
 
   /**
@@ -1203,8 +1230,21 @@ class GroupedTable(
 }
 
 /**
-  * A table that has been windowed for grouping [[Window]]s.
+  * A table that has been windowed for [[GroupWindow]]s.
   */
+class GroupWindowedTable(
+    override private[flink] val table: Table,
+    override private[flink] val window: GroupWindow)
+  extends WindowedTable(table, window) {
+
+}
+
+/**
+  * A table that has been windowed for grouping [[Window]]s.
+  *
+  * @deprecated This class will be replaced by [[GroupWindowedTable]] later.
+  */
+@Deprecated
 class WindowedTable(
     private[flink] val table: Table,
     private[flink] val window: Window) {
@@ -1258,10 +1298,14 @@ class WindowedTable(
 /**
   * A table that has been windowed and grouped for grouping [[Window]]s.
   */
-class WindowGroupedTable(
+class WindowGroupedTable @Deprecated() (
     private[flink] val table: Table,
     private[flink] val groupKeys: Seq[Expression],
     private[flink] val window: Window) {
+
+  def this(table: Table, groupKeys: Seq[Expression], groupWindow: GroupWindow) {
+    this(table, groupKeys, groupWindow.asInstanceOf[Window])
+  }
 
   /**
     * Performs a selection operation on a window grouped table. Similar to an SQL SELECT statement.
@@ -1418,7 +1462,7 @@ class OverWindowedTable(
       overWindow.getPartitioning.map(table.expressionBridge.bridge),
       table.expressionBridge.bridge(overWindow.getOrder),
       table.expressionBridge.bridge(overWindow.getPreceding),
-      overWindow.getFollowing.map(table.expressionBridge.bridge)
+      JavaScalaConversionUtil.toScala(overWindow.getFollowing).map(table.expressionBridge.bridge)
     )
   }
 }
