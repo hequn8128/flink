@@ -31,30 +31,30 @@ class KeywordParseTest {
   def testKeyword(): Unit = {
     assertEquals(
       call(BuiltInFunctionDefinitions.ORDER_ASC, fieldRef("f0")),
-      ExpressionParser.parseExpression("f0.asc"))
+      ExpressionParserImpl.parseExpression("f0.asc"))
     assertEquals(
       call(BuiltInFunctionDefinitions.ORDER_ASC, fieldRef("f0")),
-      ExpressionParser.parseExpression("f0.asc()"))
+      ExpressionParserImpl.parseExpression("f0.asc()"))
   }
 
   @Test
   def testKeywordAsPrefixInFunctionName(): Unit = {
     assertEquals(
       unresolvedCall("ascii", fieldRef("f0")),
-      ExpressionParser.parseExpression("f0.ascii()"))
+      ExpressionParserImpl.parseExpression("f0.ascii()"))
   }
 
   @Test
   def testKeywordAsInfixInFunctionName(): Unit = {
     assertEquals(
       unresolvedCall("iiascii", fieldRef("f0")),
-      ExpressionParser.parseExpression("f0.iiascii()"))
+      ExpressionParserImpl.parseExpression("f0.iiascii()"))
   }
 
   @Test
   def testKeywordAsSuffixInFunctionName(): Unit = {
     assertEquals(
       unresolvedCall("iiasc", fieldRef("f0")),
-      ExpressionParser.parseExpression("f0.iiasc()"))
+      ExpressionParserImpl.parseExpression("f0.iiasc()"))
   }
 }

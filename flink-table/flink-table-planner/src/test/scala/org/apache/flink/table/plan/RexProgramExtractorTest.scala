@@ -58,8 +58,8 @@ class RexProgramExtractorTest extends RexProgramTestBase {
     val builder: RexBuilder = new RexBuilder(typeFactory)
     val program = buildSimpleRexProgram()
 
-    val firstExp = ExpressionParser.parseExpression("id > 6")
-    val secondExp = ExpressionParser.parseExpression("amount * price < 100")
+    val firstExp = ExpressionParserImpl.parseExpression("id > 6")
+    val secondExp = ExpressionParserImpl.parseExpression("amount * price < 100")
     val expected: Array[Expression] = Array(firstExp, secondExp)
 
     val (convertedExpressions, unconvertedRexNodes) =
@@ -94,7 +94,7 @@ class RexProgramExtractorTest extends RexProgramTestBase {
         relBuilder,
         functionCatalog)
 
-    val expected: Array[Expression] = Array(ExpressionParser.parseExpression("amount >= id"))
+    val expected: Array[Expression] = Array(ExpressionParserImpl.parseExpression("amount >= id"))
     assertExpressionArrayEquals(expected, convertedExpressions)
     assertEquals(0, unconvertedRexNodes.length)
   }
@@ -147,9 +147,9 @@ class RexProgramExtractorTest extends RexProgramTestBase {
         functionCatalog)
 
     val expected: Array[Expression] = Array(
-      ExpressionParser.parseExpression("amount < 100 || price == 100 || price === 200"),
-      ExpressionParser.parseExpression("id > 100 || price == 100 || price === 200"),
-      ExpressionParser.parseExpression("!(amount <= id)"))
+      ExpressionParserImpl.parseExpression("amount < 100 || price == 100 || price === 200"),
+      ExpressionParserImpl.parseExpression("id > 100 || price == 100 || price === 200"),
+      ExpressionParserImpl.parseExpression("!(amount <= id)"))
     assertExpressionArrayEquals(expected, convertedExpressions)
     assertEquals(0, unconvertedRexNodes.length)
   }
@@ -199,7 +199,8 @@ class RexProgramExtractorTest extends RexProgramTestBase {
     }
 
     val expected: Array[Expression] = Array(
-      ExpressionParser.parseExpression("amount < 100 && id > 100 && price === 100 && amount <= id"))
+      ExpressionParserImpl
+        .parseExpression("amount < 100 && id > 100 && price === 100 && amount <= id"))
 
     assertExpressionArrayEquals(expected, convertedExpressions.toArray)
     assertEquals(0, unconvertedRexNodes.length)
@@ -305,17 +306,17 @@ class RexProgramExtractorTest extends RexProgramTestBase {
         functionCatalog)
 
     val expected: Array[Expression] = Array(
-      ExpressionParser.parseExpression("amount < id"),
-      ExpressionParser.parseExpression("amount <= id"),
-      ExpressionParser.parseExpression("amount <> id"),
-      ExpressionParser.parseExpression("amount == id"),
-      ExpressionParser.parseExpression("amount >= id"),
-      ExpressionParser.parseExpression("amount > id"),
-      ExpressionParser.parseExpression("amount + id == 100"),
-      ExpressionParser.parseExpression("amount - id == 100"),
-      ExpressionParser.parseExpression("amount * id == 100"),
-      ExpressionParser.parseExpression("amount / id == 100"),
-      ExpressionParser.parseExpression("-amount == 100")
+      ExpressionParserImpl.parseExpression("amount < id"),
+      ExpressionParserImpl.parseExpression("amount <= id"),
+      ExpressionParserImpl.parseExpression("amount <> id"),
+      ExpressionParserImpl.parseExpression("amount == id"),
+      ExpressionParserImpl.parseExpression("amount >= id"),
+      ExpressionParserImpl.parseExpression("amount > id"),
+      ExpressionParserImpl.parseExpression("amount + id == 100"),
+      ExpressionParserImpl.parseExpression("amount - id == 100"),
+      ExpressionParserImpl.parseExpression("amount * id == 100"),
+      ExpressionParserImpl.parseExpression("amount / id == 100"),
+      ExpressionParserImpl.parseExpression("-amount == 100")
     )
     assertExpressionArrayEquals(expected, convertedExpressions)
     assertEquals(0, unconvertedRexNodes.length)
@@ -413,7 +414,7 @@ class RexProgramExtractorTest extends RexProgramTestBase {
         functionCatalog)
 
     val expected: Array[Expression] = Array(
-      ExpressionParser.parseExpression("amount <= id")
+      ExpressionParserImpl.parseExpression("amount <= id")
     )
     assertExpressionArrayEquals(expected, convertedExpressions)
     assertEquals(2, unconvertedRexNodes.length)

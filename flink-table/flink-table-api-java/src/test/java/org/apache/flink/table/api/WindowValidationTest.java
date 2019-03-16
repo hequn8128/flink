@@ -18,10 +18,6 @@
 
 package org.apache.flink.table.api;
 
-import org.apache.flink.table.expressions.Expression;
-import org.apache.flink.table.expressions.ValueLiteralExpression;
-import org.apache.flink.table.typeutils.TimeIntervalTypeInfo;
-
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -31,65 +27,34 @@ import org.junit.rules.ExpectedException;
  */
 public class WindowValidationTest {
 
-	private static final Expression timeExpr =
-		new ValueLiteralExpression(4 * 3600000L, TimeIntervalTypeInfo.INTERVAL_MILLIS);
-
 	@Rule
 	public final ExpectedException exception = ExpectedException.none();
 
 	@Test
 	public void testTumbleOverForString() {
 		exception.expect(TableException.class);
-		exception.expectMessage("New TumbleWithSizeImpl class failed.");
+		exception.expectMessage("Construct ExpressionParserImpl class failed.");
 		Tumble.over("4.hours");
-	}
-
-	@Test
-	public void testTumbleOverForExpression() {
-		exception.expect(TableException.class);
-		exception.expectMessage("New TumbleWithSizeImpl class failed.");
-		Tumble.over(timeExpr);
 	}
 
 	@Test
 	public void testSlideOverForString() {
 		exception.expect(TableException.class);
-		exception.expectMessage("New SlideWithSizeImpl class failed.");
+		exception.expectMessage("Construct ExpressionParserImpl class failed.");
 		Slide.over("4.hours");
-	}
-
-	@Test
-	public void testSlideOverForExpression() {
-		exception.expect(TableException.class);
-		exception.expectMessage("New SlideWithSizeImpl class failed.");
-		Slide.over(timeExpr);
 	}
 
 	@Test
 	public void testSessionWithGapForString() {
 		exception.expect(TableException.class);
-		exception.expectMessage("New SessionWithGapImpl class failed.");
+		exception.expectMessage("Construct ExpressionParserImpl class failed.");
 		Session.withGap("4.hours");
-	}
-
-	@Test
-	public void testSessionWithGapForExpression() {
-		exception.expect(TableException.class);
-		exception.expectMessage("New SessionWithGapImpl class failed.");
-		Session.withGap(timeExpr);
 	}
 
 	@Test
 	public void testOverWithPartitionByForString() {
 		exception.expect(TableException.class);
-		exception.expectMessage("New OverWindowPartitionedImpl class failed.");
+		exception.expectMessage("Construct ExpressionParserImpl class failed.");
 		Over.partitionBy("a");
-	}
-
-	@Test
-	public void testOverWithPartitionByForExpression() {
-		exception.expect(TableException.class);
-		exception.expectMessage("New OverWindowPartitionedImpl class failed.");
-		Over.partitionBy();
 	}
 }

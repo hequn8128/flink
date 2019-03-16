@@ -20,12 +20,24 @@ package org.apache.flink.table.api;
 
 import org.apache.flink.annotation.PublicEvolving;
 import org.apache.flink.table.expressions.Expression;
+import org.apache.flink.table.expressions.ExpressionParser;
+
+import java.util.List;
+import java.util.Optional;
 
 /**
  * Partially defined over window with (optional) partitioning and order.
  */
 @PublicEvolving
-public interface OverWindowPartitionedOrdered {
+public final class OverWindowPartitionedOrdered {
+
+	private final List<Expression> partitionBy;
+	private final Expression orderBy;
+
+	public OverWindowPartitionedOrdered(List<Expression> partitionBy, Expression orderBy) {
+		this.partitionBy = partitionBy;
+		this.orderBy = orderBy;
+	}
 
 	/**
 	 * Set the preceding offset (based on time or row-count intervals) for over window.
@@ -33,7 +45,9 @@ public interface OverWindowPartitionedOrdered {
 	 * @param preceding preceding offset relative to the current row.
 	 * @return an over window with defined preceding
 	 */
-	OverWindowPartitionedOrderedPreceding preceding(String preceding);
+	public OverWindowPartitionedOrderedPreceding preceding(String preceding) {
+		return this.preceding(ExpressionParser.create().parseExpression(preceding));
+	}
 
 	/**
 	 * Set the preceding offset (based on time or row-count intervals) for over window.
@@ -41,7 +55,9 @@ public interface OverWindowPartitionedOrdered {
 	 * @param preceding preceding offset relative to the current row.
 	 * @return an over window with defined preceding
 	 */
-	OverWindowPartitionedOrderedPreceding preceding(Expression preceding);
+	public OverWindowPartitionedOrderedPreceding preceding(Expression preceding) {
+		return new OverWindowPartitionedOrderedPreceding(partitionBy, orderBy, preceding);
+	}
 
 	/**
 	 * Assigns an alias for this window that the following {@code select()} clause can refer to.
@@ -49,7 +65,9 @@ public interface OverWindowPartitionedOrdered {
 	 * @param alias alias for this over window
 	 * @return the fully defined over window
 	 */
-	OverWindow as(String alias);
+	public OverWindow as(String alias) {
+		return as(ExpressionParser.create().parseExpression(alias));
+	}
 
 	/**
 	 * Assigns an alias for this window that the following {@code select()} clause can refer to.
@@ -57,5 +75,12 @@ public interface OverWindowPartitionedOrdered {
 	 * @param alias alias for this over window
 	 * @return the fully defined over window
 	 */
-	OverWindow as(Expression alias);
+	public OverWindow as(Expression alias) {
+		return new OverWindow(
+			alias,
+			partitionBy,
+			orderBy,
+			ExpressionParser.create().parseExpression("UNBOUNDED_RANGE"),
+			Optional.empty());
+	}
 }

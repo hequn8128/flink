@@ -21,8 +21,24 @@ import org.apache.flink.api.common.typeinfo.{SqlTimeTypeInfo, TypeInformation}
 import org.apache.flink.table.api._
 import org.apache.flink.table.expressions.ApiExpressionUtils._
 
+import _root_.java.util.{List => JList}
 import _root_.scala.language.implicitConversions
 import _root_.scala.util.parsing.combinator.{JavaTokenParsers, PackratParsers}
+import _root_.scala.collection.JavaConversions._
+
+/**
+  * The implementation of an [[ExpressionParser]] which parsers expressions inside a String.
+  */
+class ExpressionParserImpl extends ExpressionParser {
+
+  def parseExpression(exprString: String): Expression = {
+    ExpressionParserImpl.parseExpression(exprString)
+  }
+
+  override def parseExpressionList(expression: String): JList[Expression] = {
+    ExpressionParserImpl.parseExpressionList(expression)
+  }
+}
 
 /**
  * Parser for expressions inside a String. This parses exactly the same expressions that
@@ -33,7 +49,7 @@ import _root_.scala.util.parsing.combinator.{JavaTokenParsers, PackratParsers}
  * available in the Scala Expression DSL. This parser must be kept in sync with the Scala DSL
  * lazy valined in the above files.
  */
-object ExpressionParser extends JavaTokenParsers with PackratParsers {
+object ExpressionParserImpl extends JavaTokenParsers with PackratParsers with ExpressionParser {
   case class Keyword(key: String)
 
   // Convert the keyword into an case insensitive Parser
@@ -113,7 +129,7 @@ object ExpressionParser extends JavaTokenParsers with PackratParsers {
   lazy val TRIM_MODE_TRAILING: Keyword = Keyword("TRAILING")
   lazy val TRIM_MODE_BOTH: Keyword = Keyword("BOTH")
 
-  def functionIdent: ExpressionParser.Parser[String] = super.ident
+  def functionIdent: ExpressionParserImpl.Parser[String] = super.ident
 
   // symbols
 
@@ -625,7 +641,7 @@ object ExpressionParser extends JavaTokenParsers with PackratParsers {
 
   lazy val expressionList: Parser[List[Expression]] = rep1sep(expression, ",")
 
-  def parseExpressionList(expression: String): List[Expression] = {
+  def parseExpressionList(expression: String): JList[Expression] = {
     parseAll(expressionList, expression) match {
       case Success(lst, _) => lst
 

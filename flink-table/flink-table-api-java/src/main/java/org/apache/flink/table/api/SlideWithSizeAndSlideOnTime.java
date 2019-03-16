@@ -20,12 +20,26 @@ package org.apache.flink.table.api;
 
 import org.apache.flink.annotation.PublicEvolving;
 import org.apache.flink.table.expressions.Expression;
+import org.apache.flink.table.expressions.ExpressionParser;
 
 /**
  * Sliding window on time.
  */
 @PublicEvolving
-public interface SlideWithSizeAndSlideOnTime {
+public final class SlideWithSizeAndSlideOnTime {
+
+	private final Expression timeField;
+	private final Expression size;
+	private final Expression slide;
+
+	public SlideWithSizeAndSlideOnTime(
+		Expression timeField,
+		Expression size,
+		Expression slide) {
+		this.timeField = timeField;
+		this.size = size;
+		this.slide = slide;
+	}
 
 	/**
 	 * Assigns an alias for this window that the following {@code groupBy()} and {@code select()}
@@ -35,7 +49,10 @@ public interface SlideWithSizeAndSlideOnTime {
 	 * @param alias alias for this window
 	 * @return this window
 	 */
-	SlideWithSizeAndSlideOnTimeWithAlias as(String alias);
+	public SlideWithSizeAndSlideOnTimeWithAlias as(String alias) {
+		ExpressionParser expressionParser = ExpressionParser.create();
+		return as(expressionParser.parseExpression(alias));
+	}
 
 	/**
 	 * Assigns an alias for this window that the following {@code groupBy()} and {@code select()}
@@ -45,5 +62,7 @@ public interface SlideWithSizeAndSlideOnTime {
 	 * @param alias alias for this window
 	 * @return this window
 	 */
-	SlideWithSizeAndSlideOnTimeWithAlias as(Expression alias);
+	public SlideWithSizeAndSlideOnTimeWithAlias as(Expression alias) {
+		return new SlideWithSizeAndSlideOnTimeWithAlias(alias, timeField, size, slide);
+	}
 }

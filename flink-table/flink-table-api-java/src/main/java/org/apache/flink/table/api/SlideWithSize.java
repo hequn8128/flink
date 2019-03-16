@@ -20,12 +20,24 @@ package org.apache.flink.table.api;
 
 import org.apache.flink.annotation.PublicEvolving;
 import org.apache.flink.table.expressions.Expression;
+import org.apache.flink.table.expressions.ExpressionParser;
 
 /**
  * Partially specified sliding window. The size of the window either as time or row-count interval.
  */
 @PublicEvolving
-public interface SlideWithSize {
+public final class SlideWithSize {
+
+	/** The size of the window either as time or row-count interval. */
+	private final Expression size;
+
+	public SlideWithSize(Expression size) {
+		this.size = size;
+	}
+
+	public SlideWithSize(String size) {
+		this.size = ExpressionParser.create().parseExpression(size);
+	}
 
 	/**
 	 * Specifies the window's slide as time or row-count interval.
@@ -40,7 +52,9 @@ public interface SlideWithSize {
 	 * @param slide the slide of the window either as time or row-count interval.
 	 * @return a sliding window
 	 */
-	SlideWithSizeAndSlide every(String slide);
+	public SlideWithSizeAndSlide every(String slide) {
+		return every(ExpressionParser.create().parseExpression(slide));
+	}
 
 	/**
 	 * Specifies the window's slide as time or row-count interval.
@@ -55,5 +69,7 @@ public interface SlideWithSize {
 	 * @param slide the slide of the window either as time or row-count interval.
 	 * @return a sliding window
 	 */
-	SlideWithSizeAndSlide every(Expression slide);
+	public SlideWithSizeAndSlide every(Expression slide) {
+		return new SlideWithSizeAndSlide(size, slide);
+	}
 }

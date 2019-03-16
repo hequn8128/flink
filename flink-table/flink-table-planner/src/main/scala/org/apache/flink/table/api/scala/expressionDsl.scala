@@ -36,7 +36,7 @@ import _root_.scala.language.implicitConversions
   * expression operations.
   *
   * These operations must be kept in sync with the parser in
-  * [[org.apache.flink.table.expressions.ExpressionParser]].
+  * [[org.apache.flink.table.expressions.ExpressionParserImpl]].
   */
 trait ImplicitExpressionOperations {
   private[flink] def expr: Expression

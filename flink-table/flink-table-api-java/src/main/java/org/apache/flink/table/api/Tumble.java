@@ -21,8 +21,6 @@ package org.apache.flink.table.api;
 import org.apache.flink.annotation.PublicEvolving;
 import org.apache.flink.table.expressions.Expression;
 
-import java.lang.reflect.Constructor;
-
 /**
  * Helper class for creating a tumbling window. Tumbling windows are consecutive, non-overlapping
  * windows of a specified fixed length. For example, a tumbling window of 5 minutes size groups
@@ -56,13 +54,7 @@ public final class Tumble {
 	 * @return a partially defined tumbling window
 	 */
 	public static TumbleWithSize over(String size) {
-		try {
-			Class clazz = Class.forName("org.apache.flink.table.api.TumbleWithSizeImpl");
-			Constructor con = clazz.getConstructor(String.class);
-			return (TumbleWithSize) con.newInstance(size);
-		} catch (Throwable t) {
-			throw new TableException("New TumbleWithSizeImpl class failed.", t);
-		}
+		return new TumbleWithSize(size);
 	}
 
 	/**
@@ -74,12 +66,6 @@ public final class Tumble {
 	 * @return a partially defined tumbling window
 	 */
 	public static TumbleWithSize over(Expression size) {
-		try {
-			Class clazz = Class.forName("org.apache.flink.table.api.TumbleWithSizeImpl");
-			Constructor con = clazz.getConstructor(Expression.class);
-			return (TumbleWithSize) con.newInstance(size);
-		} catch (Throwable t) {
-			throw new TableException("New TumbleWithSizeImpl class failed.", t);
-		}
+		return new TumbleWithSize(size);
 	}
 }

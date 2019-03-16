@@ -31,15 +31,44 @@ import java.util.Optional;
  * of its neighboring rows.
  */
 @PublicEvolving
-public interface OverWindow {
+public final class OverWindow {
 
-	Expression getAlias();
+	private final Expression alias;
+	private final List<Expression> partitioning;
+	private final Expression order;
+	private final Expression preceding;
+	private final Optional<Expression> following;
 
-	List<Expression> getPartitioning();
+	public OverWindow(
+		Expression alias,
+		List<Expression> partitionBy,
+		Expression orderBy,
+		Expression preceding,
+		Optional<Expression> following) {
+		this.alias = alias;
+		this.partitioning = partitionBy;
+		this.order = orderBy;
+		this.preceding = preceding;
+		this.following = following;
+	}
 
-	Expression getOrder();
+	public Expression getAlias() {
+		return alias;
+	}
 
-	Expression getPreceding();
+	public List<Expression> getPartitioning() {
+		return partitioning;
+	}
 
-	Optional<Expression> getFollowing();
+	public Expression getOrder() {
+		return order;
+	}
+
+	public Expression getPreceding() {
+		return preceding;
+	}
+
+	public Optional<Expression> getFollowing() {
+		return following;
+	}
 }

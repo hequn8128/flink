@@ -21,8 +21,6 @@ package org.apache.flink.table.api;
 import org.apache.flink.annotation.PublicEvolving;
 import org.apache.flink.table.expressions.Expression;
 
-import java.lang.reflect.Constructor;
-
 /**
  * Helper class for creating a session window. The boundary of session windows are defined by
  * intervals of inactivity, i.e., a session window is closes if no event appears for a defined
@@ -57,13 +55,7 @@ public final class Session {
 	 * @return a partially defined session window
 	 */
 	public static SessionWithGap withGap(String gap) {
-		try {
-			Class clazz = Class.forName("org.apache.flink.table.api.SessionWithGapImpl");
-			Constructor con = clazz.getConstructor(String.class);
-			return (SessionWithGap) con.newInstance(gap);
-		} catch (Throwable t) {
-			throw new TableException("New SessionWithGapImpl class failed.", t);
-		}
+		return new SessionWithGap(gap);
 	}
 
 	/**
@@ -76,12 +68,6 @@ public final class Session {
 	 * @return a partially defined session window
 	 */
 	public static SessionWithGap withGap(Expression gap) {
-		try {
-			Class clazz = Class.forName("org.apache.flink.table.api.SessionWithGapImpl");
-			Constructor con = clazz.getConstructor(Expression.class);
-			return (SessionWithGap) con.newInstance(gap);
-		} catch (Throwable t) {
-			throw new TableException("New SessionWithGapImpl class failed.", t);
-		}
+		return new SessionWithGap(gap);
 	}
 }

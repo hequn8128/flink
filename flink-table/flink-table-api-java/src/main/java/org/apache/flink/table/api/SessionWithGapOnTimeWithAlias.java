@@ -25,7 +25,16 @@ import org.apache.flink.table.expressions.Expression;
  * Session window on time with alias. Fully specifies a window.
  */
 @PublicEvolving
-public interface SessionWithGapOnTimeWithAlias extends GroupWindow {
+public final class SessionWithGapOnTimeWithAlias extends GroupWindow {
 
-	Expression getGap();
+	private final Expression gap;
+
+	public SessionWithGapOnTimeWithAlias(Expression alias, Expression timeField, Expression gap) {
+		super(alias, timeField);
+		this.gap = gap;
+	}
+
+	public Expression getGap() {
+		return gap;
+	}
 }

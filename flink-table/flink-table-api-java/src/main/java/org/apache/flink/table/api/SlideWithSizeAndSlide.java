@@ -20,6 +20,7 @@ package org.apache.flink.table.api;
 
 import org.apache.flink.annotation.PublicEvolving;
 import org.apache.flink.table.expressions.Expression;
+import org.apache.flink.table.expressions.ExpressionParser;
 
 /**
  * Sliding window. The size of the window either as time or row-count interval.
@@ -29,7 +30,16 @@ import org.apache.flink.table.expressions.Expression;
  * <p>For batch tables you can specify grouping on a timestamp or long attribute.
  */
 @PublicEvolving
-public interface SlideWithSizeAndSlide {
+public final class SlideWithSizeAndSlide {
+
+	/** The size of the window either as time or row-count interval. */
+	private final Expression size;
+	private final Expression slide;
+
+	public SlideWithSizeAndSlide(Expression size, Expression slide) {
+		this.size = size;
+		this.slide = slide;
+	}
 
 	/**
 	 * Specifies the time attribute on which rows are grouped.
@@ -42,7 +52,10 @@ public interface SlideWithSizeAndSlide {
 	 * @param timeField time attribute for streaming and batch tables
 	 * @return a tumbling window on event-time
 	 */
-	SlideWithSizeAndSlideOnTime on(String timeField);
+	public SlideWithSizeAndSlideOnTime on(String timeField) {
+		ExpressionParser expressionParser = ExpressionParser.create();
+		return on(expressionParser.parseExpression(timeField));
+	}
 
 	/**
 	 * Specifies the time attribute on which rows are grouped.
@@ -55,5 +68,7 @@ public interface SlideWithSizeAndSlide {
 	 * @param timeField time attribute for streaming and batch tables
 	 * @return a tumbling window on event-time
 	 */
-	SlideWithSizeAndSlideOnTime on(Expression timeField);
+	public SlideWithSizeAndSlideOnTime on(Expression timeField) {
+		return new SlideWithSizeAndSlideOnTime(timeField, size, slide);
+	}
 }

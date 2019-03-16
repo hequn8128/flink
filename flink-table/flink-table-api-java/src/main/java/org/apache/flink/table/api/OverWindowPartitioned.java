@@ -20,12 +20,26 @@ package org.apache.flink.table.api;
 
 import org.apache.flink.annotation.PublicEvolving;
 import org.apache.flink.table.expressions.Expression;
+import org.apache.flink.table.expressions.ExpressionParser;
+
+import java.util.List;
 
 /**
  * Partially defined over window with partitioning.
  */
 @PublicEvolving
-public interface OverWindowPartitioned {
+public final class OverWindowPartitioned {
+
+	/** Defines a partitioning of the input on one or more attributes. */
+	private final List<Expression> partitionBy;
+
+	public OverWindowPartitioned(List<Expression> partitionBy) {
+		this.partitionBy = partitionBy;
+	}
+
+	public OverWindowPartitioned(String partitionBy) {
+		this.partitionBy = ExpressionParser.create().parseExpressionList(partitionBy);
+	}
 
 	/**
 	 * Specifies the time attribute on which rows are ordered.
@@ -38,7 +52,9 @@ public interface OverWindowPartitioned {
 	 * @param orderBy field reference
 	 * @return an over window with defined order
 	 */
-	OverWindowPartitionedOrdered orderBy(String orderBy);
+	public OverWindowPartitionedOrdered orderBy(String orderBy) {
+		return this.orderBy(ExpressionParser.create().parseExpression(orderBy));
+	}
 
 	/**
 	 * Specifies the time attribute on which rows are ordered.
@@ -51,5 +67,7 @@ public interface OverWindowPartitioned {
 	 * @param orderBy field reference
 	 * @return an over window with defined order
 	 */
-	OverWindowPartitionedOrdered orderBy(Expression orderBy);
+	public OverWindowPartitionedOrdered orderBy(Expression orderBy) {
+		return new OverWindowPartitionedOrdered(partitionBy, orderBy);
+	}
 }

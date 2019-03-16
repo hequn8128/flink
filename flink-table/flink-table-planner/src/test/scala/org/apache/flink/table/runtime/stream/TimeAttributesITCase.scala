@@ -31,7 +31,7 @@ import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
 import org.apache.flink.streaming.api.watermark.Watermark
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.{TableSchema, Tumble, Types}
-import org.apache.flink.table.expressions.{ExpressionParser, TimeIntervalUnit}
+import org.apache.flink.table.expressions.{ExpressionParserImpl, TimeIntervalUnit}
 import org.apache.flink.table.plan.TimeIndicatorConversionTest.TableFunc
 import org.apache.flink.table.runtime.stream.TimeAttributesITCase.{AtomicTimestampWithEqualWatermark, TestPojo, TimestampWithEqualWatermark, TimestampWithEqualWatermarkPojo}
 import org.apache.flink.table.runtime.utils.JavaPojos.Pojo1
@@ -43,6 +43,8 @@ import org.junit.Assert._
 import org.junit.Test
 
 import scala.collection.mutable
+import scala.collection.JavaConverters._
+
 
 /**
   * Tests for access and materialization of time attributes.
@@ -560,11 +562,11 @@ class TimeAttributesITCase extends AbstractTestBase {
     // use aliases, swap all attributes, and skip b2
     val table4 = stream.toTable(
       tEnv,
-      ExpressionParser.parseExpressionList("b.rowtime as b, c as c, a as a"): _*)
+      ExpressionParserImpl.parseExpressionList("b.rowtime as b, c as c, a as a").asScala: _*)
     // no aliases, no swapping
     val table5 = stream.toTable(
       tEnv,
-      ExpressionParser.parseExpressionList("a, b.rowtime, c"): _*)
+      ExpressionParserImpl.parseExpressionList("a, b.rowtime, c").asScala: _*)
 
     val t = table.select('b, 'c , 'a)
       .unionAll(table2.select('b, 'c, 'a))

@@ -21,7 +21,7 @@ import org.apache.calcite.rel.RelNode
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.operators.join.JoinType
 import org.apache.flink.table.calcite.{FlinkRelBuilder, FlinkTypeFactory}
-import org.apache.flink.table.expressions.{Alias, Asc, Expression, ExpressionBridge, ExpressionParser, Ordering, PlannerExpression, ResolvedFieldReference, UnresolvedAlias, WindowProperty}
+import org.apache.flink.table.expressions.{Alias, Asc, Expression, ExpressionBridge, ExpressionParserImpl, Ordering, PlannerExpression, ResolvedFieldReference, UnresolvedAlias, WindowProperty}
 import org.apache.flink.table.functions.TemporalTableFunction
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils
 import org.apache.flink.table.plan.ProjectionTranslator._
@@ -101,7 +101,7 @@ class Table(
     * }}}
     */
   def select(fields: String): Table = {
-    select(ExpressionParser.parseExpressionList(fields): _*)
+    select(ExpressionParserImpl.parseExpressionList(fields): _*)
   }
 
   /**
@@ -167,8 +167,8 @@ class Table(
       primaryKey: String)
     : TemporalTableFunction = {
     createTemporalTableFunction(
-      ExpressionParser.parseExpression(timeAttribute),
-      ExpressionParser.parseExpression(primaryKey))
+      ExpressionParserImpl.parseExpression(timeAttribute),
+      ExpressionParserImpl.parseExpression(primaryKey))
   }
 
   /**
@@ -234,7 +234,7 @@ class Table(
     * }}}
     */
   def as(fields: String): Table = {
-    as(ExpressionParser.parseExpressionList(fields): _*)
+    as(ExpressionParserImpl.parseExpressionList(fields): _*)
   }
 
   /**
@@ -266,7 +266,7 @@ class Table(
     * }}}
     */
   def filter(predicate: String): Table = {
-    filter(ExpressionParser.parseExpression(predicate))
+    filter(ExpressionParserImpl.parseExpression(predicate))
   }
 
   /**
@@ -326,7 +326,7 @@ class Table(
     * }}}
     */
   def groupBy(fields: String): GroupedTable = {
-    groupBy(ExpressionParser.parseExpressionList(fields): _*)
+    groupBy(ExpressionParserImpl.parseExpressionList(fields): _*)
   }
 
   /**
@@ -390,7 +390,7 @@ class Table(
     * }}}
     */
   def join(right: Table, joinPredicate: String): Table = {
-    join(right, ExpressionParser.parseExpression(joinPredicate))
+    join(right, ExpressionParserImpl.parseExpression(joinPredicate))
   }
 
   /**
@@ -440,7 +440,7 @@ class Table(
     * }}}
     */
   def leftOuterJoin(right: Table, joinPredicate: String): Table = {
-    leftOuterJoin(right, ExpressionParser.parseExpression(joinPredicate))
+    leftOuterJoin(right, ExpressionParserImpl.parseExpression(joinPredicate))
   }
 
   /**
@@ -474,7 +474,7 @@ class Table(
     * }}}
     */
   def rightOuterJoin(right: Table, joinPredicate: String): Table = {
-    rightOuterJoin(right, ExpressionParser.parseExpression(joinPredicate))
+    rightOuterJoin(right, ExpressionParserImpl.parseExpression(joinPredicate))
   }
 
   /**
@@ -508,7 +508,7 @@ class Table(
     * }}}
     */
   def fullOuterJoin(right: Table, joinPredicate: String): Table = {
-    fullOuterJoin(right, ExpressionParser.parseExpression(joinPredicate))
+    fullOuterJoin(right, ExpressionParserImpl.parseExpression(joinPredicate))
   }
 
   /**
@@ -564,7 +564,7 @@ class Table(
     * }}}
     */
   def joinLateral(tableFunctionCall: String): Table = {
-    joinLateral(ExpressionParser.parseExpression(tableFunctionCall))
+    joinLateral(ExpressionParserImpl.parseExpression(tableFunctionCall))
   }
 
   /**
@@ -608,8 +608,8 @@ class Table(
     */
   def joinLateral(tableFunctionCall: String, joinPredicate: String): Table = {
     joinLateral(
-      ExpressionParser.parseExpression(tableFunctionCall),
-      ExpressionParser.parseExpression(joinPredicate))
+      ExpressionParserImpl.parseExpression(tableFunctionCall),
+      ExpressionParserImpl.parseExpression(joinPredicate))
   }
 
   /**
@@ -656,7 +656,7 @@ class Table(
     * }}}
     */
   def leftOuterJoinLateral(tableFunctionCall: String): Table = {
-    leftOuterJoinLateral(ExpressionParser.parseExpression(tableFunctionCall))
+    leftOuterJoinLateral(ExpressionParserImpl.parseExpression(tableFunctionCall))
   }
 
   /**
@@ -702,8 +702,8 @@ class Table(
     */
   def leftOuterJoinLateral(tableFunctionCall: String, joinPredicate: String): Table = {
     leftOuterJoinLateral(
-      ExpressionParser.parseExpression(tableFunctionCall),
-      ExpressionParser.parseExpression(joinPredicate))
+      ExpressionParserImpl.parseExpression(tableFunctionCall),
+      ExpressionParserImpl.parseExpression(joinPredicate))
   }
 
   /**
@@ -904,7 +904,7 @@ class Table(
     * }}}
     */
   def orderBy(fields: String): Table = {
-    orderBy(ExpressionParser.parseExpressionList(fields): _*)
+    orderBy(ExpressionParserImpl.parseExpressionList(fields): _*)
   }
 
   /**
@@ -1167,7 +1167,7 @@ class GroupedTable(
     * }}}
     */
   def select(fields: String): Table = {
-    select(ExpressionParser.parseExpressionList(fields): _*)
+    select(ExpressionParserImpl.parseExpressionList(fields): _*)
   }
 
   /**
@@ -1228,7 +1228,7 @@ class GroupWindowedTable(
     * }}}
     */
   def groupBy(fields: String): WindowGroupedTable = {
-    groupBy(ExpressionParser.parseExpressionList(fields): _*)
+    groupBy(ExpressionParserImpl.parseExpressionList(fields): _*)
   }
 
   /**
@@ -1276,7 +1276,7 @@ class WindowGroupedTable(
     * }}}
     */
   def select(fields: String): Table = {
-    select(ExpressionParser.parseExpressionList(fields): _*)
+    select(ExpressionParserImpl.parseExpressionList(fields): _*)
   }
 
   /**
@@ -1364,7 +1364,7 @@ class OverWindowedTable(
     * }}}
     */
   def select(fields: String): Table = {
-    select(ExpressionParser.parseExpressionList(fields): _*)
+    select(ExpressionParserImpl.parseExpressionList(fields): _*)
   }
 
   /**

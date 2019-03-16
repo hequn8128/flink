@@ -21,9 +21,7 @@ package org.apache.flink.table.api;
 import org.apache.flink.annotation.PublicEvolving;
 import org.apache.flink.table.expressions.Expression;
 
-import java.lang.reflect.Constructor;
 import java.util.Arrays;
-import java.util.List;
 
 /**
  * Helper class for creating an over window. Similar to SQL, over window aggregates compute an
@@ -58,13 +56,7 @@ public final class Over {
 	 * @return an over window with defined partitioning
 	 */
 	public static OverWindowPartitioned partitionBy(String partitionBy) {
-		try {
-			Class clazz = Class.forName("org.apache.flink.table.api.OverWindowPartitionedImpl");
-			Constructor con = clazz.getConstructor(String.class);
-			return (OverWindowPartitioned) con.newInstance(partitionBy);
-		} catch (Throwable t) {
-			throw new TableException("New OverWindowPartitionedImpl class failed.", t);
-		}
+		return new OverWindowPartitioned(partitionBy);
 	}
 
 	/**
@@ -77,13 +69,7 @@ public final class Over {
 	 * @return an over window with defined partitioning
 	 */
 	public static OverWindowPartitioned partitionBy(Expression... partitionBy) {
-		try {
-			Class clazz = Class.forName("org.apache.flink.table.api.OverWindowPartitionedImpl");
-			Constructor con = clazz.getConstructor(List.class);
-			return (OverWindowPartitioned) con.newInstance(Arrays.asList(partitionBy));
-		} catch (Throwable t) {
-			throw new TableException("New OverWindowPartitionedImpl class failed.", t);
-		}
+		return new OverWindowPartitioned(Arrays.asList(partitionBy));
 	}
 
 	/**

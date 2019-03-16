@@ -20,12 +20,21 @@ package org.apache.flink.table.api;
 
 import org.apache.flink.annotation.PublicEvolving;
 import org.apache.flink.table.expressions.Expression;
+import org.apache.flink.table.expressions.ExpressionParser;
 
 /**
  * Session window on time.
  */
 @PublicEvolving
-public interface SessionWithGapOnTime {
+public final class SessionWithGapOnTime {
+
+	private final Expression timeField;
+	private final Expression gap;
+
+	public SessionWithGapOnTime(Expression timeField, Expression gap) {
+		this.timeField = timeField;
+		this.gap = gap;
+	}
 
 	/**
 	 * Assigns an alias for this window that the following {@code groupBy()} and {@code select()}
@@ -35,7 +44,9 @@ public interface SessionWithGapOnTime {
 	 * @param alias alias for this window
 	 * @return this window
 	 */
-	SessionWithGapOnTimeWithAlias as(Expression alias);
+	public SessionWithGapOnTimeWithAlias as(String alias) {
+		return as(ExpressionParser.create().parseExpression(alias));
+	}
 
 	/**
 	 * Assigns an alias for this window that the following {@code groupBy()} and {@code select()}
@@ -45,5 +56,7 @@ public interface SessionWithGapOnTime {
 	 * @param alias alias for this window
 	 * @return this window
 	 */
-	SessionWithGapOnTimeWithAlias as(String alias);
+	public SessionWithGapOnTimeWithAlias as(Expression alias) {
+		return new SessionWithGapOnTimeWithAlias(alias, timeField, gap);
+	}
 }

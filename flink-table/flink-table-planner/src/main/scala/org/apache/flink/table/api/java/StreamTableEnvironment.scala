@@ -22,10 +22,11 @@ import org.apache.flink.api.java.typeutils.{TupleTypeInfo, TypeExtractor}
 import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2}
 import org.apache.flink.table.api._
 import org.apache.flink.table.functions.{AggregateFunction, TableFunction}
-import org.apache.flink.table.expressions.ExpressionParser
+import org.apache.flink.table.expressions.ExpressionParserImpl
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import _root_.java.lang.{Boolean => JBool}
+import _root_.scala.collection.JavaConverters._
 
 /**
   * The [[TableEnvironment]] for a Java [[StreamExecutionEnvironment]] that works with
@@ -83,8 +84,8 @@ class StreamTableEnvironment @Deprecated() (
     * @return The converted [[Table]].
     */
   def fromDataStream[T](dataStream: DataStream[T], fields: String): Table = {
-    val exprs = ExpressionParser
-      .parseExpressionList(fields)
+    val exprs = ExpressionParserImpl
+      .parseExpressionList(fields).asScala
       .toArray
 
     val name = createUniqueTableName()
@@ -128,8 +129,8 @@ class StreamTableEnvironment @Deprecated() (
     * @tparam T The type of the [[DataStream]] to register.
     */
   def registerDataStream[T](name: String, dataStream: DataStream[T], fields: String): Unit = {
-    val exprs = ExpressionParser
-      .parseExpressionList(fields)
+    val exprs = ExpressionParserImpl
+      .parseExpressionList(fields).asScala
       .toArray
 
     checkValidTableName(name)

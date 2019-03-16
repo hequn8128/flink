@@ -20,6 +20,7 @@ package org.apache.flink.table.api;
 
 import org.apache.flink.annotation.PublicEvolving;
 import org.apache.flink.table.expressions.Expression;
+import org.apache.flink.table.expressions.ExpressionParser;
 
 /**
  * Session window.
@@ -29,7 +30,18 @@ import org.apache.flink.table.expressions.Expression;
  * <p>For batch tables you can specify grouping on a timestamp or long attribute.
  */
 @PublicEvolving
-public interface SessionWithGap {
+public final class SessionWithGap {
+
+	/** The time interval of inactivity before a window is closed. */
+	private final Expression gap;
+
+	public SessionWithGap(Expression gap) {
+		this.gap = gap;
+	}
+
+	public SessionWithGap(String gap) {
+		this.gap = ExpressionParser.create().parseExpression(gap);
+	}
 
 	/**
 	 * Specifies the time attribute on which rows are grouped.
@@ -42,7 +54,9 @@ public interface SessionWithGap {
 	 * @param timeField time attribute for streaming and batch tables
 	 * @return a tumbling window on event-time
 	 */
-	SessionWithGapOnTime on(String timeField);
+	public SessionWithGapOnTime on(String timeField) {
+		return on(ExpressionParser.create().parseExpression(timeField));
+	}
 
 	/**
 	 * Specifies the time attribute on which rows are grouped.
@@ -55,5 +69,7 @@ public interface SessionWithGap {
 	 * @param timeField time attribute for streaming and batch tables
 	 * @return a tumbling window on event-time
 	 */
-	SessionWithGapOnTime on(Expression timeField);
+	public SessionWithGapOnTime on(Expression timeField) {
+		return new SessionWithGapOnTime(timeField, gap);
+	}
 }

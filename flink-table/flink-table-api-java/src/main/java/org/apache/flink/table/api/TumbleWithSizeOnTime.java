@@ -20,12 +20,21 @@ package org.apache.flink.table.api;
 
 import org.apache.flink.annotation.PublicEvolving;
 import org.apache.flink.table.expressions.Expression;
+import org.apache.flink.table.expressions.ExpressionParser;
 
 /**
  * Tumbling window on time.
  */
 @PublicEvolving
-public interface TumbleWithSizeOnTime {
+public final class TumbleWithSizeOnTime {
+
+	private final Expression time;
+	private final Expression size;
+
+	public TumbleWithSizeOnTime(Expression time, Expression size) {
+		this.time = time;
+		this.size = size;
+	}
 
 	/**
 	 * Assigns an alias for this window that the following {@code groupBy()} and {@code select()}
@@ -35,7 +44,9 @@ public interface TumbleWithSizeOnTime {
 	 * @param alias alias for this window
 	 * @return this window
 	 */
-	TumbleWithSizeOnTimeWithAlias as(Expression alias);
+	public TumbleWithSizeOnTimeWithAlias as(Expression alias) {
+		return new TumbleWithSizeOnTimeWithAlias(alias, time, size);
+	}
 
 	/**
 	 * Assigns an alias for this window that the following {@code groupBy()} and {@code select()}
@@ -45,6 +56,8 @@ public interface TumbleWithSizeOnTime {
 	 * @param alias alias for this window
 	 * @return this window
 	 */
-	TumbleWithSizeOnTimeWithAlias as(String alias);
-
+	public TumbleWithSizeOnTimeWithAlias as(String alias) {
+		ExpressionParser expressionParser = ExpressionParser.create();
+		return as(expressionParser.parseExpression(alias));
+	}
 }

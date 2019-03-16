@@ -25,7 +25,16 @@ import org.apache.flink.table.expressions.Expression;
  * Tumbling window on time with alias. Fully specifies a window.
  */
 @PublicEvolving
-public interface TumbleWithSizeOnTimeWithAlias extends GroupWindow {
+public final class TumbleWithSizeOnTimeWithAlias extends GroupWindow {
 
-	Expression getSize();
+	private final Expression size;
+
+	public TumbleWithSizeOnTimeWithAlias(Expression alias, Expression timeField, Expression size) {
+		super(alias, timeField);
+		this.size = size;
+	}
+
+	public Expression getSize() {
+		return size;
+	}
 }

@@ -20,6 +20,7 @@ package org.apache.flink.table.api;
 
 import org.apache.flink.annotation.PublicEvolving;
 import org.apache.flink.table.expressions.Expression;
+import org.apache.flink.table.expressions.ExpressionParser;
 
 /**
  * Tumbling window.
@@ -29,7 +30,19 @@ import org.apache.flink.table.expressions.Expression;
  * <p>For batch tables you can specify grouping on a timestamp or long attribute.
  */
 @PublicEvolving
-public interface TumbleWithSize {
+public final class TumbleWithSize {
+
+	/** The size of the window either as time or row-count interval. */
+	private Expression size;
+
+	public TumbleWithSize(Expression size) {
+		this.size = size;
+	}
+
+	public TumbleWithSize(String size) {
+		ExpressionParser expressionParser = ExpressionParser.create();
+		this.size = expressionParser.parseExpression(size);
+	}
 
 	/**
 	 * Specifies the time attribute on which rows are grouped.
@@ -42,7 +55,9 @@ public interface TumbleWithSize {
 	 * @param timeField time attribute for streaming and batch tables
 	 * @return a tumbling window on event-time
 	 */
-	TumbleWithSizeOnTime on(Expression timeField);
+	public TumbleWithSizeOnTime on(Expression timeField) {
+		return new TumbleWithSizeOnTime(timeField, size);
+	}
 
 	/**
 	 * Specifies the time attribute on which rows are grouped.
@@ -55,5 +70,8 @@ public interface TumbleWithSize {
 	 * @param timeField time attribute for streaming and batch tables
 	 * @return a tumbling window on event-time
 	 */
-	TumbleWithSizeOnTime on(String timeField);
+	public TumbleWithSizeOnTime on(String timeField) {
+		ExpressionParser expressionParser = ExpressionParser.create();
+		return on(expressionParser.parseExpression(timeField));
+	}
 }

@@ -25,9 +25,26 @@ import org.apache.flink.table.expressions.Expression;
  * Sliding window on time with alias. Fully specifies a window.
  */
 @PublicEvolving
-public interface SlideWithSizeAndSlideOnTimeWithAlias extends GroupWindow {
+public final class SlideWithSizeAndSlideOnTimeWithAlias extends GroupWindow {
 
-	Expression getSize();
+	private final Expression size;
+	private final Expression slide;
 
-	Expression getSlide();
+	public SlideWithSizeAndSlideOnTimeWithAlias(
+		Expression alias,
+		Expression timeField,
+		Expression size,
+		Expression slide) {
+		super(alias, timeField);
+		this.size = size;
+		this.slide = slide;
+	}
+
+	public Expression getSize() {
+		return size;
+	}
+
+	public Expression getSlide() {
+		return slide;
+	}
 }

@@ -21,8 +21,10 @@ import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.typeutils.TypeExtractor
 import org.apache.flink.api.java.{DataSet, ExecutionEnvironment}
 import org.apache.flink.table.api._
-import org.apache.flink.table.expressions.ExpressionParser
+import org.apache.flink.table.expressions.ExpressionParserImpl
 import org.apache.flink.table.functions.{AggregateFunction, TableFunction}
+
+import _root_.scala.collection.JavaConverters._
 
 /**
   * The [[TableEnvironment]] for a Java batch [[ExecutionEnvironment]] that works
@@ -79,8 +81,8 @@ class BatchTableEnvironment @Deprecated() (
     * @return The converted [[Table]].
     */
   def fromDataSet[T](dataSet: DataSet[T], fields: String): Table = {
-    val exprs = ExpressionParser
-      .parseExpressionList(fields)
+    val exprs = ExpressionParserImpl
+      .parseExpressionList(fields).asScala
       .toArray
 
     val name = createUniqueTableName()
@@ -123,8 +125,8 @@ class BatchTableEnvironment @Deprecated() (
     * @tparam T The type of the [[DataSet]] to register.
     */
   def registerDataSet[T](name: String, dataSet: DataSet[T], fields: String): Unit = {
-    val exprs = ExpressionParser
-      .parseExpressionList(fields)
+    val exprs = ExpressionParserImpl
+      .parseExpressionList(fields).asScala
       .toArray
 
     checkValidTableName(name)

@@ -21,8 +21,6 @@ package org.apache.flink.table.api;
 import org.apache.flink.annotation.PublicEvolving;
 import org.apache.flink.table.expressions.Expression;
 
-import java.lang.reflect.Constructor;
-
 /**
  * Helper class for creating a sliding window. Sliding windows have a fixed size and slide by
  * a specified slide interval. If the slide interval is smaller than the window size, sliding
@@ -64,13 +62,7 @@ public final class Slide {
 	 * @return a partially specified sliding window
 	 */
 	public static SlideWithSize over(String size) {
-		try {
-			Class clazz = Class.forName("org.apache.flink.table.api.SlideWithSizeImpl");
-			Constructor con = clazz.getConstructor(String.class);
-			return (SlideWithSize) con.newInstance(size);
-		} catch (Throwable t) {
-			throw new TableException("New SlideWithSizeImpl class failed.", t);
-		}
+		return new SlideWithSize(size);
 	}
 
 	/**
@@ -86,12 +78,6 @@ public final class Slide {
 	 * @return a partially specified sliding window
 	 */
 	public static SlideWithSize over(Expression size) {
-		try {
-			Class clazz = Class.forName("org.apache.flink.table.api.SlideWithSizeImpl");
-			Constructor con = clazz.getConstructor(Expression.class);
-			return (SlideWithSize) con.newInstance(size);
-		} catch (Throwable t) {
-			throw new TableException("New SlideWithSizeImpl class failed.", t);
-		}
+		return new SlideWithSize(size);
 	}
 }

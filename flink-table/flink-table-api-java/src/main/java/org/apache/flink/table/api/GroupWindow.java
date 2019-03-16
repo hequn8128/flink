@@ -34,9 +34,22 @@ import org.apache.flink.table.expressions.Expression;
  * <p>For finite batch tables, group windows provide shortcuts for time-based groupBy.
  */
 @PublicEvolving
-public interface GroupWindow {
+public abstract class GroupWindow {
 
-	Expression getAlias();
+	/** Alias name for the group window. */
+	private final Expression alias;
+	private final Expression timeField;
 
-	Expression getTimeField();
+	public GroupWindow(Expression alias, Expression timeField) {
+		this.alias = alias;
+		this.timeField = timeField;
+	}
+
+	public Expression getAlias() {
+		return alias;
+	}
+
+	public Expression getTimeField() {
+		return timeField;
+	}
 }
