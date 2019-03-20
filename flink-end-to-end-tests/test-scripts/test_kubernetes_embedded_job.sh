@@ -41,7 +41,8 @@ function cleanup {
 
 function check_kubernetes_status {
     local status=`minikube status`
-    echo ${status} | grep -q "minikube: Running cluster: Running kubectl: Correctly Configured"
+    echo ${status} | grep -q "minikube: Running cluster: Running kubectl: Correctly Configured" \
+        || echo ${status} | grep -q "host: Running kubelet: Running apiserver: Running kubectl: Correctly Configured"
     return $?
 }
 
