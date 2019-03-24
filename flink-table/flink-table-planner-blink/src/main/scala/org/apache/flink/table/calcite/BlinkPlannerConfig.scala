@@ -20,19 +20,19 @@ package org.apache.flink.table.calcite
 
 import org.apache.flink.table.plan.optimize.program.{BatchOptimizeContext, FlinkChainedProgram, StreamOptimizeContext}
 import org.apache.flink.util.Preconditions
-
 import org.apache.calcite.config.{CalciteConnectionConfig, CalciteConnectionConfigImpl, CalciteConnectionProperty}
 import org.apache.calcite.sql.SqlOperatorTable
 import org.apache.calcite.sql.parser.SqlParser
 import org.apache.calcite.sql.util.ChainedSqlOperatorTable
 import org.apache.calcite.sql2rel.SqlToRelConverter
-
 import java.util.Properties
 
+import org.apache.flink.table.api.PlannerConfig
+
 /**
-  * Builder for creating a Calcite configuration.
+  * Builder for creating a Blink Planner configuration.
   */
-class CalciteConfigBuilder {
+class BlinkPlannerConfigBuilder {
 
   /**
     * Defines the optimize program for batch table plan.
@@ -64,7 +64,7 @@ class CalciteConfigBuilder {
     * Replaces the default batch table optimize program with the given program.
     */
   def replaceBatchProgram(
-      program: FlinkChainedProgram[BatchOptimizeContext]): CalciteConfigBuilder = {
+      program: FlinkChainedProgram[BatchOptimizeContext]): BlinkPlannerConfigBuilder = {
     Preconditions.checkNotNull(program)
     batchProgram = Some(program)
     this
@@ -74,7 +74,7 @@ class CalciteConfigBuilder {
     * Replaces the default stream table optimize program with the given program.
     */
   def replaceStreamProgram(
-      program: FlinkChainedProgram[StreamOptimizeContext]): CalciteConfigBuilder = {
+      program: FlinkChainedProgram[StreamOptimizeContext]): BlinkPlannerConfigBuilder = {
     Preconditions.checkNotNull(program)
     streamProgram = Some(program)
     this
@@ -83,7 +83,8 @@ class CalciteConfigBuilder {
   /**
     * Replaces the built-in SQL operator table with the given table.
     */
-  def replaceSqlOperatorTable(replaceSqlOperatorTable: SqlOperatorTable): CalciteConfigBuilder = {
+  def replaceSqlOperatorTable(replaceSqlOperatorTable: SqlOperatorTable)
+  : BlinkPlannerConfigBuilder = {
     Preconditions.checkNotNull(replaceSqlOperatorTable)
     operatorTables = List(replaceSqlOperatorTable)
     replaceOperatorTable = true
@@ -93,7 +94,7 @@ class CalciteConfigBuilder {
   /**
     * Appends the given table to the built-in SQL operator table.
     */
-  def addSqlOperatorTable(addedSqlOperatorTable: SqlOperatorTable): CalciteConfigBuilder = {
+  def addSqlOperatorTable(addedSqlOperatorTable: SqlOperatorTable): BlinkPlannerConfigBuilder = {
     Preconditions.checkNotNull(addedSqlOperatorTable)
     this.operatorTables = addedSqlOperatorTable :: this.operatorTables
     this
@@ -102,33 +103,34 @@ class CalciteConfigBuilder {
   /**
     * Replaces the built-in SQL parser configuration with the given configuration.
     */
-  def replaceSqlParserConfig(sqlParserConfig: SqlParser.Config): CalciteConfigBuilder = {
+  def replaceSqlParserConfig(sqlParserConfig: SqlParser.Config): BlinkPlannerConfigBuilder = {
     Preconditions.checkNotNull(sqlParserConfig)
     replaceSqlParserConfig = Some(sqlParserConfig)
     this
   }
 
-  def replaceSqlToRelConverterConfig(config: SqlToRelConverter.Config): CalciteConfigBuilder = {
+  def replaceSqlToRelConverterConfig(config: SqlToRelConverter.Config)
+  : BlinkPlannerConfigBuilder = {
     Preconditions.checkNotNull(config)
     replaceSqlToRelConverterConfig = Some(config)
     this
   }
 
-  private class CalciteConfigImpl(
+  private class BlinkPlannerConfigImpl(
       val getBatchProgram: Option[FlinkChainedProgram[BatchOptimizeContext]],
       val getStreamProgram: Option[FlinkChainedProgram[StreamOptimizeContext]],
       val getSqlOperatorTable: Option[SqlOperatorTable],
       val replacesSqlOperatorTable: Boolean,
       val getSqlParserConfig: Option[SqlParser.Config],
       val getSqlToRelConverterConfig: Option[SqlToRelConverter.Config])
-    extends CalciteConfig {
+    extends BlinkPlannerConfig {
 
   }
 
   /**
-    * Builds a new [[CalciteConfig]].
+    * Builds a new [[BlinkPlannerConfig]].
     */
-  def build(): CalciteConfig = new CalciteConfigImpl(
+  def build(): BlinkPlannerConfig = new BlinkPlannerConfigImpl(
     batchProgram,
     streamProgram,
     operatorTables match {
@@ -144,9 +146,9 @@ class CalciteConfigBuilder {
 }
 
 /**
-  * Calcite configuration for defining a custom Calcite configuration for Table and SQL API.
+  * Planner configuration for defining a custom Planner configuration for Table and SQL API.
   */
-trait CalciteConfig {
+trait BlinkPlannerConfig extends PlannerConfig {
 
   /**
     * Returns a custom batch table optimize program
@@ -179,40 +181,41 @@ trait CalciteConfig {
   def getSqlToRelConverterConfig: Option[SqlToRelConverter.Config]
 }
 
-object CalciteConfig {
+object BlinkPlannerConfig {
 
-  val DEFAULT: CalciteConfig = createBuilder().build()
+  val DEFAULT: BlinkPlannerConfig = createBuilder().build()
 
   /**
-    * Creates a new builder for constructing a [[CalciteConfig]].
+    * Creates a new builder for constructing a [[BlinkPlannerConfig]].
     */
-  def createBuilder(): CalciteConfigBuilder = {
-    new CalciteConfigBuilder
+  def createBuilder(): BlinkPlannerConfigBuilder = {
+    new BlinkPlannerConfigBuilder
   }
 
   /**
-    * Creates a new builder for constructing a [[CalciteConfig]] based on a given [[CalciteConfig]].
+    * Creates a new builder for constructing a [[BlinkPlannerConfig]] based on a given
+    * [BlinkPlannerConfig.
     */
-  def createBuilder(calciteConfig: CalciteConfig): CalciteConfigBuilder = {
-    val builder = new CalciteConfigBuilder
-    if (calciteConfig.getBatchProgram.isDefined) {
-      builder.replaceBatchProgram(calciteConfig.getBatchProgram.get)
+  def createBuilder(plannerConfig: BlinkPlannerConfig): BlinkPlannerConfigBuilder = {
+    val builder = new BlinkPlannerConfigBuilder
+    if (plannerConfig.getBatchProgram.isDefined) {
+      builder.replaceBatchProgram(plannerConfig.getBatchProgram.get)
     }
-    if (calciteConfig.getStreamProgram.isDefined) {
-      builder.replaceStreamProgram(calciteConfig.getStreamProgram.get)
+    if (plannerConfig.getStreamProgram.isDefined) {
+      builder.replaceStreamProgram(plannerConfig.getStreamProgram.get)
     }
-    if (calciteConfig.getSqlOperatorTable.isDefined) {
-      if (calciteConfig.replacesSqlOperatorTable) {
-        builder.replaceSqlOperatorTable(calciteConfig.getSqlOperatorTable.get)
+    if (plannerConfig.getSqlOperatorTable.isDefined) {
+      if (plannerConfig.replacesSqlOperatorTable) {
+        builder.replaceSqlOperatorTable(plannerConfig.getSqlOperatorTable.get)
       } else {
-        builder.addSqlOperatorTable(calciteConfig.getSqlOperatorTable.get)
+        builder.addSqlOperatorTable(plannerConfig.getSqlOperatorTable.get)
       }
     }
-    if (calciteConfig.getSqlParserConfig.isDefined) {
-      builder.replaceSqlParserConfig(calciteConfig.getSqlParserConfig.get)
+    if (plannerConfig.getSqlParserConfig.isDefined) {
+      builder.replaceSqlParserConfig(plannerConfig.getSqlParserConfig.get)
     }
-    if (calciteConfig.getSqlToRelConverterConfig.isDefined) {
-      builder.replaceSqlToRelConverterConfig(calciteConfig.getSqlToRelConverterConfig.get)
+    if (plannerConfig.getSqlToRelConverterConfig.isDefined) {
+      builder.replaceSqlToRelConverterConfig(plannerConfig.getSqlToRelConverterConfig.get)
     }
 
     builder

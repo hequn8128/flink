@@ -41,7 +41,7 @@ object ExternalTableUtil extends Logging {
     * @return converted [[TableSourceTable]] instance from the input catalog table
     */
   def fromExternalCatalogTable[T1, T2](
-      tableEnv: TableEnvironment,
+      tableEnv: TableEnvImpl,
       externalTable: ExternalCatalogTable)
     : TableSourceSinkTable[T1, T2] = {
 
@@ -63,16 +63,16 @@ object ExternalTableUtil extends Logging {
   }
 
   private def createTableSource[T](
-      tableEnv: TableEnvironment,
+      tableEnv: TableEnvImpl,
       externalTable: ExternalCatalogTable,
       statistics: FlinkStatistic)
     : TableSourceTable[T] = tableEnv match {
 
-    case _: BatchTableEnvironment if externalTable.isBatchTable =>
+    case _: BatchTableEnvImpl if externalTable.isBatchTable =>
       val source = TableFactoryUtil.findAndCreateTableSource(tableEnv, externalTable)
       new BatchTableSourceTable[T](source.asInstanceOf[BatchTableSource[T]], statistics)
 
-    case _: StreamTableEnvironment if externalTable.isStreamTable =>
+    case _: StreamTableEnvImpl if externalTable.isStreamTable =>
       val source = TableFactoryUtil.findAndCreateTableSource(tableEnv, externalTable)
       new StreamTableSourceTable[T](source.asInstanceOf[StreamTableSource[T]], statistics)
 
@@ -82,16 +82,16 @@ object ExternalTableUtil extends Logging {
   }
 
   private def createTableSink[T](
-      tableEnv: TableEnvironment,
+      tableEnv: TableEnvImpl,
       externalTable: ExternalCatalogTable,
       statistics: FlinkStatistic)
     : TableSinkTable[T] = tableEnv match {
 
-    case _: BatchTableEnvironment if externalTable.isBatchTable =>
+    case _: BatchTableEnvImpl if externalTable.isBatchTable =>
       val sink = TableFactoryUtil.findAndCreateTableSink(tableEnv, externalTable)
       new TableSinkTable[T](sink.asInstanceOf[BatchTableSink[T]], statistics)
 
-    case _: StreamTableEnvironment if externalTable.isStreamTable =>
+    case _: StreamTableEnvImpl if externalTable.isStreamTable =>
       val sink = TableFactoryUtil.findAndCreateTableSink(tableEnv, externalTable)
       new TableSinkTable[T](sink.asInstanceOf[StreamTableSink[T]], statistics)
 

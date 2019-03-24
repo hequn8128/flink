@@ -18,7 +18,7 @@
 
 package org.apache.flink.table.plan.logical
 
-import org.apache.flink.table.api.{BatchTableEnvironment, StreamTableEnvironment, TableEnvironment}
+import org.apache.flink.table.api.{BatchTableEnvImpl, StreamTableEnvImpl, TableEnvImpl}
 import org.apache.flink.table.expressions.PlannerExpressionUtils.{isRowCountLiteral, isRowtimeAttribute, isTimeAttribute, isTimeIntervalLiteral}
 import org.apache.flink.table.expressions._
 import org.apache.flink.table.typeutils.TypeCheckUtils.{isTimePoint, isLong}
@@ -54,7 +54,7 @@ case class TumblingGroupWindow(
       resolve(timeField),
       resolve(size))
 
-  override def validate(tableEnv: TableEnvironment): ValidationResult =
+  override def validate(tableEnv: TableEnvImpl): ValidationResult =
     super.validate(tableEnv).orElse(
       tableEnv match {
 
@@ -65,16 +65,16 @@ case class TumblingGroupWindow(
               "or Interval of Rows.")
 
         // check time attribute
-        case _: StreamTableEnvironment if !isTimeAttribute(timeField) =>
+        case _: StreamTableEnvImpl if !isTimeAttribute(timeField) =>
           ValidationFailure(
             "Tumbling window expects a time attribute for grouping in a stream environment.")
-        case _: BatchTableEnvironment
+        case _: BatchTableEnvImpl
           if !(isTimePoint(timeField.resultType) || isLong(timeField.resultType)) =>
           ValidationFailure(
             "Tumbling window expects a time attribute for grouping in a batch environment.")
 
         // check row intervals on event-time
-        case _: StreamTableEnvironment
+        case _: StreamTableEnvImpl
             if isRowCountLiteral(size) && isRowtimeAttribute(timeField) =>
           ValidationFailure(
             "Event-time grouping windows on row intervals in a stream environment " +
@@ -109,7 +109,7 @@ case class SlidingGroupWindow(
       resolve(size),
       resolve(slide))
 
-  override def validate(tableEnv: TableEnvironment): ValidationResult =
+  override def validate(tableEnv: TableEnvImpl): ValidationResult =
     super.validate(tableEnv).orElse(
       tableEnv match {
 
@@ -130,16 +130,16 @@ case class SlidingGroupWindow(
           ValidationFailure("Sliding window expects same type of size and slide.")
 
         // check time attribute
-        case _: StreamTableEnvironment if !isTimeAttribute(timeField) =>
+        case _: StreamTableEnvImpl if !isTimeAttribute(timeField) =>
           ValidationFailure(
             "Sliding window expects a time attribute for grouping in a stream environment.")
-        case _: BatchTableEnvironment
+        case _: BatchTableEnvImpl
           if !(isTimePoint(timeField.resultType) || isLong(timeField.resultType)) =>
           ValidationFailure(
             "Sliding window expects a time attribute for grouping in a stream environment.")
 
         // check row intervals on event-time
-        case _: StreamTableEnvironment
+        case _: StreamTableEnvImpl
             if isRowCountLiteral(size) && isRowtimeAttribute(timeField) =>
           ValidationFailure(
             "Event-time grouping windows on row intervals in a stream environment " +
@@ -172,7 +172,7 @@ case class SessionGroupWindow(
       resolve(timeField),
       resolve(gap))
 
-  override def validate(tableEnv: TableEnvironment): ValidationResult =
+  override def validate(tableEnv: TableEnvImpl): ValidationResult =
     super.validate(tableEnv).orElse(
       tableEnv match {
 
@@ -182,10 +182,10 @@ case class SessionGroupWindow(
             "Session window expects size literal of type Interval of Milliseconds.")
 
         // check time attribute
-        case _: StreamTableEnvironment if !isTimeAttribute(timeField) =>
+        case _: StreamTableEnvImpl if !isTimeAttribute(timeField) =>
           ValidationFailure(
             "Session window expects a time attribute for grouping in a stream environment.")
-        case _: BatchTableEnvironment
+        case _: BatchTableEnvImpl
           if !(isTimePoint(timeField.resultType) || isLong(timeField.resultType)) =>
           ValidationFailure(
             "Session window expects a time attribute for grouping in a stream environment.")

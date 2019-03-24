@@ -91,7 +91,7 @@ object FlinkRelBuilder {
       calciteSchema,
       Collections.emptyList(),
       typeFactory,
-      CalciteConfig.connectionConfig(config.getParserConfig))
+      DefaultPlannerConfig.connectionConfig(config.getParserConfig))
 
     new FlinkRelBuilder(config.getContext, cluster, relOptSchema)
   }

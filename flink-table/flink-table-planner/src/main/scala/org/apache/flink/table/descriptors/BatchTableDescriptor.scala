@@ -18,13 +18,13 @@
 
 package org.apache.flink.table.descriptors
 
-import org.apache.flink.table.api.BatchTableEnvironment
+import org.apache.flink.table.api.BatchTableEnvImpl
 
 /**
   * Descriptor for specifying a table source and/or sink in a batch environment.
   */
 class BatchTableDescriptor(
-    tableEnv: BatchTableEnvironment,
+    tableEnv: BatchTableEnvImpl,
     connectorDescriptor: ConnectorDescriptor)
   extends ConnectTableDescriptor[BatchTableDescriptor](
     tableEnv,

@@ -27,8 +27,8 @@ import org.apache.flink.streaming.api.TimeCharacteristic
 import org.apache.flink.streaming.api.environment.LocalStreamEnvironment
 import org.apache.flink.streaming.api.functions.source.SourceFunction
 import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
-import org.apache.flink.table.api.java.{BatchTableEnvironment => JavaBatchTableEnv, StreamTableEnvironment => JavaStreamTableEnv}
-import org.apache.flink.table.api.scala.{BatchTableEnvironment => ScalaBatchTableEnv, StreamTableEnvironment => ScalaStreamTableEnv}
+import org.apache.flink.table.api.java.{BatchTableEnvImpl => JavaBatchTableEnv, StreamTableEnvImpl => JavaStreamTableEnv}
+import org.apache.flink.table.api.scala.{BatchTableEnvImpl => ScalaBatchTableEnv, StreamTableEnvImpl => ScalaStreamTableEnv}
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.api.{Table, TableImpl, TableSchema}
 import org.apache.flink.table.expressions.Expression

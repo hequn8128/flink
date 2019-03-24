@@ -27,22 +27,15 @@ import org.apache.calcite.sql.parser.SqlParser
 import org.apache.calcite.sql.util.ChainedSqlOperatorTable
 import org.apache.calcite.sql2rel.SqlToRelConverter
 import org.apache.calcite.tools.{RuleSet, RuleSets}
+import org.apache.flink.table.api.PlannerConfig
 import org.apache.flink.util.Preconditions
 
 import scala.collection.JavaConverters._
 
 /**
-  * Builder for creating a Calcite configuration.
-  *
-  * @deprecated This class will be removed temporarily while the API is uncoupled
-  *             from Calcite. An alternative might be provided in the future. See FLINK-11728
-  *             for more information.
+  * Builder for creating a Default Planner configuration.
   */
-@Deprecated
-@deprecated(
-  "This method will be removed temporarily while the API is uncoupled from Calcite.",
-  "1.8.0")
-class CalciteConfigBuilder {
+class DefaultPlannerConfigBuilder {
 
   /**
     * Defines the normalization rule set. Normalization rules are dedicated for rewriting
@@ -89,7 +82,7 @@ class CalciteConfigBuilder {
   /**
     * Replaces the built-in normalization rule set with the given rule set.
     */
-  def replaceNormRuleSet(replaceRuleSet: RuleSet): CalciteConfigBuilder = {
+  def replaceNormRuleSet(replaceRuleSet: RuleSet): DefaultPlannerConfigBuilder = {
     Preconditions.checkNotNull(replaceRuleSet)
     normRuleSets = List(replaceRuleSet)
     replaceNormRules = true
@@ -99,7 +92,7 @@ class CalciteConfigBuilder {
   /**
     * Appends the given normalization rule set to the built-in rule set.
     */
-  def addNormRuleSet(addedRuleSet: RuleSet): CalciteConfigBuilder = {
+  def addNormRuleSet(addedRuleSet: RuleSet): DefaultPlannerConfigBuilder = {
     Preconditions.checkNotNull(addedRuleSet)
     normRuleSets = addedRuleSet :: normRuleSets
     this
@@ -108,7 +101,7 @@ class CalciteConfigBuilder {
   /**
     * Replaces the built-in optimization rule set with the given rule set.
     */
-  def replaceLogicalOptRuleSet(replaceRuleSet: RuleSet): CalciteConfigBuilder = {
+  def replaceLogicalOptRuleSet(replaceRuleSet: RuleSet): DefaultPlannerConfigBuilder = {
     Preconditions.checkNotNull(replaceRuleSet)
     logicalOptRuleSets = List(replaceRuleSet)
     replaceLogicalOptRules = true
@@ -118,7 +111,7 @@ class CalciteConfigBuilder {
   /**
     * Appends the given optimization rule set to the built-in rule set.
     */
-  def addLogicalOptRuleSet(addedRuleSet: RuleSet): CalciteConfigBuilder = {
+  def addLogicalOptRuleSet(addedRuleSet: RuleSet): DefaultPlannerConfigBuilder = {
     Preconditions.checkNotNull(addedRuleSet)
     logicalOptRuleSets = addedRuleSet :: logicalOptRuleSets
     this
@@ -127,7 +120,7 @@ class CalciteConfigBuilder {
   /**
     * Replaces the built-in optimization rule set with the given rule set.
     */
-  def replacePhysicalOptRuleSet(replaceRuleSet: RuleSet): CalciteConfigBuilder = {
+  def replacePhysicalOptRuleSet(replaceRuleSet: RuleSet): DefaultPlannerConfigBuilder = {
     Preconditions.checkNotNull(replaceRuleSet)
     physicalOptRuleSets = List(replaceRuleSet)
     replacePhysicalOptRules = true
@@ -137,7 +130,7 @@ class CalciteConfigBuilder {
   /**
     * Appends the given optimization rule set to the built-in rule set.
     */
-  def addPhysicalOptRuleSet(addedRuleSet: RuleSet): CalciteConfigBuilder = {
+  def addPhysicalOptRuleSet(addedRuleSet: RuleSet): DefaultPlannerConfigBuilder = {
     Preconditions.checkNotNull(addedRuleSet)
     physicalOptRuleSets = addedRuleSet :: physicalOptRuleSets
     this
@@ -150,7 +143,7 @@ class CalciteConfigBuilder {
     * The decoration phase allows to rewrite the optimized plan and is not cost-based.
     *
     */
-  def replaceDecoRuleSet(replaceRuleSet: RuleSet): CalciteConfigBuilder = {
+  def replaceDecoRuleSet(replaceRuleSet: RuleSet): DefaultPlannerConfigBuilder = {
     Preconditions.checkNotNull(replaceRuleSet)
     decoRuleSets = List(replaceRuleSet)
     replaceDecoRules = true
@@ -163,7 +156,7 @@ class CalciteConfigBuilder {
     * The decoration rules are applied after the cost-based optimization phase.
     * The decoration phase allows to rewrite the optimized plan and is not cost-based.
     */
-  def addDecoRuleSet(addedRuleSet: RuleSet): CalciteConfigBuilder = {
+  def addDecoRuleSet(addedRuleSet: RuleSet): DefaultPlannerConfigBuilder = {
     Preconditions.checkNotNull(addedRuleSet)
     decoRuleSets = addedRuleSet :: decoRuleSets
     this
@@ -172,7 +165,8 @@ class CalciteConfigBuilder {
   /**
     * Replaces the built-in SQL operator table with the given table.
     */
-  def replaceSqlOperatorTable(replaceSqlOperatorTable: SqlOperatorTable): CalciteConfigBuilder = {
+  def replaceSqlOperatorTable(replaceSqlOperatorTable: SqlOperatorTable)
+  : DefaultPlannerConfigBuilder = {
     Preconditions.checkNotNull(replaceSqlOperatorTable)
     operatorTables = List(replaceSqlOperatorTable)
     replaceOperatorTable = true
@@ -182,7 +176,7 @@ class CalciteConfigBuilder {
   /**
     * Appends the given table to the built-in SQL operator table.
     */
-  def addSqlOperatorTable(addedSqlOperatorTable: SqlOperatorTable): CalciteConfigBuilder = {
+  def addSqlOperatorTable(addedSqlOperatorTable: SqlOperatorTable): DefaultPlannerConfigBuilder = {
     Preconditions.checkNotNull(addedSqlOperatorTable)
     this.operatorTables = addedSqlOperatorTable :: this.operatorTables
     this
@@ -191,7 +185,7 @@ class CalciteConfigBuilder {
   /**
     * Replaces the built-in SQL parser configuration with the given configuration.
     */
-  def replaceSqlParserConfig(sqlParserConfig: SqlParser.Config): CalciteConfigBuilder = {
+  def replaceSqlParserConfig(sqlParserConfig: SqlParser.Config): DefaultPlannerConfigBuilder = {
     Preconditions.checkNotNull(sqlParserConfig)
     replaceSqlParserConfig = Some(sqlParserConfig)
     this
@@ -200,13 +194,14 @@ class CalciteConfigBuilder {
   /**
     * Replaces the built-in SqlToRelConverter configuration with the given configuration.
     */
-  def replaceSqlToRelConverterConfig(config: SqlToRelConverter.Config): CalciteConfigBuilder = {
+  def replaceSqlToRelConverterConfig(config: SqlToRelConverter.Config)
+  : DefaultPlannerConfigBuilder = {
     Preconditions.checkNotNull(config)
     replaceSqlToRelConverterConfig = Some(config)
     this
   }
 
-  private class CalciteConfigImpl(
+  private class DefaultPlannerConfigImpl(
       val getNormRuleSet: Option[RuleSet],
       val replacesNormRuleSet: Boolean,
       val getLogicalOptRuleSet: Option[RuleSet],
@@ -219,7 +214,7 @@ class CalciteConfigBuilder {
       val replacesSqlOperatorTable: Boolean,
       val getSqlParserConfig: Option[SqlParser.Config],
       val getSqlToRelConverterConfig: Option[SqlToRelConverter.Config])
-    extends CalciteConfig
+    extends DefaultPlannerConfig
 
 
   /**
@@ -238,9 +233,9 @@ class CalciteConfigBuilder {
   }
 
   /**
-    * Builds a new [[CalciteConfig]].
+    * Builds a new [[DefaultPlannerConfig]].
     */
-  def build(): CalciteConfig = new CalciteConfigImpl(
+  def build(): DefaultPlannerConfig = new DefaultPlannerConfigImpl(
     getRuleSet(normRuleSets),
     replaceNormRules,
     getRuleSet(logicalOptRuleSets),
@@ -262,17 +257,9 @@ class CalciteConfigBuilder {
 }
 
 /**
-  * Calcite configuration for defining a custom Calcite configuration for Table and SQL API.
-  *
-  * @deprecated This class will be removed temporarily while the API is uncoupled
-  *             from Calcite. An alternative might be provided in the future. See FLINK-11728
-  *             for more information.
+  * Default Planner configuration for defining a custom planner configuration for Table and SQL API.
   */
-@Deprecated
-@deprecated(
-  "This method will be removed temporarily while the API is uncoupled from Calcite.",
-  "1.8.0")
-trait CalciteConfig {
+trait DefaultPlannerConfig extends PlannerConfig {
 
   /**
     * Returns whether this configuration replaces the built-in normalization rule set.
@@ -335,15 +322,15 @@ trait CalciteConfig {
   def getSqlToRelConverterConfig: Option[SqlToRelConverter.Config]
 }
 
-object CalciteConfig {
+object DefaultPlannerConfig {
 
-  val DEFAULT: CalciteConfig = createBuilder().build()
+  val DEFAULT: DefaultPlannerConfig = createBuilder().build()
 
   /**
-    * Creates a new builder for constructing a [[CalciteConfig]].
+    * Creates a new builder for constructing a [[DefaultPlannerConfig]].
     */
-  def createBuilder(): CalciteConfigBuilder = {
-    new CalciteConfigBuilder
+  def createBuilder(): DefaultPlannerConfigBuilder = {
+    new DefaultPlannerConfigBuilder
   }
 
   def connectionConfig(parserConfig : SqlParser.Config): CalciteConnectionConfig = {

@@ -36,7 +36,7 @@ import org.apache.flink.api.scala.typeutils.CaseClassTypeInfo
 import org.apache.flink.streaming.api.TimeCharacteristic
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
-import org.apache.flink.table.calcite.{FlinkTypeFactory, RelTimeIndicatorConverter}
+import org.apache.flink.table.calcite.{DefaultPlannerConfig, FlinkTypeFactory, RelTimeIndicatorConverter}
 import org.apache.flink.table.descriptors.{ConnectorDescriptor, StreamTableDescriptor}
 import org.apache.flink.table.explain.PlanJsonParser
 import org.apache.flink.table.expressions._
@@ -66,13 +66,13 @@ import _root_.scala.collection.JavaConverters._
   * - convert a [[Table]] into a [[DataStream]]
   *
   * @param execEnv The [[StreamExecutionEnvironment]] which is wrapped in this
-  *                [[StreamTableEnvironment]].
-  * @param config The [[TableConfig]] of this [[StreamTableEnvironment]].
+  *                [[StreamTableEnvImpl]].
+  * @param config  The [[TableConfig]] of this [[StreamTableEnvImpl]].
   */
-abstract class StreamTableEnvironment(
+abstract class StreamTableEnvImpl(
     private[flink] val execEnv: StreamExecutionEnvironment,
     config: TableConfig)
-  extends TableEnvironment(config) {
+  extends TableEnvImpl(config) {
 
   // a counter for unique table names
   private val nameCntr: AtomicInteger = new AtomicInteger(0)
@@ -102,7 +102,7 @@ abstract class StreamTableEnvironment(
     "_DataStreamTable_" + nameCntr.getAndIncrement()
 
   /**
-    * Registers an internal [[StreamTableSource]] in this [[TableEnvironment]]'s catalog without
+    * Registers an internal [[StreamTableSource]] in this [[TableEnvImpl]]'s catalog without
     * name checking. Registered tables can be referenced in SQL queries.
     *
     * @param name        The name under which the [[TableSource]] is registered.
@@ -200,7 +200,7 @@ abstract class StreamTableEnvironment(
 
   /**
     * Registers an external [[TableSink]] with given field names and types in this
-    * [[TableEnvironment]]'s catalog.
+    * [[TableEnvImpl]]'s catalog.
     * Registered sink tables can be referenced in SQL DML statements.
     *
     * Example:
@@ -243,7 +243,7 @@ abstract class StreamTableEnvironment(
 
   /**
     * Registers an external [[TableSink]] with already configured field names and field types in
-    * this [[TableEnvironment]]'s catalog.
+    * this [[TableEnvImpl]]'s catalog.
     * Registered sink tables can be referenced in SQL DML statements.
     *
     * @param name The name under which the [[TableSink]] is registered.
@@ -506,7 +506,7 @@ abstract class StreamTableEnvironment(
   }
 
   /**
-    * Registers a [[DataStream]] as a table under a given name in the [[TableEnvironment]]'s
+    * Registers a [[DataStream]] as a table under a given name in the [[TableEnvImpl]]'s
     * catalog.
     *
     * @param name The name under which the table is registered in the catalog.
@@ -528,7 +528,7 @@ abstract class StreamTableEnvironment(
 
   /**
     * Registers a [[DataStream]] as a table under a given name with field names as specified by
-    * field expressions in the [[TableEnvironment]]'s catalog.
+    * field expressions in the [[TableEnvImpl]]'s catalog.
     *
     * @param name The name under which the table is registered in the catalog.
     * @param dataStream The [[DataStream]] to register as table in the catalog.
@@ -769,7 +769,7 @@ abstract class StreamTableEnvironment(
     * including a custom RuleSet configuration.
     */
   protected def getDecoRuleSet: RuleSet = {
-    val calciteConfig = config.getCalciteConfig
+    val calciteConfig = config.getPlannerConfig.asInstanceOf[DefaultPlannerConfig]
     calciteConfig.getDecoRuleSet match {
 
       case None =>

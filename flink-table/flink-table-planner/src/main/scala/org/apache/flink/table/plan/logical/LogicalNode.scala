@@ -20,7 +20,7 @@ package org.apache.flink.table.plan.logical
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.tools.RelBuilder
 import org.apache.flink.table.plan.TreeNode
-import org.apache.flink.table.api.{TableEnvironment, ValidationException}
+import org.apache.flink.table.api.{TableEnvImpl, ValidationException}
 import org.apache.flink.table.expressions._
 import org.apache.flink.table.typeutils.TypeCoercion
 import org.apache.flink.table.validate._
@@ -48,7 +48,7 @@ import org.apache.flink.table.validate._
 abstract class LogicalNode extends TreeNode[LogicalNode] {
   def output: Seq[Attribute]
 
-  def resolveExpressions(tableEnv: TableEnvironment): LogicalNode = {
+  def resolveExpressions(tableEnv: TableEnvImpl): LogicalNode = {
     // resolve references and function calls
     val exprResolved = expressionPostOrderTransform {
       case u @ UnresolvedFieldReference(name) =>
@@ -76,7 +76,7 @@ abstract class LogicalNode extends TreeNode[LogicalNode] {
 
   protected[logical] def construct(relBuilder: RelBuilder): RelBuilder
 
-  def validate(tableEnv: TableEnvironment): LogicalNode = {
+  def validate(tableEnv: TableEnvImpl): LogicalNode = {
     val resolvedNode = resolveExpressions(tableEnv)
     resolvedNode.expressionPostOrderTransform {
       case a: Attribute if !a.valid =>
@@ -100,7 +100,7 @@ abstract class LogicalNode extends TreeNode[LogicalNode] {
     * Resolves the given strings to a [[NamedExpression]] using the input from all child
     * nodes of this LogicalPlan.
     */
-  def resolveReference(tableEnv: TableEnvironment, name: String): Option[NamedExpression] = {
+  def resolveReference(tableEnv: TableEnvImpl, name: String): Option[NamedExpression] = {
     // try to resolve a field
     val childrenOutput = children.flatMap(_.output)
     val fieldCandidates = childrenOutput.filter(_.name.equalsIgnoreCase(name))

@@ -21,9 +21,9 @@ package org.apache.flink.table.plan.optimize
 import org.apache.flink.table.api.{BatchTableEnvironment, TableConfig}
 import org.apache.flink.table.plan.optimize.program.{BatchOptimizeContext, FlinkBatchProgram}
 import org.apache.flink.util.Preconditions
-
 import org.apache.calcite.plan.volcano.VolcanoPlanner
 import org.apache.calcite.rel.RelNode
+import org.apache.flink.table.calcite.BlinkPlannerConfig
 
 /**
   * Query optimizer for Batch.
@@ -43,8 +43,8 @@ class BatchOptimizer(tEnv: BatchTableEnvironment) extends Optimizer {
     */
   private def optimizeTree(relNode: RelNode): RelNode = {
     val config = tEnv.getConfig
-    val programs = config.getCalciteConfig.getBatchProgram
-      .getOrElse(FlinkBatchProgram.buildProgram(config.getConf))
+    val programs = config.getPlannerConfig.asInstanceOf[BlinkPlannerConfig].getBatchProgram
+      .getOrElse(FlinkBatchProgram.buildProgram(config.getUserDefinedConfig))
     Preconditions.checkNotNull(programs)
 
     programs.optimize(relNode, new BatchOptimizeContext {

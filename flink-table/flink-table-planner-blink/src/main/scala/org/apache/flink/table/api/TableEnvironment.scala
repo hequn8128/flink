@@ -22,7 +22,7 @@ import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.common.typeutils.CompositeType
 import org.apache.flink.api.java.typeutils.{RowTypeInfo, _}
 import org.apache.flink.api.scala.typeutils.CaseClassTypeInfo
-import org.apache.flink.table.calcite.{FlinkContextImpl, FlinkPlannerImpl, FlinkRelBuilder, FlinkTypeFactory, FlinkTypeSystem}
+import org.apache.flink.table.calcite._
 import org.apache.flink.table.functions.sql.FlinkSqlOperatorTable
 import org.apache.flink.table.plan.cost.FlinkCostFactory
 import org.apache.flink.table.plan.optimize.Optimizer
@@ -30,7 +30,6 @@ import org.apache.flink.table.plan.schema.RelTable
 import org.apache.flink.table.plan.stats.FlinkStatistic
 import org.apache.flink.table.sources.TableSource
 import org.apache.flink.types.Row
-
 import org.apache.calcite.config.Lex
 import org.apache.calcite.jdbc.CalciteSchema
 import org.apache.calcite.plan.RelOptPlanner
@@ -41,7 +40,6 @@ import org.apache.calcite.sql._
 import org.apache.calcite.sql.parser.SqlParser
 import org.apache.calcite.sql2rel.SqlToRelConverter
 import org.apache.calcite.tools._
-
 import _root_.java.lang.reflect.Modifier
 import _root_.java.util.concurrent.atomic.AtomicInteger
 import _root_.java.util.{Arrays => JArrays}
@@ -55,6 +53,11 @@ import _root_.scala.collection.JavaConverters._
   * @param config The configuration of the TableEnvironment
   */
 abstract class TableEnvironment(val config: TableConfig) {
+
+  // Init Planner Config
+  if (config.getPlannerConfig == null) {
+    config.setPlannerConfig(BlinkPlannerConfig.DEFAULT)
+  }
 
   // the catalog to hold all registered and translated tables
   // we disable caching here to prevent side effects
@@ -125,7 +128,7 @@ abstract class TableEnvironment(val config: TableConfig) {
     * Returns the SQL parser config for this environment including a custom Calcite configuration.
     */
   protected def getSqlParserConfig: SqlParser.Config = {
-    val calciteConfig = config.getCalciteConfig
+    val calciteConfig = config.getPlannerConfig.asInstanceOf[BlinkPlannerConfig]
     calciteConfig.getSqlParserConfig match {
 
       case None =>

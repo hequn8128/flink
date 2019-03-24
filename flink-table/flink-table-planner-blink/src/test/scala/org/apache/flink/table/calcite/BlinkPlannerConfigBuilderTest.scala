@@ -30,15 +30,15 @@ import org.junit.Test
 
 import scala.collection.JavaConverters._
 
-class CalciteConfigBuilderTest {
+class BlinkPlannerConfigBuilderTest {
 
   @Test
   def testProgram(): Unit = {
-    val cc: CalciteConfig = new CalciteConfigBuilder().build()
+    val cc: BlinkPlannerConfig = new BlinkPlannerConfigBuilder().build()
     assertTrue(cc.getStreamProgram.isEmpty)
 
-    val builder = new CalciteConfigBuilder()
-    val streamPrograms = FlinkStreamProgram.buildProgram(TableConfig.DEFAULT.getConf)
+    val builder = new BlinkPlannerConfigBuilder()
+    val streamPrograms = FlinkStreamProgram.buildProgram(TableConfig.DEFAULT.getUserDefinedConfig)
     streamPrograms.remove(FlinkStreamProgram.PHYSICAL)
     builder.replaceStreamProgram(streamPrograms)
 
@@ -49,7 +49,7 @@ class CalciteConfigBuilderTest {
 
   @Test
   def testDefaultOperatorTable(): Unit = {
-    val cc: CalciteConfig = new CalciteConfigBuilder().build()
+    val cc: BlinkPlannerConfig = new BlinkPlannerConfigBuilder().build()
 
     assertEquals(false, cc.replacesSqlOperatorTable)
     assertFalse(cc.getSqlOperatorTable.isDefined)
@@ -59,7 +59,7 @@ class CalciteConfigBuilderTest {
   def testReplaceOperatorTable(): Unit = {
     val oracleTable = new OracleSqlOperatorTable
 
-    val cc: CalciteConfig = new CalciteConfigBuilder()
+    val cc: BlinkPlannerConfig = new BlinkPlannerConfigBuilder()
       .replaceSqlOperatorTable(oracleTable)
       .build()
 
@@ -80,7 +80,7 @@ class CalciteConfigBuilderTest {
     val oracleTable = new OracleSqlOperatorTable
     val stdTable = new SqlStdOperatorTable
 
-    val cc: CalciteConfig = new CalciteConfigBuilder()
+    val cc: BlinkPlannerConfig = new BlinkPlannerConfigBuilder()
       .replaceSqlOperatorTable(oracleTable)
       .addSqlOperatorTable(stdTable)
       .build()
@@ -106,7 +106,7 @@ class CalciteConfigBuilderTest {
   def testAddOperatorTable(): Unit = {
     val oracleTable = new OracleSqlOperatorTable
 
-    val cc: CalciteConfig = new CalciteConfigBuilder()
+    val cc: BlinkPlannerConfig = new BlinkPlannerConfigBuilder()
       .addSqlOperatorTable(oracleTable)
       .build()
 
@@ -127,7 +127,7 @@ class CalciteConfigBuilderTest {
     val oracleTable = new OracleSqlOperatorTable
     val stdTable = new SqlStdOperatorTable
 
-    val cc: CalciteConfig = new CalciteConfigBuilder()
+    val cc: BlinkPlannerConfig = new BlinkPlannerConfigBuilder()
       .addSqlOperatorTable(oracleTable)
       .addSqlOperatorTable(stdTable)
       .build()
@@ -157,7 +157,7 @@ class CalciteConfigBuilderTest {
       .withExpand(false)
       .build()
 
-    val cc: CalciteConfig = new CalciteConfigBuilder()
+    val cc: BlinkPlannerConfig = new BlinkPlannerConfigBuilder()
       .replaceSqlToRelConverterConfig(config)
       .build()
 
@@ -167,7 +167,7 @@ class CalciteConfigBuilderTest {
 
   @Test
   def testCreateBuilderBasedOnAntherConfig(): Unit = {
-    val builder = CalciteConfig.createBuilder(CalciteConfig.DEFAULT)
+    val builder = BlinkPlannerConfig.createBuilder(BlinkPlannerConfig.DEFAULT)
     val config = builder.build()
     assertTrue(config.getBatchProgram.isEmpty)
     assertTrue(config.getStreamProgram.isEmpty)
@@ -176,11 +176,11 @@ class CalciteConfigBuilderTest {
     assertTrue(config.getSqlParserConfig.isEmpty)
     assertTrue(config.getSqlToRelConverterConfig.isEmpty)
 
-    val streamPrograms = FlinkStreamProgram.buildProgram(TableConfig.DEFAULT.getConf)
+    val streamPrograms = FlinkStreamProgram.buildProgram(TableConfig.DEFAULT.getUserDefinedConfig)
     streamPrograms.remove(FlinkStreamProgram.PHYSICAL)
     builder.replaceStreamProgram(streamPrograms)
     val baseConfig1 = builder.build()
-    val builder1 = CalciteConfig.createBuilder(baseConfig1)
+    val builder1 = BlinkPlannerConfig.createBuilder(baseConfig1)
     val config1 = builder1.build()
     assertTrue(streamPrograms == config1.getStreamProgram.orNull)
     assertTrue(config1.getBatchProgram.isEmpty)
@@ -196,7 +196,7 @@ class CalciteConfigBuilderTest {
       .build()
     builder.replaceSqlToRelConverterConfig(sqlToRelConvertConfig)
     val baseConfig2 = builder.build()
-    val builder2 = CalciteConfig.createBuilder(baseConfig2)
+    val builder2 = BlinkPlannerConfig.createBuilder(baseConfig2)
     val config2 = builder2.build()
     assertTrue(streamPrograms == config2.getStreamProgram.orNull)
     assertTrue(sqlToRelConvertConfig == config2.getSqlToRelConverterConfig.orNull)
@@ -210,7 +210,7 @@ class CalciteConfigBuilderTest {
       .build()
     builder.replaceSqlParserConfig(sqlParserConfig)
     val baseConfig3 = builder.build()
-    val builder3 = CalciteConfig.createBuilder(baseConfig3)
+    val builder3 = BlinkPlannerConfig.createBuilder(baseConfig3)
     val config3 = builder3.build()
     assertTrue(streamPrograms == config3.getStreamProgram.orNull)
     assertTrue(sqlToRelConvertConfig == config3.getSqlToRelConverterConfig.orNull)
@@ -222,7 +222,7 @@ class CalciteConfigBuilderTest {
     val oracleTable = new OracleSqlOperatorTable
     builder.addSqlOperatorTable(oracleTable)
     val baseConfig4 = builder.build()
-    val builder4 = CalciteConfig.createBuilder(baseConfig4)
+    val builder4 = BlinkPlannerConfig.createBuilder(baseConfig4)
     val config4 = builder4.build()
     assertTrue(streamPrograms == config4.getStreamProgram.orNull)
     assertTrue(sqlToRelConvertConfig == config4.getSqlToRelConverterConfig.orNull)
@@ -235,7 +235,7 @@ class CalciteConfigBuilderTest {
     val stdTable = new SqlStdOperatorTable
     builder.replaceSqlOperatorTable(stdTable)
     val baseConfig5 = builder.build()
-    val builder5 = CalciteConfig.createBuilder(baseConfig5)
+    val builder5 = BlinkPlannerConfig.createBuilder(baseConfig5)
     val config5 = builder5.build()
     assertTrue(streamPrograms == config5.getStreamProgram.orNull)
     assertTrue(sqlToRelConvertConfig == config5.getSqlToRelConverterConfig.orNull)

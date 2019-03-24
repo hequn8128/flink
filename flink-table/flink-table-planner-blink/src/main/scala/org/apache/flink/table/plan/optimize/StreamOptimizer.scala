@@ -21,9 +21,9 @@ package org.apache.flink.table.plan.optimize
 import org.apache.flink.table.api.{StreamTableEnvironment, TableConfig}
 import org.apache.flink.table.plan.optimize.program.{FlinkStreamProgram, StreamOptimizeContext}
 import org.apache.flink.util.Preconditions
-
 import org.apache.calcite.plan.volcano.VolcanoPlanner
 import org.apache.calcite.rel.RelNode
+import org.apache.flink.table.calcite.BlinkPlannerConfig
 
 /**
   * Query optimizer for Stream.
@@ -43,8 +43,8 @@ class StreamOptimizer(tEnv: StreamTableEnvironment) extends Optimizer {
     */
   private def optimizeTree(relNode: RelNode): RelNode = {
     val config = tEnv.getConfig
-    val programs = config.getCalciteConfig.getStreamProgram
-      .getOrElse(FlinkStreamProgram.buildProgram(config.getConf))
+    val programs = config.getPlannerConfig.asInstanceOf[BlinkPlannerConfig].getStreamProgram
+      .getOrElse(FlinkStreamProgram.buildProgram(config.getUserDefinedConfig))
     Preconditions.checkNotNull(programs)
 
     programs.optimize(relNode, new StreamOptimizeContext() {

@@ -42,7 +42,7 @@ import _root_.scala.collection.JavaConversions._
   * @param logicalPlan logical representation
   */
 class TableImpl(
-    private[flink] val tableEnv: TableEnvironment,
+    private[flink] val tableEnv: TableEnvImpl,
     private[flink] val logicalPlan: LogicalNode) extends Table {
 
   private[flink] val expressionBridge: ExpressionBridge[PlannerExpression] =
@@ -429,7 +429,7 @@ class TableImpl(
 
   override def window(overWindows: OverWindow*): OverWindowedTable = {
 
-    if (tableEnv.isInstanceOf[BatchTableEnvironment]) {
+    if (tableEnv.isInstanceOf[BatchTableEnvImpl]) {
       throw new TableException("Over-windows for batch tables are currently not supported.")
     }
 

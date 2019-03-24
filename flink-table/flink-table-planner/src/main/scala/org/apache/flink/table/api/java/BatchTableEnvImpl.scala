@@ -27,13 +27,13 @@ import org.apache.flink.table.functions.{AggregateFunction, TableFunction}
 import _root_.scala.collection.JavaConverters._
 
 /**
-  * The [[TableEnvironment]] for a Java batch [[ExecutionEnvironment]] that works
+  * The [[TableEnvImpl]] for a Java batch [[ExecutionEnvironment]] that works
   * with [[DataSet]]s.
   *
   * A TableEnvironment can be used to:
   * - convert a [[DataSet]] to a [[Table]]
-  * - register a [[DataSet]] in the [[TableEnvironment]]'s catalog
-  * - register a [[Table]] in the [[TableEnvironment]]'s catalog
+  * - register a [[DataSet]] in the [[TableEnvImpl]]'s catalog
+  * - register a [[Table]] in the [[TableEnvImpl]]'s catalog
   * - scan a registered table to obtain a [[Table]]
   * - specify a SQL query on registered tables to obtain a [[Table]]
   * - convert a [[Table]] into a [[DataSet]]
@@ -41,13 +41,13 @@ import _root_.scala.collection.JavaConverters._
   *
   * @param execEnv The Java batch [[ExecutionEnvironment]] of the TableEnvironment.
   * @param config The configuration of the TableEnvironment.
-  *
   * @deprecated This constructor will be removed. Use BatchTableEnvironment.create() instead.
   */
-class BatchTableEnvironment @Deprecated() (
+class BatchTableEnvImpl(
     execEnv: ExecutionEnvironment,
     config: TableConfig)
-  extends org.apache.flink.table.api.BatchTableEnvironment(execEnv, config) {
+  extends org.apache.flink.table.api.BatchTableEnvImpl(execEnv, config)
+    with org.apache.flink.table.api.java.BatchTableEnvironment {
 
   /**
     * Converts the given [[DataSet]] into a [[Table]].
@@ -92,7 +92,7 @@ class BatchTableEnvironment @Deprecated() (
 
   /**
     * Registers the given [[DataSet]] as table in the
-    * [[TableEnvironment]]'s catalog.
+    * [[TableEnvImpl]]'s catalog.
     * Registered tables can be referenced in SQL queries.
     *
     * The field names of the [[Table]] are automatically derived from the type of the [[DataSet]].
@@ -109,7 +109,7 @@ class BatchTableEnvironment @Deprecated() (
 
   /**
     * Registers the given [[DataSet]] as table with specified field names in the
-    * [[TableEnvironment]]'s catalog.
+    * [[TableEnvImpl]]'s catalog.
     * Registered tables can be referenced in SQL queries.
     *
     * Example:
@@ -249,50 +249,5 @@ class BatchTableEnvironment @Deprecated() (
       .asInstanceOf[TypeInformation[ACC]]
 
     registerAggregateFunctionInternal[T, ACC](name, f)
-  }
-}
-
-object BatchTableEnvironment {
-
-  /**
-    * Returns a [[TableEnvironment]] for a Java batch [[ExecutionEnvironment]] that works
-    * with [[DataSet]]s.
-    *
-    * A TableEnvironment can be used to:
-    * - convert a [[DataSet]] to a [[Table]]
-    * - register a [[DataSet]] in the [[TableEnvironment]]'s catalog
-    * - register a [[Table]] in the [[TableEnvironment]]'s catalog
-    * - scan a registered table to obtain a [[Table]]
-    * - specify a SQL query on registered tables to obtain a [[Table]]
-    * - convert a [[Table]] into a [[DataSet]]
-    * - explain the AST and execution plan of a [[Table]]
-    *
-    * @param executionEnvironment The Java batch [[ExecutionEnvironment]] of the TableEnvironment.
-    */
-  def create(executionEnvironment: ExecutionEnvironment): BatchTableEnvironment = {
-    new BatchTableEnvironment(executionEnvironment, new TableConfig())
-  }
-
-  /**
-    * Returns a [[TableEnvironment]] for a Java batch [[ExecutionEnvironment]] that works
-    * with [[DataSet]]s.
-    *
-    * A TableEnvironment can be used to:
-    * - convert a [[DataSet]] to a [[Table]]
-    * - register a [[DataSet]] in the [[TableEnvironment]]'s catalog
-    * - register a [[Table]] in the [[TableEnvironment]]'s catalog
-    * - scan a registered table to obtain a [[Table]]
-    * - specify a SQL query on registered tables to obtain a [[Table]]
-    * - convert a [[Table]] into a [[DataSet]]
-    * - explain the AST and execution plan of a [[Table]]
-    *
-    * @param executionEnvironment The Java batch [[ExecutionEnvironment]] of the TableEnvironment.
-    * @param tableConfig The configuration of the TableEnvironment.
-    */
-  def create(
-    executionEnvironment: ExecutionEnvironment,
-    tableConfig: TableConfig): BatchTableEnvironment = {
-
-    new BatchTableEnvironment(executionEnvironment, tableConfig)
   }
 }
