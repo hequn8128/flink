@@ -26,7 +26,7 @@ import org.apache.flink.configuration.Configuration
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.table.`type`.{InternalTypes, RowType, TypeConverters}
 import org.apache.flink.table.api.TableConfig
-import org.apache.flink.table.api.java.StreamTableEnvironment
+import org.apache.flink.table.api.java.StreamTableEnvImpl
 import org.apache.flink.table.calcite.FlinkPlannerImpl
 import org.apache.flink.table.codegen.{CodeGeneratorContext, ExprCodeGenerator, FunctionCodeGenerator}
 import org.apache.flink.table.dataformat.{BaseRow, BinaryRow, DataFormatConverters}
@@ -54,7 +54,7 @@ abstract class ExpressionTestBase {
   // (originalExpr, optimizedExpr, expectedResult)
   private val testExprs = mutable.ArrayBuffer[(String, RexNode, String)]()
   private val env = StreamExecutionEnvironment.createLocalEnvironment(4)
-  private val tEnv = StreamTableEnvironment.create(env, config)
+  private val tEnv = StreamTableEnvImpl.create(env, config)
   private val relBuilder = tEnv.getRelBuilder
   private val planner = new FlinkPlannerImpl(
     tEnv.getFrameworkConfig,

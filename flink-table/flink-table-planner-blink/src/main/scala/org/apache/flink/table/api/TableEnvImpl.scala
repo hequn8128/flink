@@ -44,7 +44,12 @@ import _root_.java.lang.reflect.Modifier
 import _root_.java.util.concurrent.atomic.AtomicInteger
 import _root_.java.util.{Arrays => JArrays}
 
-import _root_.scala.annotation.varargs
+import org.apache.flink.table.catalog.ExternalCatalog
+import org.apache.flink.table.descriptors.{ConnectorDescriptor, TableDescriptor}
+import org.apache.flink.table.expressions.{ExpressionBridge, PlannerExpression, PlannerExpressionConverter}
+import org.apache.flink.table.functions.ScalarFunction
+import org.apache.flink.table.sinks.TableSink
+
 import _root_.scala.collection.JavaConverters._
 
 /**
@@ -52,7 +57,7 @@ import _root_.scala.collection.JavaConverters._
   *
   * @param config The configuration of the TableEnvironment
   */
-abstract class TableEnvironment(val config: TableConfig) {
+abstract class TableEnvImpl(val config: TableConfig) extends TableEnvironment {
 
   // Init Planner Config
   if (config.getPlannerConfig == null) {
@@ -233,7 +238,6 @@ abstract class TableEnvironment(val config: TableConfig) {
     * @return The resulting [[Table]].
     */
   @throws[TableException]
-  @varargs
   def scan(tablePath: String*): Table = {
     scanInternal(tablePath.toArray) match {
       case Some(table) => table
@@ -490,7 +494,7 @@ abstract class TableEnvironment(val config: TableConfig) {
         "An input of GenericTypeInfo<Row> cannot be converted to Table. " +
           "Please specify the type of the input with a RowTypeInfo.")
     } else {
-      (TableEnvironment.getFieldNames(inputType), TableEnvironment.getFieldIndices(inputType))
+      (TableEnvImpl.getFieldNames(inputType), TableEnvImpl.getFieldIndices(inputType))
     }
   }
 
@@ -508,7 +512,7 @@ abstract class TableEnvironment(val config: TableConfig) {
     inputType: TypeInformation[A],
     fields: Array[String]): (Array[String], Array[Int]) = {
 
-    TableEnvironment.validateType(inputType)
+    TableEnvImpl.validateType(inputType)
 
     def referenceByName(name: String, ct: CompositeType[_]): Option[Int] = {
       val inputIdx = ct.getFieldIndex(name)
@@ -565,7 +569,7 @@ abstract class TableEnvironment(val config: TableConfig) {
   }
 
   /**
-    * Registers an external [[TableSource]] in this [[TableEnvironment]]'s catalog.
+    * Registers an external [[TableSource]] in this [[TableEnvImpl]]'s catalog.
     * Registered tables can be referenced in SQL queries.
     *
     * @param name        The name under which the [[TableSource]] is registered.
@@ -577,7 +581,7 @@ abstract class TableEnvironment(val config: TableConfig) {
   }
 
   /**
-    * Registers or replace an external [[TableSource]] in this [[TableEnvironment]]'s catalog.
+    * Registers or replace an external [[TableSource]] in this [[TableEnvImpl]]'s catalog.
     * Registered tables can be referenced in SQL queries.
     *
     * @param name        The name under which the [[TableSource]] is registered.
@@ -590,7 +594,7 @@ abstract class TableEnvironment(val config: TableConfig) {
   }
 
   /**
-    * Registers an internal [[TableSource]] in this [[TableEnvironment]]'s catalog without
+    * Registers an internal [[TableSource]] in this [[TableEnvImpl]]'s catalog without
     * name checking. Registered tables can be referenced in SQL queries.
     *
     * @param name        The name under which the [[TableSource]] is registered.
@@ -603,13 +607,36 @@ abstract class TableEnvironment(val config: TableConfig) {
       statistic: FlinkStatistic,
       replace: Boolean): Unit
 
+  override def fromTableSource(source: TableSource[_]): Table = ???
+
+  override def registerExternalCatalog(name: String, externalCatalog: ExternalCatalog): Unit = ???
+
+  override def getRegisteredExternalCatalog(name: String): ExternalCatalog = ???
+
+  override def registerFunction(name: String, function: ScalarFunction): Unit = ???
+
+  override def registerTableSink(
+    name: String,
+    fieldNames: Array[String],
+    fieldTypes: Array[TypeInformation[_]],
+    tableSink: TableSink[_]): Unit = ???
+
+  override def registerTableSink(name: String, configuredSink: TableSink[_]): Unit = ???
+
+  override def connect(connectorDescriptor: ConnectorDescriptor): TableDescriptor = ???
+
+  override def listUserDefinedFunctions(): Array[String] = ???
+
+  override def sqlUpdate(stmt: String): Unit = ???
+
+  override def sqlUpdate(stmt: String, config: QueryConfig): Unit = ???
 }
 
 /**
-  * Object to instantiate a [[TableEnvironment]] depending on the batch or stream execution
+  * Object to instantiate a [[TableEnvImpl]] depending on the batch or stream execution
   * environment.
   */
-object TableEnvironment {
+object TableEnvImpl {
 
   /**
     * Returns field names for a given [[TypeInformation]].

@@ -38,12 +38,13 @@ import org.apache.calcite.sql.SqlExplainLevel
   *  1. Get a table from [[DataStream]], or through registering a [[TableSource]];
   *  2. Transform current already construct table to [[DataStream]];
   *  3. Add [[TableSink]] to the [[Table]].
-  * @param config The [[TableConfig]] of this [[BatchTableEnvironment]].
+ *
+  * @param config The [[TableConfig]] of this [[BatchTableEnvImpl]].
   */
-class BatchTableEnvironment(
+class BatchTableEnvImpl(
     val streamEnv: StreamExecutionEnvironment,
     config: TableConfig)
-  extends TableEnvironment(config) {
+  extends TableEnvImpl(config) {
 
   // prefix for unique table names.
   override private[flink] val tableNamePrefix = "_DataStreamTable_"
@@ -133,7 +134,7 @@ class BatchTableEnvironment(
   }
 
   /**
-    * Registers an internal [[BatchTableSource]] in this [[TableEnvironment]]'s catalog without
+    * Registers an internal [[BatchTableSource]] in this [[TableEnvImpl]]'s catalog without
     * name checking. Registered tables can be referenced in SQL queries.
     *
     * @param name        The name under which the [[TableSource]] is registered.

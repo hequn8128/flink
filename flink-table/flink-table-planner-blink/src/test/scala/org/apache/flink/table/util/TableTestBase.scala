@@ -25,9 +25,9 @@ import org.apache.flink.streaming.api.environment.LocalStreamEnvironment
 import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
 import org.apache.flink.streaming.api.{TimeCharacteristic, environment}
 import org.apache.flink.table.`type`.TypeConverters
-import org.apache.flink.table.api.java.{BatchTableEnvironment => JavaBatchTableEnv, StreamTableEnvironment => JavaStreamTableEnv}
-import org.apache.flink.table.api.scala.{BatchTableEnvironment => ScalaBatchTableEnv, StreamTableEnvironment => ScalaStreamTableEnv, _}
-import org.apache.flink.table.api.{BatchTableEnvironment => _, StreamTableEnvironment => _, _}
+import org.apache.flink.table.api.java.{BatchTableEnvImpl => JavaBatchTableEnv, StreamTableEnvImpl => JavaStreamTableEnv}
+import org.apache.flink.table.api.scala.{BatchTableEnvImpl => ScalaBatchTableEnv, StreamTableEnvImpl => ScalaStreamTableEnv, _}
+import org.apache.flink.table.api.{BatchTableEnvImpl => _, StreamTableEnvImpl => _, _}
 import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.functions.{AggregateFunction, ScalarFunction, TableFunction}
 import org.apache.flink.table.plan.util.{FlinkRelOptUtil, _}
@@ -79,7 +79,7 @@ abstract class TableTestUtil(test: TableTestBase) {
   // scala env
   val env = new StreamExecutionEnvironment(javaEnv)
 
-  protected def getTableEnv: TableEnvironment
+  protected def getTableEnv: TableEnvImpl
 
   // a counter for unique table names
   private var counter = 0
@@ -304,7 +304,7 @@ case class StreamTableTestUtil(test: TableTestBase) extends TableTestUtil(test) 
   // scala tableEnv
   val tableEnv: ScalaStreamTableEnv = ScalaStreamTableEnv.create(env)
 
-  override def getTableEnv: TableEnvironment = tableEnv
+  override def getTableEnv: TableEnvImpl = tableEnv
 
   override def addDataStream[T: TypeInformation](
       name: String, fields: Symbol*): Table = {
@@ -323,7 +323,7 @@ case class BatchTableTestUtil(test: TableTestBase) extends TableTestUtil(test) {
   // scala tableEnv
   val tableEnv: ScalaBatchTableEnv = ScalaBatchTableEnv.create(env)
 
-  override def getTableEnv: TableEnvironment = tableEnv
+  override def getTableEnv: TableEnvImpl = tableEnv
 
   // TODO implements this method when a DataStream could be converted into a Table
   override def addDataStream[T: TypeInformation](

@@ -28,7 +28,7 @@ import org.apache.calcite.plan.volcano.VolcanoPlanner
 trait FlinkOptimizeContext extends FlinkContext {
 
   /**
-    * Gets [[VolcanoPlanner]] instance defined in [[org.apache.flink.table.api.TableEnvironment]].
+    * Gets [[VolcanoPlanner]] instance defined in [[org.apache.flink.table.api.TableEnvImpl]].
     */
   def getVolcanoPlanner: VolcanoPlanner
 }

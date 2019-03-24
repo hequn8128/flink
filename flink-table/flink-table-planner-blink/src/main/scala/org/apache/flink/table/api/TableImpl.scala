@@ -30,10 +30,10 @@ import org.apache.flink.table.functions.TemporalTableFunction
   * used to support end-to-end tests for Blink planner. It will be
   * implemented when we support full stack Table API for Blink planner.
   *
-  * @param tableEnv The [[TableEnvironment]] to which the table is bound.
+  * @param tableEnv The [[TableEnvImpl]] to which the table is bound.
   * @param relNode  The Calcite RelNode representation
   */
-class TableImpl(val tableEnv: TableEnvironment, relNode: RelNode) extends Table {
+class TableImpl(val tableEnv: TableEnvImpl, relNode: RelNode) extends Table {
 
   /**
     * Returns the Calcite RelNode represent this Table.

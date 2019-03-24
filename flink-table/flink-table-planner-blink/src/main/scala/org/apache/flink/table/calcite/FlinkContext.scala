@@ -28,7 +28,7 @@ import org.apache.calcite.plan.Context
 trait FlinkContext extends Context {
 
   /**
-    * Gets [[TableConfig]] instance defined in [[org.apache.flink.table.api.TableEnvironment]].
+    * Gets [[TableConfig]] instance defined in [[org.apache.flink.table.api.TableEnvImpl]].
     */
   def getTableConfig: TableConfig
 

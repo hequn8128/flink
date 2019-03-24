@@ -18,7 +18,7 @@
 
 package org.apache.flink.table.plan.optimize
 
-import org.apache.flink.table.api.{BatchTableEnvironment, TableConfig}
+import org.apache.flink.table.api.{BatchTableEnvImpl, TableConfig}
 import org.apache.flink.table.plan.optimize.program.{BatchOptimizeContext, FlinkBatchProgram}
 import org.apache.flink.util.Preconditions
 import org.apache.calcite.plan.volcano.VolcanoPlanner
@@ -28,7 +28,7 @@ import org.apache.flink.table.calcite.BlinkPlannerConfig
 /**
   * Query optimizer for Batch.
   */
-class BatchOptimizer(tEnv: BatchTableEnvironment) extends Optimizer {
+class BatchOptimizer(tEnv: BatchTableEnvImpl) extends Optimizer {
 
   override def optimize(roots: Seq[RelNode]): Seq[RelNode] = {
     // TODO optimize multi-roots as a whole DAG

@@ -23,7 +23,7 @@ import org.apache.flink.api.common.typeinfo.Types
 import org.apache.flink.streaming.api.environment.LocalStreamEnvironment
 import org.apache.flink.table.`type`.InternalTypes
 import org.apache.flink.table.api.TableConfig
-import org.apache.flink.table.api.java.StreamTableEnvironment
+import org.apache.flink.table.api.java.StreamTableEnvImpl
 import org.apache.flink.table.calcite.{FlinkRelBuilder, FlinkTypeFactory, FlinkTypeSystem}
 import org.apache.flink.table.codegen.CodeGeneratorContext
 import org.apache.flink.table.dataformat.GenericRow
@@ -45,7 +45,7 @@ class AggsHandlerCodeGeneratorTest {
   private val typeFactory: FlinkTypeFactory = new FlinkTypeFactory(new FlinkTypeSystem())
   private val env = new LocalStreamEnvironment
   private val conf = new TableConfig
-  private val tEnv = new StreamTableEnvironment(env, conf)
+  private val tEnv = new StreamTableEnvImpl(env, conf)
   private val frameworkConfig: FrameworkConfig = tEnv.getFrameworkConfig
   private val inputNames = Array("f0", "f1", "f2", "f3")
   private val inputTypes = Array(

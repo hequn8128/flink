@@ -24,7 +24,7 @@ import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.typeutils._
 import org.apache.flink.table.`type`.TypeConverters.{createInternalTypeFromTypeInfo, createInternalTypeInfoFromInternalType}
 import org.apache.flink.table.`type`.{InternalType, InternalTypeUtils, RowType, TypeConverters}
-import org.apache.flink.table.api.{TableEnvironment, TableException, ValidationException}
+import org.apache.flink.table.api.{TableEnvImpl, TableException, ValidationException}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.dataformat.{BaseRow, BinaryString, Decimal}
 import org.apache.flink.table.functions.{AggregateFunction, ScalarFunction, TableFunction, UserDefinedFunction}
@@ -488,9 +488,9 @@ object UserDefinedFunctionUtils {
   def getFieldInfo(inputType: TypeInformation[_])
   : (Array[String], Array[Int], Array[InternalType]) = {
     (
-        TableEnvironment.getFieldNames(inputType),
-        TableEnvironment.getFieldIndices(inputType),
-        TableEnvironment.getFieldTypes(inputType).map(createInternalTypeFromTypeInfo))
+        TableEnvImpl.getFieldNames(inputType),
+        TableEnvImpl.getFieldIndices(inputType),
+        TableEnvImpl.getFieldTypes(inputType).map(createInternalTypeFromTypeInfo))
   }
 
   /**

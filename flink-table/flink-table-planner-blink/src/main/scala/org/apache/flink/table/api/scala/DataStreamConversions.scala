@@ -20,6 +20,7 @@ package org.apache.flink.table.api.scala
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.streaming.api.scala.DataStream
 import org.apache.flink.table.api.Table
+import org.apache.flink.table.expressions.Expression
 
 /**
   * Holds methods to convert a [[DataStream]] into a [[Table]].
@@ -46,8 +47,8 @@ class DataStreamConversions[T](dataStream: DataStream[T], inputType: TypeInforma
     * If not explicitly specified, field names are automatically extracted from the type of
     * the [[DataStream]].
     *
-    * @param tableEnv The [[StreamTableEnvironment]] in which the new [[Table]] is created.
-    * @param fields The field names of the new [[Table]] (optional).
+    * @param tableEnv The [[StreamTableEnvImpl]] in which the new [[Table]] is created.
+    * @param fields   The field names of the new [[Table]] (optional).
     * @return The resulting [[Table]].
     */
   // TODO: Change fields type to `Expression*` after introducing [Expression]

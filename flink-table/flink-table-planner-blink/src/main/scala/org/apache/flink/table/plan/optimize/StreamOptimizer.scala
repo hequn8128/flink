@@ -18,7 +18,7 @@
 
 package org.apache.flink.table.plan.optimize
 
-import org.apache.flink.table.api.{StreamTableEnvironment, TableConfig}
+import org.apache.flink.table.api.{StreamTableEnvImpl, TableConfig}
 import org.apache.flink.table.plan.optimize.program.{FlinkStreamProgram, StreamOptimizeContext}
 import org.apache.flink.util.Preconditions
 import org.apache.calcite.plan.volcano.VolcanoPlanner
@@ -28,7 +28,7 @@ import org.apache.flink.table.calcite.BlinkPlannerConfig
 /**
   * Query optimizer for Stream.
   */
-class StreamOptimizer(tEnv: StreamTableEnvironment) extends Optimizer {
+class StreamOptimizer(tEnv: StreamTableEnvImpl) extends Optimizer {
 
   override def optimize(roots: Seq[RelNode]): Seq[RelNode] = {
     // TODO optimize multi-roots as a whole DAG

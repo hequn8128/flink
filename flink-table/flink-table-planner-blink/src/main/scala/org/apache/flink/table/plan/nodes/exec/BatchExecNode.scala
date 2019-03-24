@@ -19,12 +19,12 @@
 package org.apache.flink.table.plan.nodes.exec
 
 import org.apache.flink.runtime.operators.DamBehavior
-import org.apache.flink.table.api.BatchTableEnvironment
+import org.apache.flink.table.api.BatchTableEnvImpl
 
 /**
   * Base class for batch ExecNode.
   */
-trait BatchExecNode[T] extends ExecNode[BatchTableEnvironment, T] {
+trait BatchExecNode[T] extends ExecNode[BatchTableEnvImpl, T] {
 
   /**
     * Returns [[DamBehavior]] of this node.

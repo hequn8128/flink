@@ -23,7 +23,7 @@ import org.apache.flink.api.scala._
 import org.apache.flink.streaming.api.environment.LocalStreamEnvironment
 import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.scala.StreamTableEnvironment
+import org.apache.flink.table.api.scala.StreamTableEnvImpl
 import org.junit.{Rule, Test}
 import org.junit.Assert.assertEquals
 import org.junit.rules.ExpectedException
@@ -37,7 +37,7 @@ class TableEnvironmentTest {
   def thrown: ExpectedException = expectedException
 
   val env = new StreamExecutionEnvironment(new LocalStreamEnvironment())
-  val tableEnv: scala.StreamTableEnvironment = StreamTableEnvironment.create(env)
+  val tableEnv: scala.StreamTableEnvImpl = StreamTableEnvImpl.create(env)
 
   @Test
   def testScanNonExistTable(): Unit = {

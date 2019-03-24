@@ -20,7 +20,7 @@ package org.apache.flink.table.plan.util
 import org.apache.flink.api.scala._
 import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
 import org.apache.flink.table.api.{TableConfig, TableImpl}
-import org.apache.flink.table.api.scala.{StreamTableEnvironment, _}
+import org.apache.flink.table.api.scala.{StreamTableEnvImpl, _}
 import org.apache.calcite.sql.SqlExplainLevel
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -30,7 +30,7 @@ class FlinkRelOptUtilTest {
   @Test
   def testToString(): Unit = {
     val env  = StreamExecutionEnvironment.createLocalEnvironment()
-    val tableEnv = StreamTableEnvironment.create(env, new TableConfig())
+    val tableEnv = StreamTableEnvImpl.create(env, new TableConfig())
 
     val table = env.fromElements[(Int, Long, String)]().toTable(tableEnv, 'a, 'b, 'c)
     tableEnv.registerTable("MyTable", table)

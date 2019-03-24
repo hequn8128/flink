@@ -19,7 +19,7 @@
 package org.apache.flink.table.plan.nodes.exec
 
 import org.apache.flink.streaming.api.transformations.StreamTransformation
-import org.apache.flink.table.api.TableEnvironment
+import org.apache.flink.table.api.TableEnvImpl
 import org.apache.flink.table.plan.nodes.physical.FlinkPhysicalRel
 
 import java.util
@@ -30,7 +30,7 @@ import java.util
   * @tparam E The TableEnvironment
   * @tparam T The type of the elements that result from this [[StreamTransformation]]
   */
-trait ExecNode[E <: TableEnvironment, T] {
+trait ExecNode[E <: TableEnvImpl, T] {
 
   /**
     * The [[StreamTransformation]] translated from this node.
@@ -42,7 +42,7 @@ trait ExecNode[E <: TableEnvironment, T] {
     *
     * <p>NOTE: returns same translate result if called multiple times.
     *
-    * @param tableEnv The [[TableEnvironment]] of the translated Table.
+    * @param tableEnv The [[TableEnvImpl]] of the translated Table.
     */
   def translateToPlan(tableEnv: E): StreamTransformation[T] = {
     if (transformation == null) {
@@ -54,7 +54,7 @@ trait ExecNode[E <: TableEnvironment, T] {
   /**
     * Internal method, translates this node into a Flink operator.
     *
-    * @param tableEnv The [[TableEnvironment]] of the translated Table.
+    * @param tableEnv The [[TableEnvImpl]] of the translated Table.
     */
   protected def translateToPlanInternal(tableEnv: E): StreamTransformation[T]
 

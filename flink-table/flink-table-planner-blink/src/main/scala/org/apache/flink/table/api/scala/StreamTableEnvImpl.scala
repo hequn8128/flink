@@ -17,17 +17,20 @@
  */
 package org.apache.flink.table.api.scala
 
+import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.streaming.api.scala.{DataStream, StreamExecutionEnvironment}
-import org.apache.flink.table.api.{Table, TableConfig, TableEnvironment}
+import org.apache.flink.table.api.{StreamQueryConfig, Table, TableConfig, TableEnvImpl}
+import org.apache.flink.table.expressions.Expression
+import org.apache.flink.table.functions.{AggregateFunction, TableFunction}
 
 /**
-  * The [[TableEnvironment]] for a Scala [[StreamExecutionEnvironment]] that works with
+  * The [[TableEnvImpl]] for a Scala [[StreamExecutionEnvironment]] that works with
   * [[DataStream]]s.
   *
   * A TableEnvironment can be used to:
   * - convert a [[DataStream]] to a [[Table]]
-  * - register a [[DataStream]] in the [[TableEnvironment]]'s catalog
-  * - register a [[Table]] in the [[TableEnvironment]]'s catalog
+  * - register a [[DataStream]] in the [[TableEnvImpl]]'s catalog
+  * - register a [[Table]] in the [[TableEnvImpl]]'s catalog
   * - scan a registered table to obtain a [[Table]]
   * - specify a SQL query on registered tables to obtain a [[Table]]
   * - convert a [[Table]] into a [[DataStream]]
@@ -36,14 +39,13 @@ import org.apache.flink.table.api.{Table, TableConfig, TableEnvironment}
   * @param execEnv The Scala [[StreamExecutionEnvironment]] of the TableEnvironment.
   * @param config The configuration of the TableEnvironment.
   */
-class StreamTableEnvironment @deprecated(
-      "This constructor will be removed. Use StreamTableEnvironment.create() instead.",
-      "1.8.0") (
+class StreamTableEnvImpl(
     execEnv: StreamExecutionEnvironment,
     config: TableConfig)
-  extends org.apache.flink.table.api.StreamTableEnvironment(
+  extends org.apache.flink.table.api.StreamTableEnvImpl(
     execEnv.getWrappedStreamExecutionEnvironment,
-    config) {
+    config)
+    with org.apache.flink.table.api.scala.StreamTableEnvironment {
 
   /**
     * Converts the given [[DataStream]] into a [[Table]].
@@ -87,7 +89,7 @@ class StreamTableEnvironment @deprecated(
 
   /**
     * Registers the given [[DataStream]] as table in the
-    * [[TableEnvironment]]'s catalog.
+    * [[TableEnvImpl]]'s catalog.
     * Registered tables can be referenced in SQL queries.
     *
     * The field names of the [[Table]] are automatically derived
@@ -105,7 +107,7 @@ class StreamTableEnvironment @deprecated(
 
   /**
     * Registers the given [[DataStream]] as table with specified field names in the
-    * [[TableEnvironment]]'s catalog.
+    * [[TableEnvImpl]]'s catalog.
     * Registered tables can be referenced in SQL queries.
     *
     * Example:
@@ -126,51 +128,29 @@ class StreamTableEnvironment @deprecated(
     checkValidTableName(name)
     registerDataStreamInternal(name, dataStream.javaStream, exprs)
   }
+  
+  override def fromDataStream[T](dataStream: DataStream[T], fields: Expression*): Table = ???
 
+  override def registerFunction[T: TypeInformation](name: String, tf: TableFunction[T]): Unit = ???
 
-}
+  override def registerFunction[T: TypeInformation, ACC: TypeInformation](
+    name: String,
+    f: AggregateFunction[T, ACC]): Unit = ???
 
-object StreamTableEnvironment {
+  override def registerDataStream[T](
+    name: String,
+    dataStream: DataStream[T],
+    fields: Expression*): Unit = ???
 
-  /**
-    * The [[TableEnvironment]] for a Scala [[StreamExecutionEnvironment]] that works with
-    * [[DataStream]]s.
-    *
-    * A TableEnvironment can be used to:
-    * - convert a [[DataStream]] to a [[Table]]
-    * - register a [[DataStream]] in the [[TableEnvironment]]'s catalog
-    * - register a [[Table]] in the [[TableEnvironment]]'s catalog
-    * - scan a registered table to obtain a [[Table]]
-    * - specify a SQL query on registered tables to obtain a [[Table]]
-    * - convert a [[Table]] into a [[DataStream]]
-    * - explain the AST and execution plan of a [[Table]]
-    *
-    * @param executionEnvironment The Scala [[StreamExecutionEnvironment]] of the TableEnvironment.
-    */
-  def create(executionEnvironment: StreamExecutionEnvironment): StreamTableEnvironment = {
-    new StreamTableEnvironment(executionEnvironment, new TableConfig())
-  }
+  override def toAppendStream[T: TypeInformation](table: Table): DataStream[T] = ???
 
-  /**
-    * The [[TableEnvironment]] for a Scala [[StreamExecutionEnvironment]] that works with
-    * [[DataStream]]s.
-    *
-    * A TableEnvironment can be used to:
-    * - convert a [[DataStream]] to a [[Table]]
-    * - register a [[DataStream]] in the [[TableEnvironment]]'s catalog
-    * - register a [[Table]] in the [[TableEnvironment]]'s catalog
-    * - scan a registered table to obtain a [[Table]]
-    * - specify a SQL query on registered tables to obtain a [[Table]]
-    * - convert a [[Table]] into a [[DataStream]]
-    * - explain the AST and execution plan of a [[Table]]
-    *
-    * @param executionEnvironment The Scala [[StreamExecutionEnvironment]] of the TableEnvironment.
-    * @param tableConfig The configuration of the TableEnvironment.
-    */
-  def create(
-    executionEnvironment: StreamExecutionEnvironment,
-    tableConfig: TableConfig): StreamTableEnvironment = {
+  override def toAppendStream[T: TypeInformation](
+    table: Table,
+    queryConfig: StreamQueryConfig): DataStream[T] = ???
 
-    new StreamTableEnvironment(executionEnvironment, tableConfig)
-  }
+  override def toRetractStream[T: TypeInformation](table: Table): DataStream[(Boolean, T)] = ???
+
+  override def toRetractStream[T: TypeInformation](
+    table: Table,
+    queryConfig: StreamQueryConfig): DataStream[(Boolean, T)] = ???
 }

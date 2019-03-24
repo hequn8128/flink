@@ -29,10 +29,10 @@ import org.apache.flink.table.plan.stats.FlinkStatistic
 import org.apache.flink.table.plan.util.FlinkRelOptUtil
 import org.apache.flink.table.sources.{StreamTableSource, TableSource}
 import org.apache.flink.table.typeutils.TimeIndicatorTypeInfo
-
 import org.apache.calcite.plan.ConventionTraitDef
 import org.apache.calcite.rel.RelCollationTraitDef
 import org.apache.calcite.sql.SqlExplainLevel
+import org.apache.flink.table.expressions.Expression
 
 /**
   * The base class for stream TableEnvironments.
@@ -46,13 +46,13 @@ import org.apache.calcite.sql.SqlExplainLevel
   * - convert a [[Table]] into a [[DataStream]]
   *
   * @param execEnv The [[StreamExecutionEnvironment]] which is wrapped in this
-  *                [[StreamTableEnvironment]].
-  * @param config The [[TableConfig]] of this [[StreamTableEnvironment]].
+  *                [[StreamTableEnvImpl]].
+  * @param config  The [[TableConfig]] of this [[StreamTableEnvImpl]].
   */
-abstract class StreamTableEnvironment(
+abstract class StreamTableEnvImpl(
     private[flink] val execEnv: StreamExecutionEnvironment,
     config: TableConfig)
-  extends TableEnvironment(config) {
+  extends TableEnvImpl(config) {
 
   // prefix  for unique table names.
   override private[flink] val tableNamePrefix = "_DataStreamTable_"
@@ -145,7 +145,7 @@ abstract class StreamTableEnvironment(
   }
 
   /**
-    * Registers a [[DataStream]] as a table under a given name in the [[TableEnvironment]]'s
+    * Registers a [[DataStream]] as a table under a given name in the [[TableEnvImpl]]'s
     * catalog.
     *
     * @param name The name under which the table is registered in the catalog.
@@ -167,7 +167,7 @@ abstract class StreamTableEnvironment(
 
   /**
     * Registers a [[DataStream]] as a table under a given name with field names as specified by
-    * field expressions in the [[TableEnvironment]]'s catalog.
+    * field expressions in the [[TableEnvImpl]]'s catalog.
     *
     * @param name The name under which the table is registered in the catalog.
     * @param dataStream The [[DataStream]] to register as table in the catalog.
@@ -208,7 +208,7 @@ abstract class StreamTableEnvironment(
   }
 
   /**
-    * Registers an internal [[StreamTableSource]] in this [[TableEnvironment]]'s catalog without
+    * Registers an internal [[StreamTableSource]] in this [[TableEnvImpl]]'s catalog without
     * name checking. Registered tables can be referenced in SQL queries.
     *
     * @param name        The name under which the [[TableSource]] is registered.
