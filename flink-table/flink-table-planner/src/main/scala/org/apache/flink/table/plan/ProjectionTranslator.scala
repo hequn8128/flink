@@ -19,7 +19,7 @@
 package org.apache.flink.table.plan
 
 import org.apache.flink.api.common.typeutils.CompositeType
-import org.apache.flink.table.api.{TableEnvironment, ValidationException}
+import org.apache.flink.table.api.{TableEnvImpl, ValidationException}
 import org.apache.flink.table.expressions._
 import org.apache.flink.table.plan.logical.{LogicalNode, LogicalOverWindow, Project}
 import org.apache.flink.table.typeutils.RowIntervalTypeInfo
@@ -40,7 +40,7 @@ object ProjectionTranslator {
     */
   def extractAggregationsAndProperties(
       exprs: Seq[PlannerExpression],
-      tableEnv: TableEnvironment)
+      tableEnv: TableEnvImpl)
     : (Map[PlannerExpression, String], Map[PlannerExpression, String]) = {
     exprs.foldLeft((Map[PlannerExpression, String](), Map[PlannerExpression, String]())) {
       (x, y) => identifyAggregationsAndProperties(y, tableEnv, x._1, x._2)
@@ -50,7 +50,7 @@ object ProjectionTranslator {
   /** Identifies and deduplicates aggregation functions and window properties. */
   private def identifyAggregationsAndProperties(
       exp: PlannerExpression,
-      tableEnv: TableEnvironment,
+      tableEnv: TableEnvImpl,
       aggNames: Map[PlannerExpression, String],
       propNames: Map[PlannerExpression, String])
     : (Map[PlannerExpression, String], Map[PlannerExpression, String]) = {
@@ -108,7 +108,7 @@ object ProjectionTranslator {
     */
   def replaceAggregationsAndProperties(
       exprs: Seq[PlannerExpression],
-      tableEnv: TableEnvironment,
+      tableEnv: TableEnvImpl,
       aggNames: Map[PlannerExpression, String],
       propNames: Map[PlannerExpression, String]): Seq[NamedExpression] = {
     val projectedNames = new mutable.HashSet[String]
@@ -119,7 +119,7 @@ object ProjectionTranslator {
 
   private def replaceAggregationsAndProperties(
       exp: PlannerExpression,
-      tableEnv: TableEnvironment,
+      tableEnv: TableEnvImpl,
       aggNames: Map[PlannerExpression, String],
       propNames: Map[PlannerExpression, String],
       projectedNames: mutable.HashSet[String])
@@ -194,7 +194,7 @@ object ProjectionTranslator {
   def expandProjectList(
       exprs: Seq[PlannerExpression],
       parent: LogicalNode,
-      tableEnv: TableEnvironment)
+      tableEnv: TableEnvImpl)
     : Seq[PlannerExpression] = {
 
     val projectList = new ListBuffer[PlannerExpression]
@@ -228,7 +228,7 @@ object ProjectionTranslator {
   def resolveOverWindows(
       exprs: Seq[PlannerExpression],
       overWindows: Seq[LogicalOverWindow],
-      tEnv: TableEnvironment): Seq[PlannerExpression] = {
+      tEnv: TableEnvImpl): Seq[PlannerExpression] = {
 
     exprs.map(e => replaceOverCall(e, overWindows, tEnv))
   }
@@ -242,7 +242,7 @@ object ProjectionTranslator {
   private def replaceOverCall(
       expr: PlannerExpression,
       overWindows: Seq[LogicalOverWindow],
-      tableEnv: TableEnvironment)
+      tableEnv: TableEnvImpl)
     : PlannerExpression = {
 
     expr match {

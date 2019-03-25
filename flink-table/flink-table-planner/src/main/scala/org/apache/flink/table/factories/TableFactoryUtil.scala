@@ -18,7 +18,7 @@
 
 package org.apache.flink.table.factories
 
-import org.apache.flink.table.api.{BatchTableEnvironment, StreamTableEnvironment, TableEnvironment, TableException}
+import org.apache.flink.table.api._
 import org.apache.flink.table.descriptors.Descriptor
 import org.apache.flink.table.sinks.TableSink
 import org.apache.flink.table.sources.TableSource
@@ -39,12 +39,12 @@ object TableFactoryUtil {
     val javaMap = descriptor.toProperties
 
     tableEnvironment match {
-      case _: BatchTableEnvironment =>
+      case _: BatchTableEnvImpl =>
         TableFactoryService
           .find(classOf[BatchTableSourceFactory[T]], javaMap)
           .createBatchTableSource(javaMap)
 
-      case _: StreamTableEnvironment =>
+      case _: StreamTableEnvImpl =>
         TableFactoryService
           .find(classOf[StreamTableSourceFactory[T]], javaMap)
           .createStreamTableSource(javaMap)
@@ -65,12 +65,12 @@ object TableFactoryUtil {
     val javaMap = descriptor.toProperties
 
     tableEnvironment match {
-      case _: BatchTableEnvironment =>
+      case _: BatchTableEnvImpl =>
         TableFactoryService
           .find(classOf[BatchTableSinkFactory[T]], javaMap)
           .createBatchTableSink(javaMap)
 
-      case _: StreamTableEnvironment =>
+      case _: StreamTableEnvImpl =>
         TableFactoryService
           .find(classOf[StreamTableSinkFactory[T]], javaMap)
           .createStreamTableSink(javaMap)

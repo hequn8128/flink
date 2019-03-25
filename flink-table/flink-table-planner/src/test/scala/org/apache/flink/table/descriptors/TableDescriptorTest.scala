@@ -70,13 +70,13 @@ class TableDescriptorTest extends TableTestBase {
 
     val descriptor: RegistrableDescriptor = if (isStreaming) {
       streamTestUtil().tableEnv
-        .connect(connector)
+        .connect(connector).asInstanceOf[StreamTableDescriptor]
         .withFormat(format)
         .withSchema(schema)
         .inAppendMode()
     } else {
       batchTestUtil().tableEnv
-        .connect(connector)
+        .connect(connector).asInstanceOf[BatchTableDescriptor]
         .withFormat(format)
         .withSchema(schema)
     }

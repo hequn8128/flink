@@ -195,7 +195,7 @@ class FlinkPlannerImpl(
       CalciteSchema.from(rootSchema),
       CalciteSchema.from(defaultSchema).path(null),
       typeFactory,
-      CalciteConfig.connectionConfig(parserConfig)
+      DefaultPlannerConfig.connectionConfig(parserConfig)
     )
   }
 

@@ -97,7 +97,7 @@ class RowtimeTest extends DescriptorTestBase {
       "rowtime.timestamps.serialized" -> ("rO0ABXNyAD5vcmcuYXBhY2hlLmZsaW5rLnRhYmxlLmRlc2NyaXB0b3" +
         "JzLlJvd3RpbWVUZXN0JEN1c3RvbUV4dHJhY3RvcoaChjMg55xwAgABTAAFZmllbGR0ABJMamF2YS9sYW5nL1N0cm" +
         "luZzt4cgA-b3JnLmFwYWNoZS5mbGluay50YWJsZS5zb3VyY2VzLnRzZXh0cmFjdG9ycy5UaW1lc3RhbXBFeHRyYW" +
-        "N0b3LU8E2thK4wMQIAAHhwdAAHdHNGaWVsZA"),
+        "N0b3LU8E2thK4wMQIAAHhwdAAHdHNGaWVsZAa"),
       "rowtime.watermarks.type" -> "periodic-bounded",
       "rowtime.watermarks.delay" -> "1000"
     )

@@ -317,7 +317,8 @@ class UpdatePlanCheckerUtil extends StreamTableTestUtil {
 
   def getKeyGroups(resultTable: Table): Option[Seq[(String, String)]] = {
     val relNode = resultTable.asInstanceOf[TableImpl].getRelNode
-    val optimized = tableEnv.optimize(relNode, updatesAsRetraction = false)
+    val optimized = tableEnv.asInstanceOf[StreamTableEnvImpl]
+      .optimize(relNode, updatesAsRetraction = false)
     UpdatingPlanChecker.getUniqueKeyGroups(optimized)
   }
 
