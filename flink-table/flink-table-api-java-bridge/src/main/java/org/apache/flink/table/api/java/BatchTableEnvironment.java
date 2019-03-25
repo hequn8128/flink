@@ -26,6 +26,8 @@ import org.apache.flink.table.api.Table;
 import org.apache.flink.table.api.TableConfig;
 import org.apache.flink.table.api.TableEnvironment;
 import org.apache.flink.table.api.TableException;
+import org.apache.flink.table.descriptors.BatchTableDescriptor;
+import org.apache.flink.table.descriptors.ConnectorDescriptor;
 import org.apache.flink.table.functions.AggregateFunction;
 import org.apache.flink.table.functions.TableFunction;
 
@@ -55,6 +57,9 @@ public interface BatchTableEnvironment extends TableEnvironment {
 	<T> DataSet<T> toDataSet(Table table, Class<T> clazz, BatchQueryConfig queryConfig);
 
 	<T> DataSet<T> toDataSet(Table table, TypeInformation<T> typeInfo, BatchQueryConfig queryConfig);
+
+	@Override
+	BatchTableDescriptor connect(ConnectorDescriptor connectorDescriptor);
 
 	static BatchTableEnvironment create(ExecutionEnvironment executionEnvironment) {
 		return create(executionEnvironment, new TableConfig());

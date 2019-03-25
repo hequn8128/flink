@@ -620,37 +620,6 @@ abstract class TableEnvImpl(val config: TableConfig) extends TableEnvironment {
     }
   }
 
-  /**
-    * Creates a table source and/or table sink from a descriptor.
-    *
-    * Descriptors allow for declaring the communication to external systems in an
-    * implementation-agnostic way. The classpath is scanned for suitable table factories that match
-    * the desired configuration.
-    *
-    * The following example shows how to read from a connector using a JSON format and
-    * registering a table source as "MyTable":
-    *
-    * {{{
-    *
-    * tableEnv
-    *   .connect(
-    *     new ExternalSystemXYZ()
-    *       .version("0.11"))
-    *   .withFormat(
-    *     new Json()
-    *       .jsonSchema("{...}")
-    *       .failOnMissingField(false))
-    *   .withSchema(
-    *     new Schema()
-    *       .field("user-name", "VARCHAR").from("u_name")
-    *       .field("count", "DECIMAL")
-    *   .registerSource("MyTable")
-    * }}}
-    *
-    * @param connectorDescriptor connector descriptor describing the external system
-    */
-  def connect(connectorDescriptor: ConnectorDescriptor): TableDescriptor
-
   private[flink] def scanInternal(tablePath: Array[String]): Option[Table] = {
     require(tablePath != null && !tablePath.isEmpty, "tablePath must not be null or empty.")
     val schemaPaths = tablePath.slice(0, tablePath.length - 1)

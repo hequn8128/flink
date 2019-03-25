@@ -20,6 +20,7 @@ package org.apache.flink.table.api.scala
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.scala.{DataSet, ExecutionEnvironment}
 import org.apache.flink.table.api._
+import org.apache.flink.table.descriptors.{BatchTableDescriptor, ConnectorDescriptor, TableDescriptor}
 import org.apache.flink.table.expressions.Expression
 import org.apache.flink.table.functions.{AggregateFunction, TableFunction}
 
@@ -44,6 +45,8 @@ trait BatchTableEnvironment extends TableEnvironment {
   def toDataSet[T: TypeInformation](
     table: Table,
     queryConfig: BatchQueryConfig): DataSet[T]
+
+  override def connect(connectorDescriptor: ConnectorDescriptor): BatchTableDescriptor
 }
 
 object BatchTableEnvironment {

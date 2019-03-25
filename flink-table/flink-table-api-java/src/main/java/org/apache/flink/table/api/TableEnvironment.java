@@ -49,6 +49,37 @@ public interface TableEnvironment {
 
 	Table scan(String... tablePath);
 
+	/**
+	 * Creates a table source and/or table sink from a descriptor.
+	 *
+	 * <p>Descriptors allow for declaring the communication to external systems in an
+	 * implementation-agnostic way. The classpath is scanned for suitable table factories that match
+	 * the desired configuration.
+	 *
+	 * <p>The following example shows how to read from a connector using a JSON format and
+	 * registering a table source as "MyTable":
+	 *
+	 * <pre>
+	 * {@code
+	 *
+	 * tableEnv
+	 *   .connect(
+	 *     new ExternalSystemXYZ()
+	 *       .version("0.11"))
+	 *   .withFormat(
+	 *     new Json()
+	 *       .jsonSchema("{...}")
+	 *       .failOnMissingField(false))
+	 *   .withSchema(
+	 *     new Schema()
+	 *       .field("user-name", "VARCHAR").from("u_name")
+	 *       .field("count", "DECIMAL")
+	 *   .registerSource("MyTable")
+	 * }
+	 *</pre>
+	 *
+	 * @param connectorDescriptor connector descriptor describing the external system
+	 */
 	TableDescriptor connect(ConnectorDescriptor connectorDescriptor);
 
 	String[] listTables();
@@ -68,6 +99,4 @@ public interface TableEnvironment {
 	QueryConfig queryConfig();
 
 	TableConfig getConfig();
-
-
 }

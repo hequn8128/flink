@@ -27,6 +27,8 @@ import org.apache.flink.table.api.Table;
 import org.apache.flink.table.api.TableConfig;
 import org.apache.flink.table.api.TableEnvironment;
 import org.apache.flink.table.api.TableException;
+import org.apache.flink.table.descriptors.ConnectorDescriptor;
+import org.apache.flink.table.descriptors.StreamTableDescriptor;
 import org.apache.flink.table.functions.AggregateFunction;
 import org.apache.flink.table.functions.TableFunction;
 
@@ -64,6 +66,9 @@ public interface StreamTableEnvironment extends TableEnvironment {
 	<T> DataStream<Tuple2<Boolean, T>> toRetractStream(Table table, Class<T> clazz, StreamQueryConfig queryConfig);
 
 	<T> DataStream<Tuple2<Boolean, T>> toRetractStream(Table table, TypeInformation<T> typeInfo, StreamQueryConfig queryConfig);
+
+	@Override
+	StreamTableDescriptor connect(ConnectorDescriptor connectorDescriptor);
 
 	static StreamTableEnvironment create(StreamExecutionEnvironment executionEnvironment) {
 		return create(executionEnvironment, new TableConfig());

@@ -24,9 +24,28 @@ import org.apache.flink.table.sinks.TableSink
 import org.apache.flink.table.sources.TableSource
 
 /**
+  * The implementation of [[PlannerTableFactoryUtil]] which used to find and create
+  * [[TableSource]] or [[TableSink]].
+  */
+class PlannerTableFactoryUtilImpl extends PlannerTableFactoryUtil {
+
+  override def findAndCreateTableSource[T](
+    tableEnvironment: TableEnvironment,
+    descriptor: Descriptor): TableSource[T] = {
+    PlannerTableFactoryUtilImpl.findAndCreateTableSource(tableEnvironment, descriptor);
+  }
+
+  override def findAndCreateTableSink[T](
+    tableEnvironment: TableEnvironment,
+    descriptor: Descriptor): TableSink[T] = {
+    PlannerTableFactoryUtilImpl.findAndCreateTableSink(tableEnvironment, descriptor);
+  }
+}
+
+/**
   * Utility for dealing with [[TableFactory]] using the [[TableFactoryService]].
   */
-object TableFactoryUtil {
+object PlannerTableFactoryUtilImpl {
 
   /**
     * Returns a table source for a table environment.

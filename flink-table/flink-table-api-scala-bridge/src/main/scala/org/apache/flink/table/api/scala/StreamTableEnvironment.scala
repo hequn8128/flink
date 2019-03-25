@@ -20,6 +20,7 @@ package org.apache.flink.table.api.scala
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.streaming.api.scala.{DataStream, StreamExecutionEnvironment}
 import org.apache.flink.table.api._
+import org.apache.flink.table.descriptors.{ConnectorDescriptor, StreamTableDescriptor, TableDescriptor}
 import org.apache.flink.table.expressions.Expression
 import org.apache.flink.table.functions.{AggregateFunction, TableFunction}
 
@@ -50,6 +51,8 @@ trait StreamTableEnvironment extends TableEnvironment {
   def toRetractStream[T: TypeInformation](
     table: Table,
     queryConfig: StreamQueryConfig): DataStream[(Boolean, T)]
+
+  override def connect(connectorDescriptor: ConnectorDescriptor): StreamTableDescriptor;
 }
 
 object StreamTableEnvironment {
