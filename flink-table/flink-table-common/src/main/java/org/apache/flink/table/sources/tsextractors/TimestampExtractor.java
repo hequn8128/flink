@@ -16,23 +16,21 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.descriptors;
+package org.apache.flink.table.sources.tsextractors;
 
-import org.apache.flink.annotation.PublicEvolving;
+import org.apache.flink.api.common.typeinfo.TypeInformation;
+import org.apache.flink.api.common.typeinfo.Types;
+import org.apache.flink.table.sources.FieldComputer;
+
+import java.io.Serializable;
 
 /**
- * A trait for descriptors that allow to define a format and schema.
+ * Provides the an expression to extract the timestamp for a rowtime attribute.
  */
-@PublicEvolving
-public interface SchematicDescriptor<D extends SchematicDescriptor<D>> extends Descriptor {
+public abstract class TimestampExtractor implements FieldComputer<Long>, Serializable {
 
-	/**
-	 * Specifies the format that defines how to read data from a connector.
-	 */
-	D withFormat(FormatDescriptor format);
-
-	/**
-	 * Specifies the resulting table schema.
-	 */
-	D withSchema(Schema schema);
+	@Override
+	public TypeInformation<Long> getReturnType() {
+		return Types.LONG;
+	}
 }

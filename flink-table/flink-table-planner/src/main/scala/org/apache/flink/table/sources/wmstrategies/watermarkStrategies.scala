@@ -21,15 +21,6 @@ package org.apache.flink.table.sources.wmstrategies
 import org.apache.flink.streaming.api.watermark.Watermark
 import org.apache.flink.types.Row
 
-/**
-  * Provides a strategy to generate watermarks for a rowtime attribute.
-  *
-  * A watermark strategy is either a [[PeriodicWatermarkAssigner]] or
-  * [[PunctuatedWatermarkAssigner]].
-  *
-  */
-sealed abstract class WatermarkStrategy extends Serializable
-
 /** A periodic watermark assigner. */
 abstract class PeriodicWatermarkAssigner extends WatermarkStrategy {
 

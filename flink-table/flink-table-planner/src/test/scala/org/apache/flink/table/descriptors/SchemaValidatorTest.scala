@@ -41,7 +41,7 @@ class SchemaValidatorTest {
       .field("abcField", Types.STRING)
       .field("p", Types.SQL_TIMESTAMP).proctime()
       .field("r", Types.SQL_TIMESTAMP).rowtime(
-        Rowtime().timestampsFromSource().watermarksFromSource())
+       new Rowtime().timestampsFromSource().watermarksFromSource())
     val props = new DescriptorProperties()
     props.putProperties(desc1.toProperties)
 
@@ -78,7 +78,7 @@ class SchemaValidatorTest {
       .field("abcField", Types.STRING)
       .field("p", Types.SQL_TIMESTAMP).proctime()
       .field("r", Types.SQL_TIMESTAMP).rowtime(
-        Rowtime().timestampsFromSource().watermarksFromSource())
+      new Rowtime().timestampsFromSource().watermarksFromSource())
     val props = new DescriptorProperties()
     props.putProperties(desc1.toProperties)
 
@@ -92,7 +92,7 @@ class SchemaValidatorTest {
       .field("abcField", Types.STRING)
       .field("p", Types.SQL_TIMESTAMP).proctime()
       .field("r", Types.SQL_TIMESTAMP).rowtime(
-        Rowtime().timestampsFromField("myTime").watermarksFromSource())
+      new Rowtime().timestampsFromField("myTime").watermarksFromSource())
     val props = new DescriptorProperties()
     props.putProperties(desc1.toProperties)
 
@@ -112,7 +112,7 @@ class SchemaValidatorTest {
       .field("abcField", Types.STRING)
       .field("p", Types.SQL_TIMESTAMP).proctime()
       .field("r", Types.SQL_TIMESTAMP).rowtime(
-        Rowtime().timestampsFromField("myTime").watermarksFromSource())
+       new Rowtime().timestampsFromField("myTime").watermarksFromSource())
     val props = new DescriptorProperties()
     props.putProperties(desc1.toProperties)
 
@@ -151,7 +151,7 @@ class SchemaValidatorTest {
       .field("f2", Types.STRING)
       .field("f3", Types.SQL_TIMESTAMP)
       .field("rt", Types.SQL_TIMESTAMP).rowtime(
-        Rowtime().timestampsFromExtractor(new CustomExtractor("f3"))
+      new Rowtime().timestampsFromExtractor(new CustomExtractor("f3"))
           .watermarksPeriodicBounded(1000L))
     val properties = new DescriptorProperties()
     properties.putProperties(descriptor.toProperties)

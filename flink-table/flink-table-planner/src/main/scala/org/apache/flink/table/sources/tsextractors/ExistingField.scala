@@ -20,7 +20,7 @@ package org.apache.flink.table.sources.tsextractors
 
 import org.apache.flink.api.common.typeinfo.{SqlTimeTypeInfo, TypeInformation}
 import org.apache.flink.table.api.{Types, ValidationException}
-import org.apache.flink.table.expressions.{Cast, Expression, PlannerExpression, ResolvedFieldReference}
+import org.apache.flink.table.expressions._
 
 /**
   * Converts an existing [[Long]], [[java.sql.Timestamp]], or
@@ -53,7 +53,7 @@ final class ExistingField(val field: String) extends TimestampExtractor {
     * into a rowtime attribute.
     */
   override def getExpression(fieldAccesses: Array[ResolvedFieldReference]): PlannerExpression = {
-    val fieldAccess: PlannerExpression = fieldAccesses(0)
+    val fieldAccess: PlannerExpression = fieldAccesses(0).asInstanceOf[PlannerExpression]
 
     fieldAccess.resultType match {
       case Types.LONG =>

@@ -525,7 +525,7 @@ case class CatalogNode(
     rowType: RelDataType) extends LeafNode {
 
   val output: Seq[Attribute] = rowType.getFieldList.asScala.map { field =>
-    ResolvedFieldReference(field.getName, FlinkTypeFactory.toTypeInfo(field.getType))
+    PlannerResolvedFieldReference(field.getName, FlinkTypeFactory.toTypeInfo(field.getType))
   }
 
   override protected[logical] def construct(relBuilder: RelBuilder): RelBuilder = {
@@ -542,7 +542,7 @@ case class LogicalRelNode(
     relNode: RelNode) extends LeafNode {
 
   val output: Seq[Attribute] = relNode.getRowType.getFieldList.asScala.map { field =>
-    ResolvedFieldReference(field.getName, FlinkTypeFactory.toTypeInfo(field.getType))
+    PlannerResolvedFieldReference(field.getName, FlinkTypeFactory.toTypeInfo(field.getType))
   }
 
   override protected[logical] def construct(relBuilder: RelBuilder): RelBuilder = {
@@ -583,7 +583,7 @@ case class WindowAggregate(
         val resolvedType = window.timeAttribute match {
           case UnresolvedFieldReference(n) =>
             super.resolveReference(tableEnv, n) match {
-              case Some(ResolvedFieldReference(_, tpe)) => Some(tpe)
+              case Some(PlannerResolvedFieldReference(_, tpe)) => Some(tpe)
               case _ => None
             }
           case _ => None
@@ -726,11 +726,11 @@ case class LogicalTableFunctionCall(
   override def output: Seq[Attribute] = {
     if (fieldNames.isEmpty) {
       generatedNames.zip(fieldTypes).map {
-        case (n, t) => ResolvedFieldReference(n, t)
+        case (n, t) => PlannerResolvedFieldReference(n, t)
       }
     } else {
       fieldNames.zip(fieldTypes).map {
-        case (n, t) => ResolvedFieldReference(n, t)
+        case (n, t) => PlannerResolvedFieldReference(n, t)
       }
     }
   }

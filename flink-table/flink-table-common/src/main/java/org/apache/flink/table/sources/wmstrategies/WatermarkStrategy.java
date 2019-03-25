@@ -16,17 +16,15 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.sources.tsextractors
+package org.apache.flink.table.sources.wmstrategies;
 
-import org.apache.flink.api.common.typeinfo.TypeInformation
-import org.apache.flink.table.api.Types
-import org.apache.flink.table.sources.FieldComputer
+import org.apache.flink.annotation.PublicEvolving;
 
 /**
-  * Provides the an expression to extract the timestamp for a rowtime attribute.
-  */
-abstract class TimestampExtractor extends FieldComputer[Long] with Serializable {
-
-  /** Timestamp extractors compute the timestamp as Long. */
-  override def getReturnType: TypeInformation[Long] = Types.LONG.asInstanceOf[TypeInformation[Long]]
-}
+ * Provides a strategy to generate watermarks for a rowtime attribute.
+ *
+ * <p>A watermark strategy is either a {@code PeriodicWatermarkAssigner} or
+ * {@code PunctuatedWatermarkAssigner}.
+ */
+@PublicEvolving
+public abstract class WatermarkStrategy implements java.io.Serializable {}
