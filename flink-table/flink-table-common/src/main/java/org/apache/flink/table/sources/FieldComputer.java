@@ -23,8 +23,8 @@ import org.apache.flink.table.expressions.Expression;
 import org.apache.flink.table.expressions.ResolvedFieldReference;
 
 /**
- * The [[FieldComputer]] interface returns an expression to compute the field of the table schema
- * of a [[TableSource]] from one or more fields of the [[TableSource]]'s return type.
+ * The {@link FieldComputer} interface returns an expression to compute the field of the table
+ * schema of a {@link TableSource} from one or more fields of the {@link TableSource}'s return type.
  *
  * @param <T> The result type of the provided expression.
  */
@@ -52,10 +52,10 @@ public interface FieldComputer<T> {
 	void validateArgumentFields(TypeInformation<?>[] argumentFieldTypes);
 
 	/**
-	 * Returns the [[Expression]] that computes the value of the field.
+	 * Returns the {@link Expression} that computes the value of the field.
 	 *
 	 * @param fieldAccesses Field access expressions for the argument fields.
-	 * @return The expression to extract the timestamp from the [[TableSource]] return type.
+	 * @return The expression to extract the timestamp from the {@link TableSource} return type.
 	 */
 	Expression getExpression(ResolvedFieldReference[] fieldAccesses);
 }

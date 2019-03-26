@@ -33,7 +33,7 @@ public class Rowtime implements Descriptor {
 	private final DescriptorProperties internalProperties = new DescriptorProperties(true);
 
 	/**
-	 * These constants will be removed once RowtimeValidator is ported to flink-table-common.
+	 * TODO These constants will be removed once RowtimeValidator is ported to flink-table-common.
 	 */
 	private static final String ROWTIME_TIMESTAMPS_TYPE = "rowtime.timestamps.type";
 	private static final String ROWTIME_TIMESTAMPS_TYPE_VALUE_FROM_FIELD = "from-field";
@@ -123,8 +123,7 @@ public class Rowtime implements Descriptor {
 	 * the underlying DataStream API and thus preserves the assigned watermarks from the source.
 	 */
 	public Rowtime watermarksFromSource() {
-		internalProperties.putString(
-			ROWTIME_WATERMARKS_TYPE, ROWTIME_WATERMARKS_TYPE_VALUE_FROM_SOURCE);
+		internalProperties.putString(ROWTIME_WATERMARKS_TYPE, ROWTIME_WATERMARKS_TYPE_VALUE_FROM_SOURCE);
 		return this;
 	}
 

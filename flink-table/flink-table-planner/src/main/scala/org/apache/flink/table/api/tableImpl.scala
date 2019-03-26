@@ -58,6 +58,8 @@ class TableImpl(
 
   def getRelNode: RelNode = logicalPlan.toRelNode(relBuilder)
 
+  override def getTableEnvironment: TableEnvironment = tableEnv
+
   override def getSchema: TableSchema = tableSchema
 
   override def printSchema(): Unit = print(tableSchema.toString)

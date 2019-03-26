@@ -118,10 +118,8 @@ abstract class TableEnvImpl(val config: TableConfig) extends TableEnvironment {
   private[flink] val expressionBridge: ExpressionBridge[PlannerExpression] =
     new ExpressionBridge[PlannerExpression](functionCatalog, PlannerExpressionConverter.INSTANCE)
 
-  /** Returns the table config to define the runtime behavior of the Table API. */
   def getConfig: TableConfig = config
 
-  /** Returns the [[QueryConfig]] depends on the concrete type of this TableEnvironment. */
   private[flink] def queryConfig: QueryConfig = this match {
     case _: BatchTableEnvImpl => new BatchQueryConfig
     case _: StreamTableEnvImpl => new StreamQueryConfig
@@ -401,24 +399,12 @@ abstract class TableEnvImpl(val config: TableConfig) extends TableEnvironment {
     output
   }
 
-  /**
-    * Creates a table from a table source.
-    *
-    * @param source table source used as table
-    */
-  def fromTableSource(source: TableSource[_]): Table = {
+  override def fromTableSource(source: TableSource[_]): Table = {
     val name = createUniqueTableName()
     registerTableSourceInternal(name, source)
     scan(name)
   }
 
-  /**
-    * Registers an [[ExternalCatalog]] under a unique name in the TableEnvironment's schema.
-    * All tables registered in the [[ExternalCatalog]] can be accessed.
-    *
-    * @param name            The name under which the externalCatalog will be registered
-    * @param externalCatalog The externalCatalog to register
-    */
   def registerExternalCatalog(name: String, externalCatalog: ExternalCatalog): Unit = {
     if (rootSchema.getSubSchema(name) != null) {
       throw new ExternalCatalogAlreadyExistException(name)
@@ -428,12 +414,6 @@ abstract class TableEnvImpl(val config: TableConfig) extends TableEnvironment {
     ExternalCatalogSchema.registerCatalog(this, rootSchema, name, externalCatalog)
   }
 
-  /**
-    * Gets a registered [[ExternalCatalog]] by name.
-    *
-    * @param name The name to look up the [[ExternalCatalog]]
-    * @return The [[ExternalCatalog]]
-    */
   def getRegisteredExternalCatalog(name: String): ExternalCatalog = {
     this.externalCatalogs.get(name) match {
       case Some(catalog) => catalog
@@ -441,10 +421,6 @@ abstract class TableEnvImpl(val config: TableConfig) extends TableEnvironment {
     }
   }
 
-  /**
-    * Registers a [[ScalarFunction]] under a unique name. Replaces already existing
-    * user-defined functions under this name.
-    */
   def registerFunction(name: String, function: ScalarFunction): Unit = {
     // check if class could be instantiated
     checkForInstantiation(function.getClass)
@@ -506,13 +482,6 @@ abstract class TableEnvImpl(val config: TableConfig) extends TableEnvironment {
       typeFactory)
   }
 
-  /**
-    * Registers a [[Table]] under a unique name in the TableEnvironment's catalog.
-    * Registered tables can be referenced in SQL queries.
-    *
-    * @param name The name under which the table will be registered.
-    * @param table The table to register.
-    */
   def registerTable(name: String, table: Table): Unit = {
 
     // check that table belongs to this table environment
@@ -526,13 +495,6 @@ abstract class TableEnvImpl(val config: TableConfig) extends TableEnvironment {
     registerTableInternal(name, tableTable)
   }
 
-  /**
-    * Registers an external [[TableSource]] in this [[TableEnvImpl]]'s catalog.
-    * Registered tables can be referenced in SQL queries.
-    *
-    * @param name        The name under which the [[TableSource]] is registered.
-    * @param tableSource The [[TableSource]] to register.
-    */
   def registerTableSource(name: String, tableSource: TableSource[_]): Unit = {
     checkValidTableName(name)
     registerTableSourceInternal(name, tableSource)
@@ -547,30 +509,12 @@ abstract class TableEnvImpl(val config: TableConfig) extends TableEnvironment {
     */
   protected def registerTableSourceInternal(name: String, tableSource: TableSource[_]): Unit
 
-  /**
-    * Registers an external [[TableSink]] with given field names and types in this
-    * [[TableEnvImpl]]'s catalog.
-    * Registered sink tables can be referenced in SQL DML statements.
-    *
-    * @param name The name under which the [[TableSink]] is registered.
-    * @param fieldNames The field names to register with the [[TableSink]].
-    * @param fieldTypes The field types to register with the [[TableSink]].
-    * @param tableSink The [[TableSink]] to register.
-    */
   def registerTableSink(
       name: String,
       fieldNames: Array[String],
       fieldTypes: Array[TypeInformation[_]],
       tableSink: TableSink[_]): Unit
 
-  /**
-    * Registers an external [[TableSink]] with already configured field names and field types in
-    * this [[TableEnvImpl]]'s catalog.
-    * Registered sink tables can be referenced in SQL DML statements.
-    *
-    * @param name The name under which the [[TableSink]] is registered.
-    * @param configuredSink The configured [[TableSink]] to register.
-    */
   def registerTableSink(name: String, configuredSink: TableSink[_]): Unit
 
   /**
@@ -590,28 +534,6 @@ abstract class TableEnvImpl(val config: TableConfig) extends TableEnvironment {
     }
   }
 
-  /**
-    * Scans a registered table and returns the resulting [[Table]].
-    *
-    * A table to scan must be registered in the TableEnvironment. It can be either directly
-    * registered as DataStream, DataSet, or Table or as member of an [[ExternalCatalog]].
-    *
-    * Examples:
-    *
-    * - Scanning a directly registered table
-    * {{{
-    *   val tab: Table = tableEnv.scan("tableName")
-    * }}}
-    *
-    * - Scanning a table from a registered catalog
-    * {{{
-    *   val tab: Table = tableEnv.scan("catalogName", "dbName", "tableName")
-    * }}}
-    *
-    * @param tablePath The path of the table to scan.
-    * @throws TableException if no table is found using the given table path.
-    * @return The resulting [[Table]].
-    */
   @throws[TableException]
   def scan(tablePath: String*): Table = {
     scanInternal(tablePath.toArray) match {
@@ -645,38 +567,16 @@ abstract class TableEnvImpl(val config: TableConfig) extends TableEnvironment {
     schema
   }
 
-  /**
-    * Gets the names of all tables registered in this environment.
-    *
-    * @return A list of the names of all registered tables.
-    */
   def listTables(): Array[String] = {
     rootSchema.getTableNames.asScala.toArray
   }
 
-  /**
-    * Gets the names of all functions registered in this environment.
-    */
   def listUserDefinedFunctions(): Array[String] = {
     functionCatalog.getUserDefinedFunctions.toArray
   }
 
-  /**
-    * Returns the AST of the specified Table API and SQL queries and the execution plan to compute
-    * the result of the given [[Table]].
-    *
-    * @param table The table for which the AST and execution plan will be returned.
-    */
   def explain(table: Table): String
 
-  /**
-    * Returns completion hints for the given statement at the given cursor position.
-    * The completion happens case insensitively.
-    *
-    * @param statement Partial or slightly incorrect SQL statement
-    * @param position cursor position
-    * @return completion hints that fit at the current cursor position
-    */
   def getCompletionHints(statement: String, position: Int): Array[String] = {
     val planner = new FlinkPlannerImpl(
       getFrameworkConfig,
@@ -685,23 +585,6 @@ abstract class TableEnvImpl(val config: TableConfig) extends TableEnvironment {
     planner.getCompletionHints(statement, position)
   }
 
-  /**
-    * Evaluates a SQL query on registered tables and retrieves the result as a [[Table]].
-    *
-    * All tables referenced by the query must be registered in the TableEnvironment.
-    * A [[Table]] is automatically registered when its [[toString]] method is called, for example
-    * when it is embedded into a String.
-    * Hence, SQL queries can directly reference a [[Table]] as follows:
-    *
-    * {{{
-    *   val table: Table = ...
-    *   // the table is not registered to the table environment
-    *   tEnv.sqlQuery(s"SELECT * FROM $table")
-    * }}}
-    *
-    * @param query The SQL query to evaluate.
-    * @return The result of the query as Table
-    */
   def sqlQuery(query: String): Table = {
     val planner = new FlinkPlannerImpl(getFrameworkConfig, getPlanner, getTypeFactory)
     // parse the sql query
@@ -719,49 +602,10 @@ abstract class TableEnvImpl(val config: TableConfig) extends TableEnvironment {
     }
   }
 
-  /**
-    * Evaluates a SQL statement such as INSERT, UPDATE or DELETE; or a DDL statement;
-    * NOTE: Currently only SQL INSERT statements are supported.
-    *
-    * All tables referenced by the query must be registered in the TableEnvironment.
-    * A [[Table]] is automatically registered when its [[toString]] method is called, for example
-    * when it is embedded into a String.
-    * Hence, SQL queries can directly reference a [[Table]] as follows:
-    *
-    * {{{
-    *   // register the table sink into which the result is inserted.
-    *   tEnv.registerTableSink("sinkTable", fieldNames, fieldsTypes, tableSink)
-    *   val sourceTable: Table = ...
-    *   // sourceTable is not registered to the table environment
-    *   tEnv.sqlUpdate(s"INSERT INTO sinkTable SELECT * FROM $sourceTable")
-    * }}}
-    *
-    * @param stmt The SQL statement to evaluate.
-    */
   def sqlUpdate(stmt: String): Unit = {
     sqlUpdate(stmt, this.queryConfig)
   }
 
-  /**
-    * Evaluates a SQL statement such as INSERT, UPDATE or DELETE; or a DDL statement;
-    * NOTE: Currently only SQL INSERT statements are supported.
-    *
-    * All tables referenced by the query must be registered in the TableEnvironment.
-    * A [[Table]] is automatically registered when its [[toString]] method is called, for example
-    * when it is embedded into a String.
-    * Hence, SQL queries can directly reference a [[Table]] as follows:
-    *
-    * {{{
-    *   // register the table sink into which the result is inserted.
-    *   tEnv.registerTableSink("sinkTable", fieldNames, fieldsTypes, tableSink)
-    *   val sourceTable: Table = ...
-    *   // sourceTable is not registered to the table environment
-    *   tEnv.sqlUpdate(s"INSERT INTO sinkTable SELECT * FROM $sourceTable")
-    * }}}
-    *
-    * @param stmt The SQL statement to evaluate.
-    * @param config The [[QueryConfig]] to use.
-    */
   def sqlUpdate(stmt: String, config: QueryConfig): Unit = {
     val planner = new FlinkPlannerImpl(getFrameworkConfig, getPlanner, getTypeFactory)
     // parse the sql query
