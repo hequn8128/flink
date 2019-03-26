@@ -84,6 +84,11 @@ public interface Table {
 	void printSchema();
 
 	/**
+	 * Returns the {@link TableEnvironment} of this table.
+	 */
+	TableEnvironment getTableEnvironment();
+
+	/**
 	 * Performs a selection operation. Similar to a SQL SELECT statement. The field expressions
 	 * can contain complex expressions and aggregations.
 	 *

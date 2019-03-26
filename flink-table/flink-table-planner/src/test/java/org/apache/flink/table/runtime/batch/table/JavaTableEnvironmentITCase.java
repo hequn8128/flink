@@ -28,11 +28,11 @@ import org.apache.flink.api.java.tuple.Tuple4;
 import org.apache.flink.api.java.tuple.Tuple5;
 import org.apache.flink.api.java.typeutils.GenericTypeInfo;
 import org.apache.flink.api.java.typeutils.TupleTypeInfo;
+import org.apache.flink.table.api.PlannerConfig;
 import org.apache.flink.table.api.Table;
 import org.apache.flink.table.api.TableException;
 import org.apache.flink.table.api.java.BatchTableEnvironment;
-import org.apache.flink.table.calcite.CalciteConfig;
-import org.apache.flink.table.calcite.CalciteConfigBuilder;
+import org.apache.flink.table.calcite.DefaultPlannerConfigBuilder;
 import org.apache.flink.table.runtime.utils.TableProgramsCollectionTestBase;
 import org.apache.flink.table.runtime.utils.TableProgramsTestBase;
 import org.apache.flink.test.operators.util.CollectionDataSets;
@@ -545,11 +545,11 @@ public class JavaTableEnvironmentITCase extends TableProgramsCollectionTestBase 
 		ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
 		BatchTableEnvironment tableEnv = BatchTableEnvironment.create(env, config());
 
-		CalciteConfig cc = new CalciteConfigBuilder()
+		PlannerConfig cc = new DefaultPlannerConfigBuilder()
 				.replaceLogicalOptRuleSet(RuleSets.ofList())
 				.replacePhysicalOptRuleSet(RuleSets.ofList())
 				.build();
-		tableEnv.getConfig().setCalciteConfig(cc);
+		tableEnv.getConfig().setPlannerConfig(cc);
 
 		DataSet<Tuple3<Integer, Long, String>> ds = CollectionDataSets.get3TupleDataSet(env);
 		Table t = tableEnv.fromDataSet(ds);

@@ -56,6 +56,8 @@ class TableImpl(val tableEnv: TableEnvironment, relNode: RelNode) extends Table 
 
   override def getSchema: TableSchema = tableSchema
 
+  override def getTableEnvironment: TableEnvironment = ???
+
   override def printSchema(): Unit = ???
 
   override def select(fields: String): Table = ???

@@ -18,7 +18,7 @@
 
 package org.apache.flink.table.descriptors
 
-import org.apache.flink.table.descriptors.RowtimeValidator._
+import org.apache.flink.table.descriptors.Rowtime._
 import org.apache.flink.table.sources.tsextractors.{ExistingField, StreamRecordTimestamp, TimestampExtractor}
 import org.apache.flink.table.sources.wmstrategies.{AscendingTimestamps, BoundedOutOfOrderTimestamps, PreserveWatermarks, WatermarkStrategy}
 import org.apache.flink.table.util.JavaScalaConversionUtil.toJava
@@ -100,23 +100,33 @@ class RowtimeValidator(
 
 object RowtimeValidator {
 
-  val ROWTIME = "rowtime"
-  val ROWTIME_TIMESTAMPS_TYPE = "rowtime.timestamps.type"
-  val ROWTIME_TIMESTAMPS_TYPE_VALUE_FROM_FIELD = "from-field"
-  val ROWTIME_TIMESTAMPS_TYPE_VALUE_FROM_SOURCE = "from-source"
-  val ROWTIME_TIMESTAMPS_TYPE_VALUE_CUSTOM = "custom"
-  val ROWTIME_TIMESTAMPS_FROM = "rowtime.timestamps.from"
-  val ROWTIME_TIMESTAMPS_CLASS = "rowtime.timestamps.class"
-  val ROWTIME_TIMESTAMPS_SERIALIZED = "rowtime.timestamps.serialized"
+  /**
+    * Use constants in [[Rowtime]] instead.
+    */
+  @Deprecated val ROWTIME = Rowtime.ROWTIME
+  @Deprecated val ROWTIME_TIMESTAMPS_TYPE = Rowtime.ROWTIME_TIMESTAMPS_TYPE
+  @Deprecated val ROWTIME_TIMESTAMPS_TYPE_VALUE_FROM_FIELD =
+    Rowtime.ROWTIME_TIMESTAMPS_TYPE_VALUE_FROM_FIELD
+  @Deprecated val ROWTIME_TIMESTAMPS_TYPE_VALUE_FROM_SOURCE =
+    Rowtime.ROWTIME_TIMESTAMPS_TYPE_VALUE_FROM_SOURCE
+  @Deprecated val ROWTIME_TIMESTAMPS_TYPE_VALUE_CUSTOM =
+    Rowtime.ROWTIME_TIMESTAMPS_TYPE_VALUE_CUSTOM
+  @Deprecated val ROWTIME_TIMESTAMPS_FROM = Rowtime.ROWTIME_TIMESTAMPS_FROM
+  @Deprecated val ROWTIME_TIMESTAMPS_CLASS = Rowtime.ROWTIME_TIMESTAMPS_CLASS
+  @Deprecated val ROWTIME_TIMESTAMPS_SERIALIZED = Rowtime.ROWTIME_TIMESTAMPS_SERIALIZED
 
-  val ROWTIME_WATERMARKS_TYPE = "rowtime.watermarks.type"
-  val ROWTIME_WATERMARKS_TYPE_VALUE_PERIODIC_ASCENDING = "periodic-ascending"
-  val ROWTIME_WATERMARKS_TYPE_VALUE_PERIODIC_BOUNDED = "periodic-bounded"
-  val ROWTIME_WATERMARKS_TYPE_VALUE_FROM_SOURCE = "from-source"
-  val ROWTIME_WATERMARKS_TYPE_VALUE_CUSTOM = "custom"
-  val ROWTIME_WATERMARKS_CLASS = "rowtime.watermarks.class"
-  val ROWTIME_WATERMARKS_SERIALIZED = "rowtime.watermarks.serialized"
-  val ROWTIME_WATERMARKS_DELAY = "rowtime.watermarks.delay"
+  @Deprecated val ROWTIME_WATERMARKS_TYPE = Rowtime.ROWTIME_WATERMARKS_TYPE
+  @Deprecated val ROWTIME_WATERMARKS_TYPE_VALUE_PERIODIC_ASCENDING =
+    Rowtime.ROWTIME_WATERMARKS_TYPE_VALUE_PERIODIC_ASCENDING
+  @Deprecated val ROWTIME_WATERMARKS_TYPE_VALUE_PERIODIC_BOUNDED =
+    Rowtime.ROWTIME_WATERMARKS_TYPE_VALUE_PERIODIC_BOUNDED
+  @Deprecated val ROWTIME_WATERMARKS_TYPE_VALUE_FROM_SOURCE =
+    Rowtime.ROWTIME_WATERMARKS_TYPE_VALUE_FROM_SOURCE
+  @Deprecated val ROWTIME_WATERMARKS_TYPE_VALUE_CUSTOM =
+    Rowtime.ROWTIME_WATERMARKS_TYPE_VALUE_CUSTOM
+  @Deprecated val ROWTIME_WATERMARKS_CLASS = Rowtime.ROWTIME_WATERMARKS_CLASS
+  @Deprecated val ROWTIME_WATERMARKS_SERIALIZED = Rowtime.ROWTIME_WATERMARKS_SERIALIZED
+  @Deprecated val ROWTIME_WATERMARKS_DELAY = Rowtime.ROWTIME_WATERMARKS_DELAY
 
   // utilities
 

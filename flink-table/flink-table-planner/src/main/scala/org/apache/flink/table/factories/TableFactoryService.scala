@@ -25,6 +25,7 @@ import org.apache.flink.table.descriptors.ConnectorDescriptorValidator._
 import org.apache.flink.table.descriptors.ExternalCatalogDescriptorValidator._
 import org.apache.flink.table.descriptors.FormatDescriptorValidator._
 import org.apache.flink.table.descriptors.MetadataValidator._
+import org.apache.flink.table.descriptors.Schema
 import org.apache.flink.table.descriptors.StatisticsValidator._
 import org.apache.flink.table.descriptors._
 import org.apache.flink.table.util.Logging
@@ -341,7 +342,7 @@ object TableFactoryService extends Logging {
       // ignore non-format (or schema) keys
       keys.filter { k =>
         if (includeSchema) {
-          k.startsWith(SchemaValidator.SCHEMA + ".") ||
+          k.startsWith(Schema.SCHEMA + ".") ||
             k.startsWith(FormatDescriptorValidator.FORMAT + ".")
         } else {
           k.startsWith(FormatDescriptorValidator.FORMAT + ".")

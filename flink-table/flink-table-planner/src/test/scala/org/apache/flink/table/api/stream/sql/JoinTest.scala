@@ -989,7 +989,7 @@ class JoinTest extends TableTestBase {
     val resultTable = streamUtil.tableEnv.sqlQuery(query)
     val relNode = RelTimeIndicatorConverter.convert(
       resultTable.asInstanceOf[TableImpl].getRelNode,
-      streamUtil.tableEnv.getRelBuilder.getRexBuilder)
+      streamUtil.tableEnv.asInstanceOf[StreamTableEnvImpl].getRelBuilder.getRexBuilder)
     val joinNode = relNode.getInput(0).asInstanceOf[LogicalJoin]
     val (windowBounds, _) =
       WindowJoinUtil.extractWindowBoundsFromPredicate(
@@ -1014,7 +1014,7 @@ class JoinTest extends TableTestBase {
     val resultTable = streamUtil.tableEnv.sqlQuery(query)
     val relNode = RelTimeIndicatorConverter.convert(
       resultTable.asInstanceOf[TableImpl].getRelNode,
-      streamUtil.tableEnv.getRelBuilder.getRexBuilder)
+      streamUtil.tableEnv.asInstanceOf[StreamTableEnvImpl].getRelBuilder.getRexBuilder)
     val joinNode = relNode.getInput(0).asInstanceOf[LogicalJoin]
     val (_, remainCondition) =
       WindowJoinUtil.extractWindowBoundsFromPredicate(

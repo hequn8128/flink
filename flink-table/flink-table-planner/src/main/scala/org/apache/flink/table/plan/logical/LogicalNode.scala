@@ -20,7 +20,7 @@ package org.apache.flink.table.plan.logical
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.tools.RelBuilder
 import org.apache.flink.table.plan.TreeNode
-import org.apache.flink.table.api.{TableEnvironment, TableSchema, ValidationException}
+import org.apache.flink.table.api.{TableEnvImpl, TableEnvironment, TableSchema, ValidationException}
 import org.apache.flink.table.expressions._
 import org.apache.flink.table.operations.TableOperation
 import org.apache.flink.table.typeutils.TypeCoercion
@@ -117,7 +117,7 @@ abstract class LogicalNode extends TreeNode[LogicalNode] with TableOperation {
     }
 
     // try to resolve a table
-    tableEnv.scanInternal(Array(name)) match {
+    tableEnv.asInstanceOf[TableEnvImpl].scanInternal(Array(name)) match {
       case Some(table) => Some(TableReference(name, table))
       case None => None
     }

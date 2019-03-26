@@ -29,7 +29,7 @@ import org.apache.calcite.tools.RelBuilder
 import org.apache.flink.api.common.typeinfo.BasicTypeInfo._
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.operators.join.JoinType
-import org.apache.flink.table.api.{StreamTableEnvironment, TableEnvironment, Types, UnresolvedException}
+import org.apache.flink.table.api._
 import org.apache.flink.table.calcite.{FlinkRelBuilder, FlinkTypeFactory}
 import org.apache.flink.table.expressions.PlannerExpressionUtils.isRowCountLiteral
 import org.apache.flink.table.expressions._
@@ -39,8 +39,8 @@ import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils._
 import org.apache.flink.table.plan.schema.FlinkTableFunctionImpl
 import org.apache.flink.table.validate.{ValidationFailure, ValidationSuccess}
 
-import scala.collection.JavaConverters._
-import scala.collection.mutable
+import _root_.scala.collection.JavaConverters._
+import _root_.scala.collection.mutable
 
 case class Project(
     projectList: Seq[NamedExpression],
@@ -157,7 +157,7 @@ case class Sort(order: Seq[Ordering], child: LogicalNode) extends UnaryNode {
   }
 
   override def validate(tableEnv: TableEnvironment): LogicalNode = {
-    if (tableEnv.isInstanceOf[StreamTableEnvironment]) {
+    if (tableEnv.isInstanceOf[StreamTableEnvImpl]) {
       failValidation(s"Sort on stream tables is currently not supported.")
     }
     super.validate(tableEnv)
@@ -173,7 +173,7 @@ case class Limit(offset: Int, fetch: Int = -1, child: LogicalNode) extends Unary
   }
 
   override def validate(tableEnv: TableEnvironment): LogicalNode = {
-    if (tableEnv.isInstanceOf[StreamTableEnvironment]) {
+    if (tableEnv.isInstanceOf[StreamTableEnvImpl]) {
       failValidation(s"Limit on stream tables is currently not supported.")
     }
     if (!child.isInstanceOf[Sort]) {
@@ -227,7 +227,7 @@ case class Aggregate(
   }
 
   override def validate(tableEnv: TableEnvironment): LogicalNode = {
-    implicit val relBuilder: RelBuilder = tableEnv.getRelBuilder
+    implicit val relBuilder: RelBuilder = tableEnv.asInstanceOf[TableEnvImpl].getRelBuilder
     val resolvedAggregate = super.validate(tableEnv).asInstanceOf[Aggregate]
     val groupingExprs = resolvedAggregate.groupingExpressions
     val aggregateExprs = resolvedAggregate.aggregateExpressions
@@ -287,7 +287,7 @@ case class Minus(left: LogicalNode, right: LogicalNode, all: Boolean) extends Bi
   }
 
   override def validate(tableEnv: TableEnvironment): LogicalNode = {
-    if (tableEnv.isInstanceOf[StreamTableEnvironment]) {
+    if (tableEnv.isInstanceOf[StreamTableEnvImpl]) {
       failValidation(s"Minus on stream tables is currently not supported.")
     }
 
@@ -318,7 +318,7 @@ case class Union(left: LogicalNode, right: LogicalNode, all: Boolean) extends Bi
   }
 
   override def validate(tableEnv: TableEnvironment): LogicalNode = {
-    if (tableEnv.isInstanceOf[StreamTableEnvironment] && !all) {
+    if (tableEnv.isInstanceOf[StreamTableEnvImpl] && !all) {
       failValidation(s"Union on stream tables is currently not supported.")
     }
 
@@ -349,7 +349,7 @@ case class Intersect(left: LogicalNode, right: LogicalNode, all: Boolean) extend
   }
 
   override def validate(tableEnv: TableEnvironment): LogicalNode = {
-    if (tableEnv.isInstanceOf[StreamTableEnvironment]) {
+    if (tableEnv.isInstanceOf[StreamTableEnvImpl]) {
       failValidation(s"Intersect on stream tables is currently not supported.")
     }
 
@@ -525,7 +525,7 @@ case class CatalogNode(
     rowType: RelDataType) extends LeafNode {
 
   val output: Seq[Attribute] = rowType.getFieldList.asScala.map { field =>
-    ResolvedFieldReference(field.getName, FlinkTypeFactory.toTypeInfo(field.getType))
+    PlannerResolvedFieldReference(field.getName, FlinkTypeFactory.toTypeInfo(field.getType))
   }
 
   override protected[logical] def construct(relBuilder: RelBuilder): RelBuilder = {
@@ -542,7 +542,7 @@ case class LogicalRelNode(
     relNode: RelNode) extends LeafNode {
 
   val output: Seq[Attribute] = relNode.getRowType.getFieldList.asScala.map { field =>
-    ResolvedFieldReference(field.getName, FlinkTypeFactory.toTypeInfo(field.getType))
+    PlannerResolvedFieldReference(field.getName, FlinkTypeFactory.toTypeInfo(field.getType))
   }
 
   override protected[logical] def construct(relBuilder: RelBuilder): RelBuilder = {
@@ -583,7 +583,7 @@ case class WindowAggregate(
         val resolvedType = window.timeAttribute match {
           case UnresolvedFieldReference(n) =>
             super.resolveReference(tableEnv, n) match {
-              case Some(ResolvedFieldReference(_, tpe)) => Some(tpe)
+              case Some(PlannerResolvedFieldReference(_, tpe)) => Some(tpe)
               case _ => None
             }
           case _ => None
@@ -621,7 +621,7 @@ case class WindowAggregate(
   }
 
   override def validate(tableEnv: TableEnvironment): LogicalNode = {
-    implicit val relBuilder: RelBuilder = tableEnv.getRelBuilder
+    implicit val relBuilder: RelBuilder = tableEnv.asInstanceOf[TableEnvImpl].getRelBuilder
     val resolvedWindowAggregate = super.validate(tableEnv).asInstanceOf[WindowAggregate]
     val groupingExprs = resolvedWindowAggregate.groupingExpressions
     val aggregateExprs = resolvedWindowAggregate.aggregateExpressions
@@ -726,11 +726,11 @@ case class LogicalTableFunctionCall(
   override def output: Seq[Attribute] = {
     if (fieldNames.isEmpty) {
       generatedNames.zip(fieldTypes).map {
-        case (n, t) => ResolvedFieldReference(n, t)
+        case (n, t) => PlannerResolvedFieldReference(n, t)
       }
     } else {
       fieldNames.zip(fieldTypes).map {
-        case (n, t) => ResolvedFieldReference(n, t)
+        case (n, t) => PlannerResolvedFieldReference(n, t)
       }
     }
   }
