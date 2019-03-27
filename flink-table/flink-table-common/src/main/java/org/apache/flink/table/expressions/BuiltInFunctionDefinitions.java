@@ -325,6 +325,10 @@ public final class BuiltInFunctionDefinitions {
 		new FunctionDefinition("as", OTHER_FUNCTION);
 	public static final FunctionDefinition STREAM_RECORD_TIMESTAMP =
 		new FunctionDefinition("streamRecordTimestamp", OTHER_FUNCTION);
+	public static final FunctionDefinition COLUMNS =
+		new FunctionDefinition("columns", OTHER_FUNCTION);
+	public static final FunctionDefinition RANGE =
+		new FunctionDefinition("range", OTHER_FUNCTION);
 
 	public static List<FunctionDefinition> getDefinitions() {
 		final Field[] fields = BuiltInFunctionDefinitions.class.getFields();

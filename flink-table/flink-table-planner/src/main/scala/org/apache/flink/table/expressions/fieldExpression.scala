@@ -19,13 +19,16 @@ package org.apache.flink.table.expressions
 
 import org.apache.calcite.rex.RexNode
 import org.apache.calcite.tools.RelBuilder
-import org.apache.flink.api.common.typeinfo.TypeInformation
+import org.apache.flink.api.common.typeinfo.{IntegerTypeInfo, TypeInformation}
 import org.apache.flink.table.api._
 import org.apache.flink.table.calcite.FlinkRelBuilder.NamedWindowProperty
 import org.apache.flink.table.calcite.FlinkTypeFactory._
 import org.apache.flink.table.functions.sql.StreamRecordTimestampSqlFunction
 import org.apache.flink.table.typeutils.TimeIndicatorTypeInfo
 import org.apache.flink.table.validate.{ValidationFailure, ValidationResult, ValidationSuccess}
+
+import _root_.scala.collection.JavaConversions._
+import _root_.scala.collection.JavaConverters._
 
 trait NamedExpression extends PlannerExpression {
   private[flink] def name: String
@@ -232,4 +235,92 @@ case class StreamRecordTimestamp() extends LeafExpression {
   override private[flink] def toRexNode(implicit relBuilder: RelBuilder): RexNode = {
     relBuilder.getRexBuilder.makeCall(StreamRecordTimestampSqlFunction)
   }
+}
+
+/** Expression to indicate the start and end column of the row */
+case class ColumnIndexRange(start: PlannerExpression, end: PlannerExpression)
+  extends BinaryExpression {
+
+  override private[flink] def left = start
+
+  override private[flink] def right = end
+
+  /**
+    * Returns the [[TypeInformation]] for evaluating this expression.
+    * It is sometimes not available until the expression is valid.
+    */
+  override private[flink] def resultType = throw new TableException("TODO")
+}
+
+// todo maybe a better name??
+case class ColumnsExpression(
+  child: Seq[PlannerExpression], var selection: Boolean = true) extends LeafExpression {
+
+  override private[flink] def resultType = {
+    throw new TableException("ColumnsExpression have no result type.")
+  }
+
+  def parse(fields: Seq[UnresolvedFieldReference]): Seq[PlannerExpression] = {
+    var fieldReferenceExpressions: Seq[PlannerExpression] = Seq[PlannerExpression]()
+    child.foreach(
+      e => e match {
+        case ColumnIndexRange(start: Literal, end: Literal) =>
+          fieldReferenceExpressions = fieldReferenceExpressions ++: fields.zipWithIndex.filter(
+            fieldAndIndex => start.value.asInstanceOf[Integer] - 1 <= fieldAndIndex._2 &&
+              fieldAndIndex._2 <= end.value.asInstanceOf[Integer] -1 ).map(fi => fi._1)
+        case l: Literal if l.resultType.isInstanceOf[IntegerTypeInfo[_]]=>
+          fieldReferenceExpressions = fieldReferenceExpressions ++:
+            fields.zipWithIndex
+              .filter(fieldAndIndex => l.value.asInstanceOf[Integer] -1  == fieldAndIndex._2)
+              .map(fi => fi._1)
+        case l:Literal => throw new TableException(
+          "The parameters of columns() only accept column name or column index.")
+        case fr: ColumnNameRange =>
+          val start = fields.zipWithIndex.filter(
+            fieldAndIndex => fieldAndIndex._1.name.equals(fr.start.name))
+          val startIndex = if (start.isEmpty) {
+            Integer.MAX_VALUE
+          } else {
+            start.head._2
+          }
+          val end = fields.zipWithIndex.filter(
+            fieldAndIndex => fieldAndIndex._1.name.equals(fr.end.name))
+          val endIndex = if (end.isEmpty) {
+            Integer.MAX_VALUE
+          } else {
+            end.head._2
+          }
+          fieldReferenceExpressions = fieldReferenceExpressions ++: fields.zipWithIndex.filter(
+            fieldAndIndex => startIndex <= fieldAndIndex._2 &&
+              fieldAndIndex._2 <= endIndex).map(fi => fi._1)
+        case UnresolvedFieldReference(_) =>
+          fieldReferenceExpressions = fieldReferenceExpressions ++: Seq(e)
+        case _ => throw new TableException(s"Unexpected expression type [$e].")
+      })
+
+    if(!selection){
+      fieldReferenceExpressions = fields.filter(f => fieldReferenceExpressions.forall(
+        df => !df.asInstanceOf[UnresolvedFieldReference].name.equals(f.name)))
+    }
+
+    fieldReferenceExpressions
+
+  }
+
+  def unary_- : ColumnsExpression = {
+    this.selection = false
+    this
+  }
+}
+
+case class ColumnNameRange(
+  start: UnresolvedFieldReference, end: UnresolvedFieldReference) extends BinaryExpression {
+  override private[flink] def left = start
+  override private[flink] def right = end
+
+  /**
+    * Returns the [[TypeInformation]] for evaluating this expression.
+    * It is sometimes not available until the expression is valid.
+    */
+  override private[flink] def resultType = throw new TableException("TODO")
 }

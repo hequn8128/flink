@@ -97,7 +97,7 @@ object Func8 extends ScalarFunction {
   }
 
   def eval(a: String, b: String): String = {
-    "c"
+    a + "=" + b
   }
 }
 

@@ -185,6 +185,11 @@ trait ImplicitExpressionOperations {
   def % (other: Expression): Expression = mod(other)
 
   /**
+    * Column operation which indicates the range from left to right.
+    */
+  def ~ (other: Expression): Expression = call(RANGE, expr, other)
+
+  /**
     * Similar to a SQL distinct aggregation clause such as COUNT(DISTINCT a), declares that an
     * aggregation function is only applied on distinct input values.
     *
@@ -1372,6 +1377,18 @@ object array {
   def apply(head: Expression, tail: Expression*): Expression = {
     call(ARRAY, head +: tail: _*)
   }
+}
+
+
+object columns {
+
+  def apply(head: Expression, tail: Expression*): Expression = {
+    call(COLUMNS, head +: tail: _*)
+  }
+//
+//  def apply(fields: String): Expression = {
+//    call(COLUMNS, ExpressionParser.parseExpressionList(fields))
+//  }
 }
 
 /**

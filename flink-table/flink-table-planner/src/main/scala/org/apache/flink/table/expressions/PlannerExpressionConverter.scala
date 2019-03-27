@@ -644,6 +644,16 @@ class PlannerExpressionConverter private extends ApiExpressionVisitor[PlannerExp
             assert(args.isEmpty)
             CurrentRow()
 
+          case COLUMNS =>
+            assert(args.size >= 1)
+            ColumnsExpression(args)
+
+          case RANGE =>
+            assert(args.size == 2)
+            ColumnNameRange(
+              args.head.asInstanceOf[UnresolvedFieldReference],
+              args.last.asInstanceOf[UnresolvedFieldReference])
+
           case _ =>
             throw new TableException(s"Unsupported function definition: $fd")
         }

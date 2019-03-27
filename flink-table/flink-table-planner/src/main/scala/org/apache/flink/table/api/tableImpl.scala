@@ -20,9 +20,7 @@ package org.apache.flink.table.api
 import org.apache.calcite.rel.RelNode
 import org.apache.flink.api.java.operators.join.JoinType
 import org.apache.flink.table.calcite.FlinkRelBuilder
-import org.apache.flink.table.expressions.{Alias, Asc, Expression, ExpressionBridge,
-  ExpressionParser, Ordering, PlannerExpression, ResolvedFieldReference, UnresolvedAlias,
-  WindowProperty}
+import org.apache.flink.table.expressions.{Alias, Asc, Expression, ExpressionBridge, ExpressionParser, Ordering, PlannerExpression, ResolvedFieldReference, UnresolvedAlias, WindowProperty}
 import org.apache.flink.table.functions.{TemporalTableFunction, TemporalTableFunctionImpl}
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils
 import org.apache.flink.table.plan.ProjectionTranslator._
@@ -70,7 +68,8 @@ class TableImpl(
     selectInternal(fields.map(expressionBridge.bridge))
   }
 
-  private def selectInternal(fields: Seq[PlannerExpression]): Table = {
+  private def selectInternal(fieldss: Seq[PlannerExpression]): Table = {
+    val finalFields = expandColumnExpression(logicalPlan, tableEnv, fieldss: _*)
     val expandedFields = expandProjectList(fields, logicalPlan, tableEnv)
     val (aggNames, propNames) = extractAggregationsAndProperties(expandedFields, tableEnv)
     if (propNames.nonEmpty) {

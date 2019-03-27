@@ -96,6 +96,42 @@ object ProjectionTranslator {
           "Use 'Null(TYPE)' to specify typed null expressions. For example: Null(Types.INT)")
     }
   }
+//
+//  def rangeExpressionToExpression(
+//    parent: LogicalNode,
+//    tableEnv: TableEnvironment,
+//    fields: Expression*): Seq[Expression] = {
+//
+//    val currentFields = expandProjectList(
+//      Seq(ExpressionParser.parseExpression("*")),
+//      parent,
+//      tableEnv).asInstanceOf[Seq[UnresolvedFieldReference]]
+//
+//    var finalFields: Seq[Expression] = Seq[Expression]()
+
+//    fields.foreach(
+//      f => f match {
+//        case col: ColumnsExpression => finalFields = finalFields ++: col.parse(currentFields)
+//        case ScalarFunctionCall(fun, args) =>
+//          val params = rangeExpressionToExpression(parent, tableEnv, args: _*)
+//          finalFields = finalFields ++: Seq(ScalarFunctionCall(fun, params))
+//        case TableFunctionCall(name, fun, args, resultType) =>
+//          val params = rangeExpressionToExpression(parent, tableEnv, args: _*)
+//          finalFields = finalFields ++: Seq(TableFunctionCall(name, fun, params, resultType))
+//        case AggFunctionCall(fun, resultType, accType, args) =>
+//          val params = rangeExpressionToExpression(parent, tableEnv, args: _*)
+//          finalFields = finalFields ++: Seq(AggFunctionCall(fun, resultType, accType, params))
+//        case Alias(child, name, extraNames) =>
+//          val expr = rangeExpressionToExpression(parent, tableEnv, child)
+//          finalFields = finalFields ++: Seq(Alias(expr.head, name, extraNames))
+//        case RowConstructor(args) =>
+//          val params = rangeExpressionToExpression(parent, tableEnv, args: _*)
+//          finalFields = finalFields ++: Seq(RowConstructor(params))
+//        case _ => finalFields = finalFields ++: Seq(f)
+//      })
+//
+//    finalFields
+//  }
 
   /**
     * Replaces expressions with deduplicated aggregations and properties.
@@ -188,6 +224,36 @@ object ProjectionTranslator {
     }
   }
 
+  def expandColumnExpression(parent: LogicalNode,
+    tableEnv: TableEnvironment, fields: PlannerExpression*): Seq[PlannerExpression] = {
+
+    val inputFields = parent.output.map(a => UnresolvedFieldReference(a.name))
+    var finalFields: Seq[PlannerExpression] = Seq[PlannerExpression]()
+
+    fields.foreach(
+      f => f match {
+        case col: ColumnsExpression => finalFields = finalFields ++: col.parse(inputFields)
+        case PlannerScalarFunctionCall(fun, args) =>
+          val params = expandColumnExpression(parent, tableEnv, args: _*)
+          finalFields = finalFields ++: Seq(PlannerScalarFunctionCall(fun, params))
+        case PlannerTableFunctionCall(name, fun, args, resultType) =>
+          val params = expandColumnExpression(parent, tableEnv, args: _*)
+          finalFields = finalFields ++: Seq(PlannerTableFunctionCall(name, fun, params, resultType))
+        case AggFunctionCall(fun, resultType, accType, args) =>
+          val params = expandColumnExpression(parent, tableEnv, args: _*)
+          finalFields = finalFields ++: Seq(AggFunctionCall(fun, resultType, accType, params))
+        case Alias(child, name, extraNames) =>
+          val expr = expandColumnExpression(parent, tableEnv, child)
+          finalFields = finalFields ++: Seq(Alias(expr.head, name, extraNames))
+        case RowConstructor(args) =>
+          val params = expandColumnExpression(parent, tableEnv, args: _*)
+          finalFields = finalFields ++: Seq(RowConstructor(params))
+        case _ => finalFields = finalFields ++: Seq(f)
+      })
+
+    finalFields
+  }
+
   /**
     * Expands an UnresolvedFieldReference("*") to parent's full project list.
     */
@@ -219,6 +285,9 @@ object ProjectionTranslator {
           case _ =>
             projectList += unresolved
         }
+
+      case c: ColumnsExpression =>
+        projectList ++= c.parse(parent.output.map(a => UnresolvedFieldReference(a.name)))
 
       case e: PlannerExpression => projectList += e
     }

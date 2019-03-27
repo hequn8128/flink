@@ -20,7 +20,7 @@ package org.apache.flink.table.runtime.stream.table
 
 import org.apache.flink.api.scala._
 import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
-import org.apache.flink.table.api.scala._
+import org.apache.flink.table.api.scala.{_}
 import org.apache.flink.table.expressions.Literal
 import org.apache.flink.table.expressions.utils._
 import org.apache.flink.table.runtime.utils.{StreamITCase, StreamTestData, UserDefinedFunctionTestUtils}
@@ -348,5 +348,51 @@ class CalcITCase extends AbstractTestBase {
       "{8=Comment#2}",
       "{9=Comment#3}")
     assertEquals(expected.sorted, StreamITCase.testResults.sorted)
+  }
+
+  // todo add column selection: 1. name reange 2. index reange  3. range in udf
+  @Test
+  def testColumnSelection(): Unit = {
+    val env = StreamExecutionEnvironment.getExecutionEnvironment
+    val tEnv = StreamTableEnvironment.create(env)
+
+    StreamITCase.clear
+
+    val testData =
+      new mutable.MutableList[(Int, Long, String, String, Int, Int, String, String, String)]
+    testData.+=((1, 1L, "Kevin", "Panpan", 3, 1, "start", "end", "deselect"))
+    testData.+=((2, 2L, "Sunny", "Panpan", 5, 1, "begin", "finish", "deselect"))
+
+    val fun = Func8
+    val t = env.fromCollection(testData).toTable(tEnv).as('a, 'b, 'c, 'd, 'e, 'f, 'g, 'h, 'i)
+
+    val result = t
+      .select('a, 'b, 'c, 'd, 'e, 'f, 'g.upperCase() as 'g, 'h, 'i)
+      .select(columns('g ~ 'h), fun(columns('g ~ 'h)))
+
+    result.addSink(new StreamITCase.StringSink[Row])
+    env.execute()
+
+    val expected = mutable.MutableList(
+      "start,end",
+      "begin,finish")
+    assertEquals(expected.sorted, StreamITCase.testResults.sorted)
+
+//    val result = t
+//      .select(columns("*"))
+//      .select(
+//        columns(1 ~ 3, 4, 'e, 'g ~ 'h),
+//        fun(columns(3 ~ 4)),
+//        'f,
+//        -columns("a,b,c,d,e,f,g,h")
+//      )
+//
+//    result.addSink(new StreamITCase.StringSink[Row])
+//    env.execute()
+//
+//    val expected = mutable.MutableList(
+//      "1,1,Kevin,Panpan,3,start,end,c,1,deselect",
+//      "2,2,Sunny,Panpan,5,begin,finish,c,1,deselect")
+//    assertEquals(expected.sorted, StreamITCase.testResults.sorted)
   }
 }
