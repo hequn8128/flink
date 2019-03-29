@@ -19,19 +19,18 @@ package org.apache.flink.table.api
 
 import _root_.java.util.Collections.emptyList
 import _root_.java.util.function.Supplier
-import _root_.java.util.Optional
 
 import org.apache.calcite.rel.RelNode
 import org.apache.flink.api.java.operators.join.JoinType
-import org.apache.flink.table.expressions.ApiExpressionUtils.{extractAggregationsAndProperties,
-  extractFieldReferences, replaceAggregationsAndProperties}
-import org.apache.flink.table.expressions.{Expression, ExpressionParser, LookupCallResolver}
+import org.apache.flink.table.expressions.ApiExpressionUtils.{extractAggregationsAndProperties, extractFieldReferences, replaceAggregationsAndProperties}
+import org.apache.flink.table.expressions._
 import org.apache.flink.table.functions.{TemporalTableFunction, TemporalTableFunctionImpl}
 import org.apache.flink.table.operations.TableOperation
-import org.apache.flink.table.plan.logical._
 import org.apache.flink.table.plan.OperationTreeBuilder
+import org.apache.flink.table.plan.logical._
 import org.apache.flink.table.util.JavaScalaConversionUtil.toJava
 
+import _root_.scala.collection.JavaConversions._
 import _root_.scala.collection.JavaConverters._
 
 /**
@@ -412,6 +411,51 @@ class TableImpl(
     }
 
     new OverWindowedTableImpl(this, overWindows)
+  }
+
+  override def addColumns(fields: String): Table = {
+    addColumns(ExpressionParser.parseExpressionList(fields): _*);
+  }
+
+  override def addColumns(fields: Expression*): Table = {
+    addColumns(false, fields: _*)
+  }
+
+  override def addColumns(replaceIfExist: Boolean, fields: String): Table = {
+    addColumns(replaceIfExist, ExpressionParser.parseExpressionList(fields): _*)
+  }
+
+  override def addColumns(replaceIfExist: Boolean, fields: Expression*): Table = {
+    val expressionsWithResolvedCalls = fields.map(_.accept(callResolver)).asJava
+    val extracted = extractAggregationsAndProperties(
+      expressionsWithResolvedCalls,
+      getUniqueAttributeSupplier)
+
+    val aggNames = extracted.getAggregations
+
+    if(aggNames.nonEmpty){
+      throw new TableException(
+        s"The added field expression cannot be an aggregation, find [${aggNames.head}].")
+    }
+
+    wrap(operationTreeBuilder.addColumn(
+      replaceIfExist, expressionsWithResolvedCalls, operationTree))
+  }
+
+  override def renameColumns(fields: String): Table = {
+    renameColumns(ExpressionParser.parseExpressionList(fields): _*)
+  }
+
+  override def renameColumns(fields: Expression*): Table = {
+    wrap(operationTreeBuilder.renameColumn(fields, operationTree))
+  }
+
+  override def dropColumns(fields: String): Table = {
+    dropColumns(ExpressionParser.parseExpressionList(fields): _*)
+  }
+
+  override def dropColumns(fields: Expression*): Table = {
+    wrap(operationTreeBuilder.dropColumn(fields, operationTree))
   }
 
   /**

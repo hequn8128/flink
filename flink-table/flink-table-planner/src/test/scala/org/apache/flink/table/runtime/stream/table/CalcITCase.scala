@@ -349,4 +349,91 @@ class CalcITCase extends AbstractTestBase {
       "{9=Comment#3}")
     assertEquals(expected.sorted, StreamITCase.testResults.sorted)
   }
+
+  @Test
+  def testAddColumns(): Unit = {
+    val env = StreamExecutionEnvironment.getExecutionEnvironment
+    val tEnv = StreamTableEnvironment.create(env)
+
+    StreamITCase.clear
+
+    val testData = new mutable.MutableList[(Int, Long, String)]
+    testData.+=((1, 1L, "Kevin"))
+    testData.+=((2, 2L, "Sunny"))
+
+    val t = env.fromCollection(testData).toTable(tEnv).as('a, 'b, 'c)
+
+    val result = t
+      .addColumns("concat(c, 'sunny') as kid")
+      .addColumns(row(1, "str").flatten())
+      .addColumns(true, concat('c, "_kid") as 'kid, concat('c, "kid") as 'kid)
+      .addColumns(true, concat('c, " is a kid") as 'kid)
+      .addColumns(true, concat('c, " is a kid") as 'kid)
+      .addColumns("'last'")
+      .addColumns('a + 2, 'b as 'b2)
+
+    result.addSink(new StreamITCase.StringSink[Row])
+    env.execute()
+
+    val expected = mutable.MutableList(
+      "1,1,Kevin,Kevin is a kid,1,str,last,3,1",
+      "2,2,Sunny,Sunny is a kid,1,str,last,4,2"
+    )
+    assertEquals(expected.sorted, StreamITCase.testResults.sorted)
+  }
+
+  @Test
+  def testRenameColumns(): Unit = {
+    val env = StreamExecutionEnvironment.getExecutionEnvironment
+    val tEnv = StreamTableEnvironment.create(env)
+
+    StreamITCase.clear
+
+    val testData = new mutable.MutableList[(Int, Long, String)]
+    testData.+=((1, 1L, "Kevin"))
+    testData.+=((2, 2L, "Sunny"))
+
+    val t = env.fromCollection(testData).toTable(tEnv).as('a, 'b, 'c)
+
+    val result = t
+      .renameColumns('a as 'a2, 'b as 'b2)
+      .select('a2, 'b2, 'c)
+      .renameColumns("c as c2")
+      .select('a2, 'b2, 'c2)
+
+    result.addSink(new StreamITCase.StringSink[Row])
+    env.execute()
+
+    val expected = mutable.MutableList(
+      "1,1,Kevin",
+      "2,2,Sunny"
+    )
+    assertEquals(expected.sorted, StreamITCase.testResults.sorted)
+  }
+
+  @Test
+  def testDropColumns(): Unit = {
+    val env = StreamExecutionEnvironment.getExecutionEnvironment
+    val tEnv = StreamTableEnvironment.create(env)
+
+    StreamITCase.clear
+
+    val testData = new mutable.MutableList[(Int, Long, String, String)]
+    testData.+=((1, 1L, "Kevin", "Panpan"))
+    testData.+=((2, 2L, "Sunny", "Panpan"))
+
+    val t = env.fromCollection(testData).toTable(tEnv).as('a, 'b, 'c, 'd)
+
+    val result = t
+      .dropColumns('a, 'd, 'a, 'd)
+      .select('b, 'c)
+      .dropColumns("b")
+
+    result.addSink(new StreamITCase.StringSink[Row])
+    env.execute()
+
+    val expected = mutable.MutableList("Kevin", "Sunny")
+    assertEquals(expected.sorted, StreamITCase.testResults.sorted)
+  }
+
 }

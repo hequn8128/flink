@@ -330,6 +330,57 @@ class CalcTest extends TableTestBase {
 
     util.verifyTable(resultTable, expected)
   }
+
+  @Test
+  def testAddColumns(): Unit = {
+    val util = batchTestUtil()
+    val sourceTable = util.addTable[(Int, Long, String)]("MyTable", 'a, 'b, 'c)
+    val resultTable = sourceTable
+      .addColumns("concat(c, 'sunny') as kid")
+      .addColumns(true, concat('c, "_kid") as 'kid, concat('c, "kid") as 'kid)
+      .addColumns(true, concat('c, " is a kid") as 'kid)
+      .select('a, 'b, 'kid, 'c)
+      .addColumns(true, concat('c, " is a kid") as 'kid)
+      .select('a, 'b, 'c, 'kid)
+      .addColumns("'last'")
+      .addColumns('a + 2, 'b as 'b2)
+
+    val expected = unaryNode(
+      "DataSetCalc",
+      batchTableNode(0),
+      term("select", "a", "b", "c", "CONCAT(c, ' is a kid') AS kid", "'last' AS _c4",
+           "+(a, 2) AS _c5", "b AS b2")
+    )
+    util.verifyTable(resultTable, expected)
+  }
+
+  @Test
+  def testRenameColumns(): Unit = {
+    val util = batchTestUtil()
+    val sourceTable = util.addTable[(Int, Long, String)]("MyTable", 'a, 'b, 'c)
+    val resultTable = sourceTable.renameColumns('a as 'a2, 'b as 'b2).select('a2, 'b2)
+
+    val expected = unaryNode(
+      "DataSetCalc",
+      batchTableNode(0),
+      term("select", "a AS a2", "b AS b2")
+    )
+    util.verifyTable(resultTable, expected)
+  }
+
+  @Test
+  def testDropColumns(): Unit = {
+    val util = batchTestUtil()
+    val sourceTable = util.addTable[(Int, Long, String)]("MyTable", 'a, 'b, 'c)
+    val resultTable = sourceTable.dropColumns('a, 'b)
+
+    val expected = unaryNode(
+      "DataSetCalc",
+      batchTableNode(0),
+      term("select", "c")
+    )
+    util.verifyTable(resultTable, expected)
+  }
 }
 
 object CalcTest {

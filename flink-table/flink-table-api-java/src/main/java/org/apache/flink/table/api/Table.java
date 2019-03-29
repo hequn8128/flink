@@ -879,4 +879,118 @@ public interface Table {
 	 * @return An OverWindowedTable to specify the aggregations.
 	 */
 	OverWindowedTable window(OverWindow... overWindows);
+
+	/**
+	 * Performs a field add operation. Similar to an SQL SELECT statement. The field expressions
+	 * can contain complex expressions, but can not contain aggregations. It will throw an exception
+	 * if the added fields already exist.
+	 *
+	 * <p>Example:
+	 * <pre>
+	 * {@code
+	 *   tab.addColumns("a + 1 as a1, concat(b, 'sunny') as b1")
+	 * }
+	 * </pre>
+	 */
+	Table addColumns(String fields);
+
+	/**
+	 * Performs a field add operation. Similar to an SQL SELECT statement. The field expressions
+	 * can contain complex expressions, but can not contain aggregations. It will throw an exception
+	 * if the added fields already exist.
+	 *
+	 * <p>Scala Example:
+	 *
+	 * <pre>
+	 * {@code
+	 *   tab.addColumns('a + 1 as 'a1, concat('b, "sunny") as 'b1)
+	 * }
+	 * </pre>
+	 */
+	Table addColumns(Expression... fields);
+
+	/**
+	 * Performs a field add operation. Similar to an SQL SELECT statement. The field expressions
+	 * can contain complex expressions, but can not contain aggregations. Existing fields will be
+	 * replaced if {@code replaceIfExist} is true. If the added fields have duplicate field name,
+	 * then the last one is valid.
+	 *
+	 * <p>Example:
+	 * <pre>
+	 * {@code
+	 *   tab.addColumns(true, "a + 1 as a1, concat(b, 'sunny') as b1")
+	 * }
+	 * </pre>
+	 */
+	Table addColumns(boolean replaceIfExist, String fields);
+
+	/**
+	 * Performs a field add operation. Similar to an SQL SELECT statement. The field expressions
+	 * can contain complex expressions, but can not contain aggregations. Existing fields will be
+	 * replaced if {@code replaceIfExist} is true. If the added fields have duplicate field name,
+	 * then the last one is valid.
+	 *
+	 * <p>Scala Example:
+	 * <pre>
+	 * {@code
+	 *   tab.addColumns(true, 'a + 1 as 'a1, concat('b, "sunny") as 'b1)
+	 * }
+	 * </pre>
+	 */
+	Table addColumns(boolean replaceIfExist, Expression... fields);
+
+	/**
+	 * Performs a field rename operation. Similar to an field alias statement. The field expressions
+	 * should be alias expressions, and only the existing fields can be renamed.
+	 *
+	 * <p>Example:
+	 *
+	 * <pre>
+	 * {@code
+	 *   tab.renameColumns("a as a1, b as b1")
+	 * }
+	 * </pre>
+	 */
+	Table renameColumns(String fields);
+
+	/**
+	 * Performs a field rename operation. Similar to an field alias statement. The field expressions
+	 * should be alias expressions, and only the existing fields can be renamed.
+	 *
+	 * <p>Scala Example:
+	 *
+	 * <pre>
+	 * {@code
+	 *   tab.renameColumns('a as 'a1, 'b as 'b1)
+	 * }
+	 * </pre>
+	 */
+	Table renameColumns(Expression... fields);
+
+	/**
+	 * Performs a field drop operation. The field expressions
+	 * should be field reference expressions, and only existing fields can be dropped.
+	 *
+	 * <p>Example:
+	 *
+	 * <pre>
+	 * {@code
+	 *   tab.dropColumns("a, b")
+	 * }
+	 * </pre>
+	 */
+	Table dropColumns(String fields);
+
+	/**
+	 * Performs a field drop operation. The field expressions
+	 * should be field reference expressions, and only existing fields can be dropped.
+	 *
+	 * <p>Scala Example:
+	 * <pre>
+	 * {@code
+	 *   tab.dropColumns('a, 'b)
+	 * }
+	 * </pre>
+	 */
+	Table dropColumns(Expression... fields);
 }

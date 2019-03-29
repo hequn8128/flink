@@ -128,4 +128,96 @@ class CalcValidationTest extends TableTestBase {
 
     table.select('a.flatten(), 'a.flatten())
   }
+
+  @Test
+  def testAddColumns(): Unit = {
+    val util = batchTestUtil()
+    val tab = util.addTable[(Int, Long, String)]("Table3",'a, 'b, 'c)
+
+    // Test aggregates
+    try {
+      tab.addColumns('a.sum)
+      fail("TableException expected")
+    } catch {
+      case _: TableException => //ignore
+    }
+
+    // Test replace the existing column, but do not with the alias.
+    try {
+      tab.addColumns(true, concat('c, "Sunny"))
+      fail("TableException expected")
+    } catch {
+      case _: TableException => //ignore
+    }
+
+  }
+
+  @Test
+  def testRenameColumns(): Unit = {
+    val util = batchTestUtil()
+    val tab = util.addTable[(Int, Long, String)]("Table3",'a, 'b, 'c)
+
+    // Test aggregates
+    try {
+      tab.renameColumns('a.sum)
+      fail("TableException expected")
+    } catch {
+      case _: TableException => //ignore
+    }
+
+    // Test without alias case.
+    try {
+      tab.renameColumns('a)
+      fail("TableException expected")
+    } catch {
+      case _: TableException => //ignore
+    }
+
+    // Test function call
+    try {
+      tab.renameColumns('a + 1  as 'a2)
+      fail("TableException expected")
+    } catch {
+      case _: TableException => //ignore
+    }
+
+    // Test for fields that do not exist
+    try {
+      tab.renameColumns('e as 'e2)
+      fail("TableException expected")
+    } catch {
+      case _: TableException => //ignore
+    }
+  }
+
+  @Test
+  def testDropColumns(): Unit = {
+    val util = batchTestUtil()
+    val tab = util.addTable[(Int, Long, String)]("Table3",'a, 'b, 'c)
+
+    // Test aggregates
+    try {
+      tab.dropColumns('a.sum)
+      fail("TableException expected")
+    } catch {
+      case _: TableException => //ignore
+    }
+
+    // Test for fields that do not exist
+    try {
+      tab.dropColumns('e)
+      fail("TableException expected")
+    } catch {
+      case _: TableException => //ignore
+    }
+
+    // Test literal.
+    try {
+      tab.dropColumns("'last'")
+      fail("TableException expected")
+    } catch {
+      case _: TableException => //ignore
+    }
+  }
+
 }

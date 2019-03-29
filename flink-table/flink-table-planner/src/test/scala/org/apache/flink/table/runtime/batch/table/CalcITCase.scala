@@ -593,6 +593,77 @@ class CalcITCase(
     val results = filterDs.toDataSet[Row].collect()
     TestBaseUtils.compareResultAsText(results.asJava, expected)
   }
+
+  @Test
+  def testAddColumns(): Unit = {
+    val env = ExecutionEnvironment.getExecutionEnvironment
+    val tableEnv = BatchTableEnvironment.create(env, config)
+
+    val data = new mutable.MutableList[(Int, Long, String)]
+    data.+=((1, 1L, "Kevin"))
+    data.+=((2, 2L, "Sunny"))
+    val in = env.fromCollection(data).toTable(tableEnv).as('a, 'b, 'c)
+
+    val result = in
+      .addColumns("concat(c, 'sunny') as kid")
+      .addColumns(true, concat('c, "_kid") as 'kid, concat('c, "kid") as 'kid)
+      .addColumns(true, concat('c, " is a kid") as 'kid)
+      .select('a, 'b, 'kid, 'c)
+      .addColumns(true, concat('c, " is a kid") as 'kid)
+      .select('a, 'b, 'c, 'kid)
+      .addColumns("'last'")
+      .addColumns('a + 2, 'b as 'b2)
+
+    val results = result.collect()
+
+    val expected = "1,1,Kevin,Kevin is a kid,last,3,1\n" +
+      "2,2,Sunny,Sunny is a kid,last,4,2"
+    TestBaseUtils.compareResultAsText(results.asJava, expected)
+  }
+
+  @Test
+  def testRenameColumns(): Unit = {
+    val env = ExecutionEnvironment.getExecutionEnvironment
+    val tableEnv = BatchTableEnvironment.create(env, config)
+
+    val data = new mutable.MutableList[(Int, Long, String)]
+    data.+=((1, 1L, "Kevin"))
+    data.+=((2, 2L, "Sunny"))
+    val in = env.fromCollection(data).toTable(tableEnv).as('a, 'b, 'c)
+
+    val result = in
+      .renameColumns('a as 'a2, 'b as 'b2)
+      .select('a2, 'b2, 'c)
+      .renameColumns("c as c2")
+      .select('a2, 'b2, 'c2)
+
+    val results = result.collect()
+
+    val expected = "1,1,Kevin\n2,2,Sunny"
+    TestBaseUtils.compareResultAsText(results.asJava, expected)
+  }
+
+  @Test
+  def testDropColumns(): Unit = {
+    val env = ExecutionEnvironment.getExecutionEnvironment
+    val tableEnv = BatchTableEnvironment.create(env, config)
+
+    val data = new mutable.MutableList[(Int, Long, String, String)]
+    data.+=((1, 1L, "Kevin", "Panpan"))
+    data.+=((2, 2L, "Sunny", "Panpan"))
+    val in = env.fromCollection(data).toTable(tableEnv).as('a, 'b, 'c, 'd)
+
+    val result = in
+      .dropColumns('a, 'd)
+      .select('b, 'c)
+      .dropColumns("b")
+
+    val results = result.collect()
+
+    val expected = "Kevin\nSunny"
+    TestBaseUtils.compareResultAsText(results.asJava, expected)
+  }
+
 }
 
 object CalcITCase {
