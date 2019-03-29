@@ -30,7 +30,6 @@ import org.apache.flink.table.plan.logical._
 import org.apache.flink.table.util.JavaScalaConversionUtil.toScala
 
 import _root_.scala.collection.JavaConverters._
-import _root_.scala.collection.mutable.ListBuffer
 
 /**
   * Builder for [[[Operation]] tree.
@@ -57,17 +56,18 @@ class OperationTreeBuilder(private val tableEnv: TableEnvironment) {
 
   def addColumn(
       replaceIfExist: Boolean,
-      fieldLists: JList[Expression],
+      fieldLists: Seq[Expression],
       child: TableOperation)
   : TableOperation = {
 
     val childNode = child.asInstanceOf[LogicalNode]
-    val childFields = childNode.output.map(a => UnresolvedFieldReference(a.name))
+    val childFields = child.asInstanceOf[LogicalNode].output
+      .map(a => UnresolvedFieldReference(a.name).asInstanceOf[PlannerExpression])
+
+    val addFields = fieldLists.map(expressionBridge.bridge)
 
     if (replaceIfExist) {
-      val finalFields = new ListBuffer[Expression]()
-      val addFields = fieldLists.asScala.map(expressionBridge.bridge)
-      childFields.foreach(e => finalFields.append(e))
+      val finalFields = childFields.toBuffer
 
       // replace field if exist.
       addFields.foreach {
@@ -88,33 +88,28 @@ class OperationTreeBuilder(private val tableEnv: TableEnvironment) {
             s"Should add an alias to the [$e], if replaceIfExist is true.")
       }
 
-      val convertedProjectList = finalFields
-        .map(expressionBridge.bridge)
-        .flatMap(expr => flattenExpression(expr, childNode, tableEnv))
-        .map(UnresolvedAlias).toList
-
-      Project(convertedProjectList, childNode, false).validate(tableEnv)
+      val convertedProjectList = finalFields.map(UnresolvedAlias).toList
+      Project(convertedProjectList, childNode).validate(tableEnv)
     } else {
 
-      val convertedProjectList = (childFields ++ fieldLists.asScala)
-        .map(expressionBridge.bridge)
+      val convertedProjectList = (childFields ++ addFields)
         .flatMap(expr => flattenExpression(expr, childNode, tableEnv))
-        .map(UnresolvedAlias).toList
-
-      Project(convertedProjectList, childNode, false).validate(tableEnv)
+        .map(UnresolvedAlias)
+      Project(convertedProjectList, childNode).validate(tableEnv)
     }
   }
 
   def renameColumn(
-      fieldLists: JList[Expression],
+      fieldLists: Seq[Expression],
       child: TableOperation)
   : TableOperation = {
 
     val childNode = child.asInstanceOf[LogicalNode]
-    val childFields = childNode.output.map(a => UnresolvedFieldReference(a.name))
+    val finalFields = childNode.output
+      .map(a => UnresolvedFieldReference(a.name).asInstanceOf[PlannerExpression])
+      .toArray
 
-    val finalFields = childFields.map(e => e.asInstanceOf[Expression]).toArray
-    val renameFields = fieldLists.asScala.map(tableEnv.expressionBridge.bridge)
+    val renameFields = fieldLists.map(tableEnv.expressionBridge.bridge)
 
     // Rename existing fields
     renameFields.foreach {
@@ -134,23 +129,21 @@ class OperationTreeBuilder(private val tableEnv: TableEnvironment) {
           s"Unexpected field expression type [$e]. " +
             s"Renaming must add an alias to the original field, e.g., a as a1.")
     }
-    val convertedProjectList = finalFields.map(f => UnresolvedAlias(expressionBridge.bridge(f)))
 
-    Project(convertedProjectList, childNode, false).validate(tableEnv)
+    Project(finalFields.map(UnresolvedAlias), childNode).validate(tableEnv)
   }
 
   def dropColumn(
-      fieldLists: JList[Expression],
+      fieldLists: Seq[Expression],
       child: TableOperation)
   : TableOperation = {
-    val childNode = child.asInstanceOf[LogicalNode]
-    val childFields = childNode.output.map(a => UnresolvedFieldReference(a.name))
-    val dropFields = fieldLists.asScala.map(tableEnv.expressionBridge.bridge)
 
-    val finalFields = childFields.toBuffer
+    val childNode = child.asInstanceOf[LogicalNode]
+    val finalFields = childNode.output.map(a => UnresolvedFieldReference(a.name)).toBuffer
+    val dropFields = fieldLists.map(tableEnv.expressionBridge.bridge).distinct
 
     // Remove the fields which should be deleted in the final list
-    dropFields.distinct.foreach {
+    dropFields.foreach {
       case UnresolvedFieldReference(name) =>
         val index = finalFields.indexWhere(
           p => p match {
@@ -166,8 +159,7 @@ class OperationTreeBuilder(private val tableEnv: TableEnvironment) {
       case e =>
         throw new TableException(s"Unexpected field expression type [$e].")
     }
-    val convertedProjectList = finalFields.map(f => UnresolvedAlias(expressionBridge.bridge(f)))
-    Project(convertedProjectList, childNode, false).validate(tableEnv)
+    Project(finalFields.map(UnresolvedAlias), childNode).validate(tableEnv)
   }
 
   def aggregate(
