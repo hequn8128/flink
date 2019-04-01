@@ -23,15 +23,18 @@ import org.apache.calcite.rel.core._
 import org.apache.calcite.rel.logical._
 import org.apache.calcite.rel.{RelNode, RelShuttle}
 import org.apache.calcite.rex._
+import org.apache.calcite.sql.SqlAggFunction
 import org.apache.calcite.sql.`type`.SqlTypeName
 import org.apache.calcite.sql.fun.SqlStdOperatorTable
 import org.apache.calcite.sql.fun.SqlStdOperatorTable.FINAL
 import org.apache.flink.api.common.typeinfo.SqlTimeTypeInfo
 import org.apache.flink.table.api.{TableException, ValidationException}
 import org.apache.flink.table.calcite.FlinkTypeFactory.{isRowtimeIndicatorType, _}
+import org.apache.flink.table.functions.aggfunctions.LastValueNullableAggFunction
 import org.apache.flink.table.functions.sql.ProctimeSqlFunction
-import org.apache.flink.table.plan.logical.rel.{LogicalUpsertToRetraction, LogicalTemporalTableJoin, LogicalWindowAggregate}
-import org.apache.flink.table.plan.schema.{TimeIndicatorRelDataType}
+import org.apache.flink.table.functions.utils.AggSqlFunction
+import org.apache.flink.table.plan.logical.rel.{LogicalTemporalTableJoin, LogicalWindowAggregate}
+import org.apache.flink.table.plan.schema.TimeIndicatorRelDataType
 import org.apache.flink.table.validate.BasicOperatorTable
 
 import scala.collection.JavaConversions._
@@ -163,8 +166,6 @@ class RelTimeIndicatorConverter(rexBuilder: RexBuilder) extends RelShuttle {
     case temporalTableJoin: LogicalTemporalTableJoin =>
       visit(temporalTableJoin)
 
-    case upsertToRetraction: LogicalUpsertToRetraction => visit(upsertToRetraction)
-
     case _ =>
       throw new TableException(s"Unsupported logical operator: ${other.getClass.getSimpleName}")
   }
@@ -220,13 +221,6 @@ class RelTimeIndicatorConverter(rexBuilder: RexBuilder) extends RelShuttle {
     val indicesToMaterialize = gatherIndicesToMaterialize(rewrittenTemporalJoin, left, right)
 
     materializerUtils.projectAndMaterializeFields(rewrittenTemporalJoin, indicesToMaterialize)
-  }
-
-  def visit(upsertToRetraction: LogicalUpsertToRetraction): RelNode = {
-    val rewrittenInput = upsertToRetraction.getInput.accept(this)
-    val materializedInput =
-      materializerUtils.projectAndMaterializeAllFields(rewrittenInput)
-    upsertToRetraction.copy(upsertToRetraction.getTraitSet, Seq(materializedInput))
   }
 
   override def visit(correlate: LogicalCorrelate): RelNode = {
@@ -288,6 +282,28 @@ class RelTimeIndicatorConverter(rexBuilder: RexBuilder) extends RelShuttle {
     rowType.getFieldList.exists(field => isRowtimeIndicatorType(field.getType))
   }
 
+  def getNewAggSqlFunctionForTimeMaterialize(sqlAggFunction: SqlAggFunction): SqlAggFunction = {
+    sqlAggFunction match {
+      case aggSqlFunction: AggSqlFunction =>
+        aggSqlFunction.getFunction match {
+          case aggFunction: LastValueNullableAggFunction[_] =>
+            aggFunction.valueTypeInfo = FlinkTypeFactory.toTypeInfo(materializerUtils.getTimestamp)
+            AggSqlFunction(
+              aggFunction.functionIdentifier(),
+              aggFunction.toString,
+              aggFunction,
+              aggFunction.valueTypeInfo,
+              aggFunction.getAccumulatorType,
+              aggSqlFunction.typeFactory.asInstanceOf[FlinkTypeFactory],
+              requiresOver = false,
+              returnTypeNullable = false
+            )
+          case _ => sqlAggFunction
+        }
+      case _ => sqlAggFunction
+    }
+  }
+
   private def convertAggregate(aggregate: Aggregate): LogicalAggregate = {
     // visit children and update inputs
     val input = aggregate.getInput.accept(this)
@@ -328,18 +344,18 @@ class RelTimeIndicatorConverter(rexBuilder: RexBuilder) extends RelShuttle {
 
     // remove time indicator type as agg call return type
     val updatedAggCalls = aggregate.getAggCallList.map { call =>
-      val callType = if (isTimeIndicatorType(call.getType)) {
-        materializerUtils.getTimestamp
+      if (isTimeIndicatorType(call.getType)) {
+        // set result type of agg function to SqlTimeTypeInfo.TIMESTAMP
+        AggregateCall.create(
+          getNewAggSqlFunctionForTimeMaterialize(call.getAggregation),
+          call.isDistinct,
+          call.getArgList,
+          call.filterArg,
+          materializerUtils.getTimestamp,
+          call.name)
       } else {
-        call.getType
+        call
       }
-      AggregateCall.create(
-        call.getAggregation,
-        call.isDistinct,
-        call.getArgList,
-        call.filterArg,
-        callType,
-        call.name)
     }
 
     LogicalAggregate.create(

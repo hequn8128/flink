@@ -52,10 +52,11 @@ class AggSqlFunction(
     val returnType: TypeInformation[_],
     val accType: TypeInformation[_],
     typeFactory: FlinkTypeFactory,
-    requiresOver: Boolean)
+    requiresOver: Boolean,
+    returnTypeNullable: Boolean)
   extends SqlUserDefinedAggFunction(
     new SqlIdentifier(name, SqlParserPos.ZERO),
-    createReturnTypeInference(returnType, typeFactory),
+    createReturnTypeInference(returnType, typeFactory, returnTypeNullable),
     createOperandTypeInference(aggregateFunction, typeFactory),
     createOperandTypeChecker(aggregateFunction),
     // Do not need to provide a calcite aggregateFunction here. Flink aggregation function
@@ -84,7 +85,8 @@ object AggSqlFunction {
       returnType: TypeInformation[_],
       accType: TypeInformation[_],
       typeFactory: FlinkTypeFactory,
-      requiresOver: Boolean): AggSqlFunction = {
+      requiresOver: Boolean,
+      returnTypeNullable: Boolean = true): AggSqlFunction = {
 
     new AggSqlFunction(
       name,
@@ -93,7 +95,8 @@ object AggSqlFunction {
       returnType,
       accType,
       typeFactory,
-      requiresOver)
+      requiresOver,
+      returnTypeNullable)
   }
 
   private[flink] def createOperandTypeInference(
@@ -137,12 +140,13 @@ object AggSqlFunction {
 
   private[flink] def createReturnTypeInference(
       resultType: TypeInformation[_],
-      typeFactory: FlinkTypeFactory)
+      typeFactory: FlinkTypeFactory,
+      returnTypeNullable: Boolean)
   : SqlReturnTypeInference = {
 
     new SqlReturnTypeInference {
       override def inferReturnType(opBinding: SqlOperatorBinding): RelDataType = {
-        typeFactory.createTypeFromTypeInfo(resultType, isNullable = true)
+        typeFactory.createTypeFromTypeInfo(resultType, returnTypeNullable)
       }
     }
   }

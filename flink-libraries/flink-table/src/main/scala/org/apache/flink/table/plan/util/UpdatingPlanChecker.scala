@@ -54,6 +54,8 @@ object UpdatingPlanChecker {
 
     override def visit(node: RelNode, ordinal: Int, parent: RelNode): Unit = {
       node match {
+        case _: DataStreamScan =>
+          isAppendOnly = false
         case s: DataStreamRel if s.producesUpdates || s.producesRetractions =>
           isAppendOnly = false
         case _ =>
@@ -184,12 +186,6 @@ object UpdatingPlanChecker {
               lJoinKeys.zip(rJoinKeys)
             )
           }
-
-        case upsertToRetraction: DataStreamUpsertToRetraction =>
-          val uniqueKeyNames = upsertToRetraction.getRowType.getFieldNames.zipWithIndex
-            .filter(e => upsertToRetraction.keyIndexes.contains(e._2))
-            .map(_._1)
-          Some(uniqueKeyNames.map(e => (e, e)))
 
         case scan: UpsertStreamScan =>
           val uniqueKeyNames = scan.dataStreamTable.asInstanceOf[UpsertStreamTable[_]].uniqueKeys

@@ -30,9 +30,12 @@ import org.junit.Test
 import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2}
 import java.lang.{Boolean => JBool}
 
+import org.apache.flink.table.functions.aggfunctions.LastValueNullableAggFunction
+
 class FromUpsertStreamTest extends TableTestBase {
 
   private val streamUtil: StreamTableTestUtil = streamTestUtil()
+  private val lastFuncName: String = classOf[LastValueNullableAggFunction[_]].getSimpleName
 
   @Test
   def testRemoveUpsertToRetraction() = {
@@ -52,7 +55,7 @@ class FromUpsertStreamTest extends TableTestBase {
   }
 
   @Test
-  def testMaterializeTimeIndicatorAndCalcUpsertToRetractionTranspose() = {
+  def testMaterializeTimeIndicator() = {
     streamUtil.addTableFromUpsert[(Boolean, (Int, String, Long))](
       "MyTable", 'a, 'b.key, 'c, 'proctime.proctime, 'rowtime.rowtime)
 
@@ -60,36 +63,22 @@ class FromUpsertStreamTest extends TableTestBase {
 
     val expected =
       unaryNode(
-        "DataStreamUpsertToRetraction",
-        unaryNode(
-          "DataStreamCalc",
-          UpsertTableNode(0),
-          term("select", "b AS b1", "c", "PROCTIME(proctime) AS proctime1",
-            "CAST(rowtime) AS rowtime1")
-        ),
-        term("keys", "b1"),
-        term("select", "b1", "c", "proctime1", "rowtime1")
-      )
-    streamUtil.verifySql(sql, expected, true)
-  }
-
-  @Test
-  def testCalcCannotTransposeUpsertToRetraction() = {
-    streamUtil.addTableFromUpsert[(Boolean, (Int, String, Long))]("MyTable", 'a, 'b.key, 'c)
-
-    val sql = "SELECT a, c FROM MyTable"
-
-    val expected =
-      unaryNode(
         "DataStreamCalc",
         unaryNode(
-          "DataStreamUpsertToRetraction",
-          UpsertTableNode(0),
-          term("keys", "b"),
-          term("select", "a", "b", "c")
+          "DataStreamGroupAggregate",
+          unaryNode(
+            "DataStreamCalc",
+            UpsertTableNode(0),
+            term("select", "b", "a", "c", "PROCTIME(proctime) AS proctime",
+              "CAST(rowtime) AS rowtime")
+          ),
+          term("groupBy", "b"),
+          term("select", "b", s"$lastFuncName(a) AS a", s"$lastFuncName(c) AS c",
+            s"$lastFuncName(proctime) AS proctime", s"$lastFuncName(rowtime) AS rowtime")
         ),
-        term("select", "a", "c")
+        term("select", "b AS b1", "c", "proctime AS proctime1", "rowtime AS rowtime1")
       )
+
     streamUtil.verifySql(sql, expected, true)
   }
 
@@ -100,11 +89,12 @@ class FromUpsertStreamTest extends TableTestBase {
 
     val expected =
       unaryNode(
-        "DataStreamUpsertToRetraction",
+        "DataStreamCalc",
         unaryNode(
-          "DataStreamCalc",
+          "DataStreamGroupAggregate",
           UpsertTableNode(0),
-          term("select", "a", "b")
+          term("select", s"$lastFuncName(a) AS a", s"$lastFuncName(b) AS b",
+            s"$lastFuncName(c) AS c")
         ),
         term("select", "a", "b")
       )
@@ -122,14 +112,14 @@ class FromUpsertStreamTest extends TableTestBase {
 
     val expected =
       unaryNode(
-        "DataStreamUpsertToRetraction",
+        "DataStreamCalc",
         unaryNode(
-          "DataStreamCalc",
+          "DataStreamGroupAggregate",
           UpsertTableNode(0),
-          term("select", "a", "b AS bb")
+          term("groupBy", "b"),
+          term("select", "b", s"$lastFuncName(a) AS a", s"$lastFuncName(c) AS c")
         ),
-        term("keys", "bb"),
-        term("select", "a", "bb")
+        term("select", "a", "b AS bb")
       )
 
     streamUtil.verifyJavaSql(sql, expected, true)

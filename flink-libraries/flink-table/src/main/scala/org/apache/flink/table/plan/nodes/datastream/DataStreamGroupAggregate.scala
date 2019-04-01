@@ -69,6 +69,8 @@ class DataStreamGroupAggregate(
 
   def getGroupings: Array[Int] = groupings
 
+  def getNamedAggregates: Seq[CalcitePair[AggregateCall, String]] = namedAggregates
+
   override def copy(traitSet: RelTraitSet, inputs: java.util.List[RelNode]): RelNode = {
     new DataStreamGroupAggregate(
       cluster,

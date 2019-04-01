@@ -40,7 +40,8 @@ class GroupAggProcessFunction(
     private val genAggregations: GeneratedAggregationsFunction,
     private val aggregationStateType: RowTypeInfo,
     private val generateRetraction: Boolean,
-    private val queryConfig: StreamQueryConfig)
+    private val queryConfig: StreamQueryConfig,
+    private val isUpsertToRetractAgg: Boolean = false)
   extends ProcessFunctionWithCleanupState[CRow, CRow](queryConfig)
     with Compiler[GeneratedAggregations]
     with Logging {
@@ -126,10 +127,14 @@ class GroupAggProcessFunction(
       function.accumulate(accumulators, input)
       function.setAggregationResults(accumulators, newRow.row)
     } else {
-      inputCnt -= 1
-      // retract input
-      function.retract(accumulators, input)
-      function.setAggregationResults(accumulators, newRow.row)
+      if (isUpsertToRetractAgg) {
+        inputCnt = 0L
+      } else {
+        inputCnt -= 1
+        // retract input
+        function.retract(accumulators, input)
+        function.setAggregationResults(accumulators, newRow.row)
+      }
     }
 
     if (inputCnt != 0) {

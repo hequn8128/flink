@@ -19,7 +19,7 @@
 package org.apache.flink.table.plan.rules
 
 import org.apache.calcite.rel.core.RelFactories
-import org.apache.calcite.rel.rules._
+import org.apache.calcite.rel.rules.{CalcMergeRule, _}
 import org.apache.calcite.tools.{RuleSet, RuleSets}
 import org.apache.flink.table.plan.rules.common._
 import org.apache.flink.table.plan.rules.logical._
@@ -119,7 +119,6 @@ object FlinkRuleSets {
     // scan optimization
     PushProjectIntoTableSourceScanRule.INSTANCE,
     PushFilterIntoTableSourceScanRule.INSTANCE,
-    CalcUpsertToRetractionTransposeRule.INSTANCE,
 
     // unnest rule
     LogicalUnnestRule.INSTANCE,
@@ -140,8 +139,7 @@ object FlinkRuleSets {
     FlinkLogicalTableSourceScan.CONVERTER,
     FlinkLogicalTableFunctionScan.CONVERTER,
     FlinkLogicalNativeTableScan.CONVERTER,
-    FlinkLogicalMatch.CONVERTER,
-    FlinkLogicalUpsertToRetraction.CONVERTER
+    FlinkLogicalMatch.CONVERTER
   )
 
   /**
@@ -229,8 +227,7 @@ object FlinkRuleSets {
     DataStreamJoinRule.INSTANCE,
     DataStreamTemporalTableJoinRule.INSTANCE,
     StreamTableSourceScanRule.INSTANCE,
-    DataStreamMatchRule.INSTANCE,
-    DataStreamUpsertToRetractionRule.INSTANCE
+    DataStreamMatchRule.INSTANCE
   )
 
   /**
@@ -242,7 +239,8 @@ object FlinkRuleSets {
     DataStreamRetractionRules.UPDATES_AS_RETRACTION_INSTANCE,
     DataStreamRetractionRules.ACCMODE_INSTANCE,
     // remove DataStreamUpsertToRetraction under AccMode.
-    RemoveDataStreamUpsertToRetractionRule.INSTANCE
+    RemoveUpsertToRetractionRule.INSTANCE,
+    CalcMergeRule.INSTANCE
   )
 
 }

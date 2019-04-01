@@ -59,7 +59,7 @@ class DataStreamCalc(
       cluster,
       traitSet,
       child,
-      inputSchema,
+      new RowSchema(child.getRowType),
       schema,
       program,
       ruleDescription)

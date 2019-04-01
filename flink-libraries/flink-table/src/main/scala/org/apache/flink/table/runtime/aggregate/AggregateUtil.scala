@@ -40,11 +40,12 @@ import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.AggregationCodeGenerator
 import org.apache.flink.table.expressions.ExpressionUtils.isTimeIntervalLiteral
 import org.apache.flink.table.expressions._
-import org.apache.flink.table.functions.aggfunctions._
+import org.apache.flink.table.functions.aggfunctions.{LastValueNullableAggFunction, _}
 import org.apache.flink.table.functions.utils.AggSqlFunction
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils._
 import org.apache.flink.table.functions.{AggregateFunction => TableAggregateFunction}
 import org.apache.flink.table.plan.logical._
+import org.apache.flink.table.plan.rules.datastream.RemoveUpsertToRetractionRule
 import org.apache.flink.table.runtime.types.{CRow, CRowTypeInfo}
 import org.apache.flink.table.typeutils.TypeCheckUtils._
 import org.apache.flink.table.typeutils.{RowIntervalTypeInfo, TimeIntervalTypeInfo}
@@ -206,8 +207,8 @@ object AggregateUtil {
       genFunction,
       aggregationStateType,
       generateRetraction,
-      queryConfig)
-
+      queryConfig,
+      RemoveUpsertToRetractionRule.isUpsertToRetraction(namedAggregates))
   }
 
   /**

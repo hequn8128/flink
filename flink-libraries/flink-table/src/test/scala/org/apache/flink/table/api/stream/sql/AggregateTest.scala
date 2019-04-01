@@ -40,7 +40,7 @@ class AggregateTest extends TableTestBase {
 
   @Test
   def testGroupbyWithoutWindow() = {
-    val sql = "SELECT COUNT(a) FROM MyTable GROUP BY b"
+    val sql = "select b from (SELECT COUNT(b) as b, sum(a) as a FROM MyTable GROUP BY b)"
 
     val expected =
       unaryNode(

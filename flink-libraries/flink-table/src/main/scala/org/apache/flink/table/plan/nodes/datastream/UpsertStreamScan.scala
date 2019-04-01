@@ -33,8 +33,6 @@ class UpsertStreamScan(
   extends DataStreamScan(cluster, traitSet, table, schema)
   with StreamScan {
 
-  override def producesUpdates: Boolean = true
-
   override def copy(traitSet: RelTraitSet, inputs: java.util.List[RelNode]): RelNode = {
     new UpsertStreamScan(
       cluster,
