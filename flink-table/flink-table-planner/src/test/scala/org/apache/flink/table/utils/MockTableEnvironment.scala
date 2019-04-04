@@ -65,7 +65,5 @@ class MockTableEnvironment extends TableEnvironment {
 
   override def sqlUpdate(stmt: String, config: QueryConfig): Unit = ???
 
-  override def queryConfig(): QueryConfig = ???
-
   override def getConfig: TableConfig = ???
 }

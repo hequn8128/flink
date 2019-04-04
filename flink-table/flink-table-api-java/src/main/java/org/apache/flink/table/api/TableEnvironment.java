@@ -37,9 +37,9 @@ import org.apache.flink.table.sources.TableSource;
  *     <li>Registering a Table in the internal catalog</li>
  *     <li>Registering an external catalog</li>
  *     <li>Executing SQL queries</li>
+ *     <li>Registering a user-defined scalar function. For the user-defined table and aggregate
+ *     function, use the StreamTableEnvironment or BatchTableEnvironment</li>
  *     <li>Registering a user-defined (scalar, table, or aggregation) function</li>
- *     <li>Converting a DataStream or DataSet into a Table</li>
- *     <li>Holding a reference to an ExecutionEnvironment or StreamExecutionEnvironment</li>
  * </ul>
  */
 @PublicEvolving
@@ -102,7 +102,9 @@ public interface TableEnvironment {
 	 * @param fieldNames The field names to register with the {@link TableSink}.
 	 * @param fieldTypes The field types to register with the {@link TableSink}.
 	 * @param tableSink The {@link TableSink} to register.
+	 * @deprecated Use {@link #registerTableSink(String, TableSink)} instead.
 	 */
+	@Deprecated
 	void registerTableSink(String name, String[] fieldNames, TypeInformation<?>[] fieldTypes, TableSink<?> tableSink);
 
 	/**
@@ -119,7 +121,7 @@ public interface TableEnvironment {
 	 * Scans a registered table and returns the resulting {@link Table}.
 	 *
 	 * <p>A table to scan must be registered in the TableEnvironment. It can be either directly
-	 * registered as DataStream, DataSet, or Table or as member of an {@link ExternalCatalog}.
+	 * registered or be a member of an {@link ExternalCatalog}.
 	 *
 	 * <p>Examples:
 	 *
@@ -138,8 +140,8 @@ public interface TableEnvironment {
 	 * </pre>
 	 *
 	 * @param tablePath The path of the table to scan.
-	 * @throws TableException if no table is found using the given table path.
 	 * @return The resulting {@link Table}.
+	 * @throws TableException if no table is found using the given table path.
 	 */
 	Table scan(String... tablePath) throws TableException;
 
@@ -151,7 +153,7 @@ public interface TableEnvironment {
 	 * the desired configuration.
 	 *
 	 * <p>The following example shows how to read from a connector using a JSON format and
-	 * registering a table source as "MyTable":
+	 * register a table source as "MyTable":
 	 *
 	 * <pre>
 	 * {@code
@@ -177,14 +179,14 @@ public interface TableEnvironment {
 	TableDescriptor connect(ConnectorDescriptor connectorDescriptor);
 
 	/**
-	 * Gets the names of all tables registered in this environment.
+	 * Gets the names of all tables registered directly in this environment.
 	 *
 	 * @return A list of the names of all registered tables.
 	 */
 	String[] listTables();
 
 	/**
-	 * Gets the names of all functions registered in this environment.
+	 * Gets the names of all user defined functions registered in this environment.
 	 */
 	String[] listUserDefinedFunctions();
 
@@ -203,7 +205,9 @@ public interface TableEnvironment {
 	 * @param statement Partial or slightly incorrect SQL statement
 	 * @param position cursor position
 	 * @return completion hints that fit at the current cursor position
+	 * @deprecated Will be removed in the next release
 	 */
+	@Deprecated
 	String[] getCompletionHints(String statement, int position);
 
 	/**
@@ -239,8 +243,8 @@ public interface TableEnvironment {
 	 *
 	 * <pre>
 	 * {@code
-	 *   // register the table sink into which the result is inserted.
-	 *   tEnv.registerTableSink("sinkTable", fieldNames, fieldsTypes, tableSink);
+	 *   // register the configured table sink into which the result is inserted.
+	 *   tEnv.registerTableSink("sinkTable", configuredSink);
 	 *   Table sourceTable = ...
 	 *   String tableName = sourceTable.toString();
 	 *   // sourceTable is not registered to the table environment
@@ -263,8 +267,8 @@ public interface TableEnvironment {
 	 *
 	 * <pre>
 	 * {@code
-	 *   // register the table sink into which the result is inserted.
-	 *   tEnv.registerTableSink("sinkTable", fieldNames, fieldsTypes, tableSink);
+	 *   // register the configured table sink into which the result is inserted.
+	 *   tEnv.registerTableSink("sinkTable", configuredSink);
 	 *   Table sourceTable = ...
 	 *   String tableName = sourceTable.toString();
 	 *   // sourceTable is not registered to the table environment
@@ -278,12 +282,7 @@ public interface TableEnvironment {
 	void sqlUpdate(String stmt, QueryConfig config);
 
 	/**
-	 * Returns the {@link QueryConfig} depends on the concrete type of this TableEnvironment.
-	 */
-	QueryConfig queryConfig();
-
-	/**
-	 * Returns the table config to define the runtime behavior of the Table API.
+	 * Returns the table config that defines the runtime behavior of the Table API.
 	 */
 	TableConfig getConfig();
 }

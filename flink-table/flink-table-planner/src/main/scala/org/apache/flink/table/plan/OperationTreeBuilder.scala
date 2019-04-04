@@ -34,7 +34,7 @@ import _root_.scala.collection.JavaConverters._
 /**
   * Builder for [[[Operation]] tree.
   */
-class OperationTreeBuilder(private val tableEnv: TableEnvironment) {
+class OperationTreeBuilder(private val tableEnv: TableEnvImpl) {
 
   private val expressionBridge: ExpressionBridge[PlannerExpression] = tableEnv.expressionBridge
 

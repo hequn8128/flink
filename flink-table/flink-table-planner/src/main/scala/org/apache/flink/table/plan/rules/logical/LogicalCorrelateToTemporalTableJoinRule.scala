@@ -26,7 +26,7 @@ import org.apache.calcite.rel.logical.LogicalCorrelate
 import org.apache.calcite.rex._
 import org.apache.flink.table.api.{Types, ValidationException}
 import org.apache.flink.table.calcite.FlinkTypeFactory.{isProctimeIndicatorType, isTimeIndicatorType}
-import org.apache.flink.table.expressions._
+import org.apache.flink.table.expressions.{PlannerResolvedFieldReference, _}
 import org.apache.flink.table.functions.utils.TableSqlFunction
 import org.apache.flink.table.functions.{TemporalTableFunction, TemporalTableFunctionImpl}
 import org.apache.flink.table.operations.TableOperation
@@ -57,7 +57,7 @@ class LogicalCorrelateToTemporalTableJoinRule
 
   private def extractNameFromPrimaryKeyAttribute(expression: PlannerExpression): String = {
     expression match {
-      case ResolvedFieldReference(name, _) =>
+      case PlannerResolvedFieldReference(name, _) =>
         name
       case _ => throw new ValidationException(
         s"Unsupported expression [$expression] as primary key. " +

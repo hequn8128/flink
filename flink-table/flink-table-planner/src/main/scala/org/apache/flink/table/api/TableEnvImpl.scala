@@ -116,7 +116,7 @@ abstract class TableEnvImpl(val config: TableConfig) extends TableEnvironment {
 
   def getConfig: TableConfig = config
 
-  private[flink] override def queryConfig: QueryConfig = this match {
+  private[flink] def queryConfig: QueryConfig = this match {
     case _: BatchTableEnvImpl => new BatchQueryConfig
     case _: StreamTableEnvImpl => new StreamQueryConfig
     case _ => null
