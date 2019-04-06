@@ -57,7 +57,7 @@ public abstract class ConnectTableDescriptor<D extends ConnectTableDescriptor<D>
 	@Override
 	public void registerTableSource(String name) {
 		Preconditions.checkNotNull(name);
-		TableSource<?> tableSource = TableFactoryUtil.findAndCreateTableSource(tableEnv, this);
+		TableSource<?> tableSource = TableFactoryUtil.findAndCreateTableSource(this);
 		tableEnv.registerTableSource(name, tableSource);
 	}
 
@@ -70,7 +70,7 @@ public abstract class ConnectTableDescriptor<D extends ConnectTableDescriptor<D>
 	@Override
 	public void registerTableSink(String name) {
 		Preconditions.checkNotNull(name);
-		TableSink<?> tableSink = TableFactoryUtil.findAndCreateTableSink(tableEnv, this);
+		TableSink<?> tableSink = TableFactoryUtil.findAndCreateTableSink(this);
 		tableEnv.registerTableSink(name, tableSink);
 	}
 
