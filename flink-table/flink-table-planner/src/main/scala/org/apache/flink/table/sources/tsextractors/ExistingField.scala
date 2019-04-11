@@ -53,7 +53,7 @@ final class ExistingField(val field: String) extends TimestampExtractor {
     * into a rowtime attribute.
     */
   override def getExpression(fieldAccesses: Array[ResolvedFieldReference]): PlannerExpression = {
-    val fieldAccess: PlannerExpression = fieldAccesses(0)
+    val fieldAccess: PlannerExpression = fieldAccesses(0).asInstanceOf[PlannerExpression]
 
     fieldAccess.resultType match {
       case Types.LONG =>

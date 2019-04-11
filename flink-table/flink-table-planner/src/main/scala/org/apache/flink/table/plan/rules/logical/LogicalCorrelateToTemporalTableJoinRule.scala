@@ -45,7 +45,7 @@ class LogicalCorrelateToTemporalTableJoinRule
 
   private def extractNameFromTimeAttribute(timeAttribute: PlannerExpression): String = {
     timeAttribute match {
-      case ResolvedFieldReference(name, _)
+      case PlannerResolvedFieldReference(name, _)
         if timeAttribute.resultType == Types.LONG ||
           timeAttribute.resultType == Types.SQL_TIMESTAMP ||
           isTimeIndicatorType(timeAttribute.resultType) =>
@@ -57,7 +57,7 @@ class LogicalCorrelateToTemporalTableJoinRule
 
   private def extractNameFromPrimaryKeyAttribute(expression: PlannerExpression): String = {
     expression match {
-      case ResolvedFieldReference(name, _) =>
+      case PlannerResolvedFieldReference(name, _) =>
         name
       case _ => throw new ValidationException(
         s"Unsupported expression [$expression] as primary key. " +

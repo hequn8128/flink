@@ -16,20 +16,17 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.descriptors
+package org.apache.flink.table.sources.wmstrategies;
+
+import org.apache.flink.annotation.PublicEvolving;
 
 /**
-  * A trait for descriptors that allow to define a format and schema.
-  */
-trait SchematicDescriptor[D <: SchematicDescriptor[D]] extends Descriptor {
+ * Provides a strategy to generate watermarks for a rowtime attribute.
+ *
+ * <p>A watermark strategy is either a {@code PeriodicWatermarkAssigner} or
+ * {@code PunctuatedWatermarkAssigner}.
+ */
+@PublicEvolving
+public abstract class WatermarkStrategy implements java.io.Serializable {
 
-  /**
-    * Specifies the format that defines how to read data from a connector.
-    */
-  def withFormat(format: FormatDescriptor): D
-
-  /**
-    * Specifies the resulting table schema.
-    */
-  def withSchema(schema: Schema): D
 }
