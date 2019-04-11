@@ -28,12 +28,12 @@ import org.junit.Test
 
 import scala.collection.JavaConverters._
 
-class CalciteConfigBuilderTest {
+class DefaultPlannerConfigBuilderTest {
 
   @Test
   def testDefaultRules(): Unit = {
 
-    val cc: CalciteConfig = new CalciteConfigBuilder().build()
+    val cc: DefaultPlannerConfig = new DefaultPlannerConfigBuilder().build()
 
     assertFalse(cc.replacesNormRuleSet)
     assertFalse(cc.getNormRuleSet.isDefined)
@@ -51,7 +51,7 @@ class CalciteConfigBuilderTest {
   @Test
   def testRules(): Unit = {
 
-    val cc: CalciteConfig = new CalciteConfigBuilder()
+    val cc: DefaultPlannerConfig = new DefaultPlannerConfigBuilder()
       .addNormRuleSet(RuleSets.ofList(ReduceExpressionsRule.FILTER_INSTANCE))
       .replaceLogicalOptRuleSet(RuleSets.ofList(FilterMergeRule.INSTANCE))
       .replacePhysicalOptRuleSet(RuleSets.ofList(FilterMergeRule.INSTANCE))
@@ -74,7 +74,7 @@ class CalciteConfigBuilderTest {
   @Test
   def testReplaceNormalizationRules(): Unit = {
 
-    val cc: CalciteConfig = new CalciteConfigBuilder()
+    val cc: DefaultPlannerConfig = new DefaultPlannerConfigBuilder()
       .replaceNormRuleSet(RuleSets.ofList(ReduceExpressionsRule.FILTER_INSTANCE))
       .build()
 
@@ -88,7 +88,7 @@ class CalciteConfigBuilderTest {
   @Test
   def testReplaceNormalizationAddRules(): Unit = {
 
-    val cc: CalciteConfig = new CalciteConfigBuilder()
+    val cc: DefaultPlannerConfig = new DefaultPlannerConfigBuilder()
       .replaceNormRuleSet(RuleSets.ofList(ReduceExpressionsRule.FILTER_INSTANCE))
       .addNormRuleSet(RuleSets.ofList(ReduceExpressionsRule.PROJECT_INSTANCE))
       .build()
@@ -104,7 +104,7 @@ class CalciteConfigBuilderTest {
   @Test
   def testAddNormalizationRules(): Unit = {
 
-    val cc: CalciteConfig = new CalciteConfigBuilder()
+    val cc: DefaultPlannerConfig = new DefaultPlannerConfigBuilder()
       .addNormRuleSet(RuleSets.ofList(ReduceExpressionsRule.FILTER_INSTANCE))
       .build()
 
@@ -118,7 +118,7 @@ class CalciteConfigBuilderTest {
   @Test
   def testAddAddNormalizationRules(): Unit = {
 
-    val cc: CalciteConfig = new CalciteConfigBuilder()
+    val cc: DefaultPlannerConfig = new DefaultPlannerConfigBuilder()
       .addNormRuleSet(RuleSets.ofList(ReduceExpressionsRule.FILTER_INSTANCE))
       .addNormRuleSet(RuleSets.ofList(ReduceExpressionsRule.PROJECT_INSTANCE,
         ReduceExpressionsRule.CALC_INSTANCE))
@@ -136,7 +136,7 @@ class CalciteConfigBuilderTest {
   @Test
   def testReplaceLogicalOptimizationRules(): Unit = {
 
-    val cc: CalciteConfig = new CalciteConfigBuilder()
+    val cc: DefaultPlannerConfig = new DefaultPlannerConfigBuilder()
         .replaceLogicalOptRuleSet(RuleSets.ofList(FilterMergeRule.INSTANCE))
         .build()
 
@@ -150,7 +150,7 @@ class CalciteConfigBuilderTest {
   @Test
   def testReplaceLogicalOptimizationAddRules(): Unit = {
 
-    val cc: CalciteConfig = new CalciteConfigBuilder()
+    val cc: DefaultPlannerConfig = new DefaultPlannerConfigBuilder()
         .replaceLogicalOptRuleSet(RuleSets.ofList(FilterMergeRule.INSTANCE))
         .addLogicalOptRuleSet(RuleSets.ofList(CalcMergeRule.INSTANCE, CalcSplitRule.INSTANCE))
         .build()
@@ -167,7 +167,7 @@ class CalciteConfigBuilderTest {
   @Test
   def testAddLogicalOptimizationRules(): Unit = {
 
-    val cc: CalciteConfig = new CalciteConfigBuilder()
+    val cc: DefaultPlannerConfig = new DefaultPlannerConfigBuilder()
         .addLogicalOptRuleSet(RuleSets.ofList(FilterMergeRule.INSTANCE))
         .addLogicalOptRuleSet(RuleSets.ofList(CalcMergeRule.INSTANCE, CalcSplitRule.INSTANCE))
         .build()
@@ -184,7 +184,7 @@ class CalciteConfigBuilderTest {
   @Test
   def testReplacePhysicalOptimizationRules(): Unit = {
 
-    val cc: CalciteConfig = new CalciteConfigBuilder()
+    val cc: DefaultPlannerConfig = new DefaultPlannerConfigBuilder()
         .replacePhysicalOptRuleSet(RuleSets.ofList(FilterMergeRule.INSTANCE))
         .build()
 
@@ -198,7 +198,7 @@ class CalciteConfigBuilderTest {
   @Test
   def testReplacePhysicalOptimizationAddRules(): Unit = {
 
-    val cc: CalciteConfig = new CalciteConfigBuilder()
+    val cc: DefaultPlannerConfig = new DefaultPlannerConfigBuilder()
         .replacePhysicalOptRuleSet(RuleSets.ofList(FilterMergeRule.INSTANCE))
         .addPhysicalOptRuleSet(RuleSets.ofList(CalcMergeRule.INSTANCE, CalcSplitRule.INSTANCE))
         .build()
@@ -215,7 +215,7 @@ class CalciteConfigBuilderTest {
   @Test
   def testAddPhysicalOptimizationRules(): Unit = {
 
-    val cc: CalciteConfig = new CalciteConfigBuilder()
+    val cc: DefaultPlannerConfig = new DefaultPlannerConfigBuilder()
         .addPhysicalOptRuleSet(RuleSets.ofList(FilterMergeRule.INSTANCE))
         .addPhysicalOptRuleSet(RuleSets.ofList(CalcMergeRule.INSTANCE, CalcSplitRule.INSTANCE))
         .build()
@@ -232,7 +232,7 @@ class CalciteConfigBuilderTest {
   @Test
   def testReplaceDecorationRules(): Unit = {
 
-    val cc: CalciteConfig = new CalciteConfigBuilder()
+    val cc: DefaultPlannerConfig = new DefaultPlannerConfigBuilder()
       .replaceDecoRuleSet(RuleSets.ofList(DataStreamRetractionRules.DEFAULT_RETRACTION_INSTANCE))
       .build()
 
@@ -246,7 +246,7 @@ class CalciteConfigBuilderTest {
   @Test
   def testReplaceDecorationAddRules(): Unit = {
 
-    val cc: CalciteConfig = new CalciteConfigBuilder()
+    val cc: DefaultPlannerConfig = new DefaultPlannerConfigBuilder()
       .replaceDecoRuleSet(RuleSets.ofList(DataStreamRetractionRules.DEFAULT_RETRACTION_INSTANCE))
       .addDecoRuleSet(RuleSets.ofList(DataStreamRetractionRules.UPDATES_AS_RETRACTION_INSTANCE))
       .build()
@@ -262,7 +262,7 @@ class CalciteConfigBuilderTest {
   @Test
   def testAddDecorationRules(): Unit = {
 
-    val cc: CalciteConfig = new CalciteConfigBuilder()
+    val cc: DefaultPlannerConfig = new DefaultPlannerConfigBuilder()
       .addDecoRuleSet(RuleSets.ofList(DataStreamRetractionRules.DEFAULT_RETRACTION_INSTANCE))
       .build()
 
@@ -276,7 +276,7 @@ class CalciteConfigBuilderTest {
   @Test
   def testAddAddDecorationRules(): Unit = {
 
-    val cc: CalciteConfig = new CalciteConfigBuilder()
+    val cc: DefaultPlannerConfig = new DefaultPlannerConfigBuilder()
       .addDecoRuleSet(RuleSets.ofList(DataStreamRetractionRules.DEFAULT_RETRACTION_INSTANCE))
       .addDecoRuleSet(RuleSets.ofList(DataStreamRetractionRules.UPDATES_AS_RETRACTION_INSTANCE,
                                       DataStreamRetractionRules.ACCMODE_INSTANCE))
@@ -294,7 +294,7 @@ class CalciteConfigBuilderTest {
   @Test
   def testDefaultOperatorTable(): Unit = {
 
-    val cc: CalciteConfig = new CalciteConfigBuilder()
+    val cc: DefaultPlannerConfig = new DefaultPlannerConfigBuilder()
       .build()
 
     assertEquals(false, cc.replacesSqlOperatorTable)
@@ -306,7 +306,7 @@ class CalciteConfigBuilderTest {
 
     val oracleTable = new OracleSqlOperatorTable
 
-    val cc: CalciteConfig = new CalciteConfigBuilder()
+    val cc: DefaultPlannerConfig = new DefaultPlannerConfigBuilder()
       .replaceSqlOperatorTable(oracleTable)
       .build()
 
@@ -328,7 +328,7 @@ class CalciteConfigBuilderTest {
     val oracleTable = new OracleSqlOperatorTable
     val stdTable = new SqlStdOperatorTable
 
-    val cc: CalciteConfig = new CalciteConfigBuilder()
+    val cc: DefaultPlannerConfig = new DefaultPlannerConfigBuilder()
       .replaceSqlOperatorTable(oracleTable)
       .addSqlOperatorTable(stdTable)
       .build()
@@ -355,7 +355,7 @@ class CalciteConfigBuilderTest {
 
     val oracleTable = new OracleSqlOperatorTable
 
-    val cc: CalciteConfig = new CalciteConfigBuilder()
+    val cc: DefaultPlannerConfig = new DefaultPlannerConfigBuilder()
       .addSqlOperatorTable(oracleTable)
       .build()
 
@@ -377,7 +377,7 @@ class CalciteConfigBuilderTest {
     val oracleTable = new OracleSqlOperatorTable
     val stdTable = new SqlStdOperatorTable
 
-    val cc: CalciteConfig = new CalciteConfigBuilder()
+    val cc: DefaultPlannerConfig = new DefaultPlannerConfigBuilder()
       .addSqlOperatorTable(oracleTable)
       .addSqlOperatorTable(stdTable)
       .build()
@@ -407,7 +407,7 @@ class CalciteConfigBuilderTest {
       .withInSubQueryThreshold(Integer.MAX_VALUE)
       .build()
 
-    val cc: CalciteConfig = new CalciteConfigBuilder()
+    val cc: DefaultPlannerConfig = new DefaultPlannerConfigBuilder()
       .replaceSqlToRelConverterConfig(config)
       .build()
 

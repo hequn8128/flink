@@ -76,6 +76,11 @@ import _root_.scala.collection.mutable
   */
 abstract class TableEnvironment(val config: TableConfig) {
 
+  // Init PlannerConfig with the DefaultPlannerConfig
+  if (config.getPlannerConfig == null) {
+    config.setPlannerConfig(DefaultPlannerConfig.createBuilder().build())
+  }
+
   // the catalog to hold all registered and translated tables
   // we disable caching here to prevent side effects
   private val internalSchema: CalciteSchema = CalciteSchema.createRootSchema(false, false)
@@ -131,8 +136,8 @@ abstract class TableEnvironment(val config: TableConfig) {
     * Returns the SqlToRelConverter config.
     */
   protected def getSqlToRelConverterConfig: SqlToRelConverter.Config = {
-    val calciteConfig = config.getCalciteConfig
-    calciteConfig.getSqlToRelConverterConfig match {
+    val plannerConfig = config.getPlannerConfig.asInstanceOf[DefaultPlannerConfig]
+    plannerConfig.getSqlToRelConverterConfig match {
 
       case None =>
         SqlToRelConverter.configBuilder()
@@ -150,14 +155,14 @@ abstract class TableEnvironment(val config: TableConfig) {
     * Returns the operator table for this environment including a custom Calcite configuration.
     */
   protected def getSqlOperatorTable: SqlOperatorTable = {
-    val calciteConfig = config.getCalciteConfig
-    calciteConfig.getSqlOperatorTable match {
+    val plannerConfig = config.getPlannerConfig.asInstanceOf[DefaultPlannerConfig]
+    plannerConfig.getSqlOperatorTable match {
 
       case None =>
         functionCatalog.getSqlOperatorTable
 
       case Some(table) =>
-        if (calciteConfig.replacesSqlOperatorTable) {
+        if (plannerConfig.replacesSqlOperatorTable) {
           table
         } else {
           ChainedSqlOperatorTable.of(functionCatalog.getSqlOperatorTable, table)
@@ -170,14 +175,14 @@ abstract class TableEnvironment(val config: TableConfig) {
     * including a custom RuleSet configuration.
     */
   protected def getNormRuleSet: RuleSet = {
-    val calciteConfig = config.getCalciteConfig
-    calciteConfig.getNormRuleSet match {
+    val plannerConfig = config.getPlannerConfig.asInstanceOf[DefaultPlannerConfig]
+    plannerConfig.getNormRuleSet match {
 
       case None =>
         getBuiltInNormRuleSet
 
       case Some(ruleSet) =>
-        if (calciteConfig.replacesNormRuleSet) {
+        if (plannerConfig.replacesNormRuleSet) {
           ruleSet
         } else {
           RuleSets.ofList((getBuiltInNormRuleSet.asScala ++ ruleSet.asScala).asJava)
@@ -190,14 +195,14 @@ abstract class TableEnvironment(val config: TableConfig) {
     * including a custom RuleSet configuration.
     */
   protected def getLogicalOptRuleSet: RuleSet = {
-    val calciteConfig = config.getCalciteConfig
-    calciteConfig.getLogicalOptRuleSet match {
+    val plannerConfig = config.getPlannerConfig.asInstanceOf[DefaultPlannerConfig]
+    plannerConfig.getLogicalOptRuleSet match {
 
       case None =>
         getBuiltInLogicalOptRuleSet
 
       case Some(ruleSet) =>
-        if (calciteConfig.replacesLogicalOptRuleSet) {
+        if (plannerConfig.replacesLogicalOptRuleSet) {
           ruleSet
         } else {
           RuleSets.ofList((getBuiltInLogicalOptRuleSet.asScala ++ ruleSet.asScala).asJava)
@@ -210,14 +215,14 @@ abstract class TableEnvironment(val config: TableConfig) {
     * including a custom RuleSet configuration.
     */
   protected def getPhysicalOptRuleSet: RuleSet = {
-    val calciteConfig = config.getCalciteConfig
-    calciteConfig.getPhysicalOptRuleSet match {
+    val plannerConfig = config.getPlannerConfig.asInstanceOf[DefaultPlannerConfig]
+    plannerConfig.getPhysicalOptRuleSet match {
 
       case None =>
         getBuiltInPhysicalOptRuleSet
 
       case Some(ruleSet) =>
-        if (calciteConfig.replacesPhysicalOptRuleSet) {
+        if (plannerConfig.replacesPhysicalOptRuleSet) {
           ruleSet
         } else {
           RuleSets.ofList((getBuiltInPhysicalOptRuleSet.asScala ++ ruleSet.asScala).asJava)
@@ -229,8 +234,8 @@ abstract class TableEnvironment(val config: TableConfig) {
     * Returns the SQL parser config for this environment including a custom Calcite configuration.
     */
   protected def getSqlParserConfig: SqlParser.Config = {
-    val calciteConfig = config.getCalciteConfig
-    calciteConfig.getSqlParserConfig match {
+    val plannerConfig = config.getPlannerConfig.asInstanceOf[DefaultPlannerConfig]
+    plannerConfig.getSqlParserConfig match {
 
       case None =>
         // we use Java lex because back ticks are easier than double quotes in programming
