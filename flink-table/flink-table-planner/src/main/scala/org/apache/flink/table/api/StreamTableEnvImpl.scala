@@ -66,13 +66,13 @@ import _root_.scala.collection.JavaConverters._
   * - convert a [[Table]] into a [[DataStream]]
   *
   * @param execEnv The [[StreamExecutionEnvironment]] which is wrapped in this
-  *                [[StreamTableEnvironment]].
-  * @param config The [[TableConfig]] of this [[StreamTableEnvironment]].
+  *                [[StreamTableEnvImpl]].
+  * @param config  The [[TableConfig]] of this [[StreamTableEnvImpl]].
   */
-abstract class StreamTableEnvironment(
+abstract class StreamTableEnvImpl(
     private[flink] val execEnv: StreamExecutionEnvironment,
     config: TableConfig)
-  extends TableEnvironment(config) {
+  extends TableEnvImpl(config) {
 
   // a counter for unique table names
   private val nameCntr: AtomicInteger = new AtomicInteger(0)
@@ -102,7 +102,7 @@ abstract class StreamTableEnvironment(
     "_DataStreamTable_" + nameCntr.getAndIncrement()
 
   /**
-    * Registers an internal [[StreamTableSource]] in this [[TableEnvironment]]'s catalog without
+    * Registers an internal [[StreamTableSource]] in this [[TableEnvImpl]]'s catalog without
     * name checking. Registered tables can be referenced in SQL queries.
     *
     * @param name        The name under which the [[TableSource]] is registered.
@@ -159,48 +159,13 @@ abstract class StreamTableEnvironment(
     }
   }
 
-  /**
-    * Creates a table source and/or table sink from a descriptor.
-    *
-    * Descriptors allow for declaring the communication to external systems in an
-    * implementation-agnostic way. The classpath is scanned for suitable table factories that match
-    * the desired configuration.
-    *
-    * The following example shows how to read from a Kafka connector using a JSON format and
-    * registering a table source "MyTable" in append mode:
-    *
-    * {{{
-    *
-    * tableEnv
-    *   .connect(
-    *     new Kafka()
-    *       .version("0.11")
-    *       .topic("clicks")
-    *       .property("zookeeper.connect", "localhost")
-    *       .property("group.id", "click-group")
-    *       .startFromEarliest())
-    *   .withFormat(
-    *     new Json()
-    *       .jsonSchema("{...}")
-    *       .failOnMissingField(false))
-    *   .withSchema(
-    *     new Schema()
-    *       .field("user-name", "VARCHAR").from("u_name")
-    *       .field("count", "DECIMAL")
-    *       .field("proc-time", "TIMESTAMP").proctime())
-    *   .inAppendMode()
-    *   .registerSource("MyTable")
-    * }}}
-    *
-    * @param connectorDescriptor connector descriptor describing the external system
-    */
   def connect(connectorDescriptor: ConnectorDescriptor): StreamTableDescriptor = {
     new StreamTableDescriptor(this, connectorDescriptor)
   }
 
   /**
     * Registers an external [[TableSink]] with given field names and types in this
-    * [[TableEnvironment]]'s catalog.
+    * [[TableEnvImpl]]'s catalog.
     * Registered sink tables can be referenced in SQL DML statements.
     *
     * Example:
@@ -243,7 +208,7 @@ abstract class StreamTableEnvironment(
 
   /**
     * Registers an external [[TableSink]] with already configured field names and field types in
-    * this [[TableEnvironment]]'s catalog.
+    * this [[TableEnvImpl]]'s catalog.
     * Registered sink tables can be referenced in SQL DML statements.
     *
     * @param name The name under which the [[TableSink]] is registered.
@@ -506,7 +471,7 @@ abstract class StreamTableEnvironment(
   }
 
   /**
-    * Registers a [[DataStream]] as a table under a given name in the [[TableEnvironment]]'s
+    * Registers a [[DataStream]] as a table under a given name in the [[TableEnvImpl]]'s
     * catalog.
     *
     * @param name The name under which the table is registered in the catalog.
@@ -528,7 +493,7 @@ abstract class StreamTableEnvironment(
 
   /**
     * Registers a [[DataStream]] as a table under a given name with field names as specified by
-    * field expressions in the [[TableEnvironment]]'s catalog.
+    * field expressions in the [[TableEnvImpl]]'s catalog.
     *
     * @param name The name under which the table is registered in the catalog.
     * @param dataStream The [[DataStream]] to register as table in the catalog.
@@ -769,14 +734,14 @@ abstract class StreamTableEnvironment(
     * including a custom RuleSet configuration.
     */
   protected def getDecoRuleSet: RuleSet = {
-    val plannerConfig = config.getPlannerConfig.asInstanceOf[DefaultPlannerConfig]
-    plannerConfig.getDecoRuleSet match {
+    val calciteConfig = config.getPlannerConfig.asInstanceOf[DefaultPlannerConfig]
+    calciteConfig.getDecoRuleSet match {
 
       case None =>
         getBuiltInDecoRuleSet
 
       case Some(ruleSet) =>
-        if (plannerConfig.replacesDecoRuleSet) {
+        if (calciteConfig.replacesDecoRuleSet) {
           ruleSet
         } else {
           RuleSets.ofList((getBuiltInDecoRuleSet.asScala ++ ruleSet.asScala).asJava)
