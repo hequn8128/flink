@@ -245,9 +245,10 @@ object FlinkRuleSets {
   val DATASTREAM_DECO_RULES2: RuleSet = RuleSets.ofList(
     // retraction rules
     SetScanRule.INSTANCE,
-
+    SetCalcRule.INSTANCE,
 
     // convert rules
-    ConvertScanToDecorateRelNodeRule.INSTANCE
+    ConvertScanToDecorateRelNodeRule.INSTANCE,
+    ConvertCalcToDecorateRelNodeRule.INSTANCE
   )
 }

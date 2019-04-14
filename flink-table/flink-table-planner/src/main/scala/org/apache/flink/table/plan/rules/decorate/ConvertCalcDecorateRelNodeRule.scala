@@ -26,39 +26,35 @@ import org.apache.flink.table.plan.nodes.FlinkConventions
 import org.apache.flink.table.plan.nodes.datastream._
 import org.apache.flink.table.plan.nodes.decorate.{DecorateScanNode, DecorateSingleRelNode}
 
-class ConvertToDecorateRelNodeRule extends ConverterRule(
-  classOf[DataStreamRel],
+class ConvertCalcToDecorateRelNodeRule extends ConverterRule(
+  classOf[DataStreamCalc],
   FlinkConventions.DATASTREAM,
   FlinkConventions.DECORATE,
-  "ConvertToDecorateRelNodeRule") {
+  "ConvertCalcToDecorateRelNodeRule") {
 
-  // only convert [[DataStreamRel]] that the input output mode are decided.
   override def matches(call: RelOptRuleCall): Boolean = {
-    val dataStreamRel = call.rel(0).asInstanceOf[DataStreamRel]
-    val xx = dataStreamRel.getDecidedInputOutputMode.isDefined &&
-      !dataStreamRel.isInstanceOf[DataStreamScan]
-    xx
+    val scan = call.rel(0).asInstanceOf[DataStreamCalc]
+    scan.inOutUpdateMode.isDefined
   }
 
   def convert(rel: RelNode): RelNode = {
-    val dataStreamRel = rel.asInstanceOf[DataStreamRel]
-    val traitSet = dataStreamRel.getTraitSet.replace(FlinkConventions.DECORATE)
-
-    // todo: need to consider multi input
-    val convInput: RelNode = RelOptRule.convert(dataStreamRel.getInput(0), FlinkConventions.DATASTREAM)
+    val calc = rel.asInstanceOf[DataStreamCalc]
+    val traitSet = calc.getTraitSet.replace(FlinkConventions.DECORATE)
+    val convInput: RelNode = RelOptRule.convert(calc.getInput, FlinkConventions.DATASTREAM)
 
     new DecorateSingleRelNode(
-      dataStreamRel.getCluster,
+      calc.getCluster,
       traitSet,
       convInput,
-      dataStreamRel
+      calc
     )
   }
-
 }
 
-object ConvertToDecorateRelNodeRule {
-  val INSTANCE = new ConvertToDecorateRelNodeRule
+object ConvertCalcToDecorateRelNodeRule {
+  val INSTANCE = new ConvertCalcToDecorateRelNodeRule
 }
+
+
 
 

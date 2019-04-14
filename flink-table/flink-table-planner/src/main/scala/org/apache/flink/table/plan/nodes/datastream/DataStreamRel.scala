@@ -61,4 +61,6 @@ trait DataStreamRel extends FlinkRelNode {
   def producesRetractions: Boolean = false
 
   def supportedInputOutputMode: Seq[(UpdateMode, UpdateMode)] = Seq()
+
+  def getDecidedInputOutputMode: Option[(UpdateMode, UpdateMode)] = None
 }

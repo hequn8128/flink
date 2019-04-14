@@ -49,7 +49,7 @@ class DataStreamScan(
 
   override def computeSelfCost(planner: RelOptPlanner, mq: RelMetadataQuery): RelOptCost = {
     if (inOutUpdateMode.isDefined) {
-      super.computeSelfCost(planner, mq).multiplyBy(0.5)
+      super.computeSelfCost(planner, mq).multiplyBy(0.8)
     } else {
       super.computeSelfCost(planner, mq)
     }
@@ -62,6 +62,11 @@ class DataStreamScan(
   override def supportedInputOutputMode: Seq[(UpdateMode, UpdateMode)] = {
     Seq((null, UpdateMode.Append))
   }
+
+  override def getDecidedInputOutputMode: Option[(UpdateMode, UpdateMode)] = {
+    inOutUpdateMode
+  }
+
 
   val dataStreamTable: DataStreamTable[Any] = getTable.unwrap(classOf[DataStreamTable[Any]])
 

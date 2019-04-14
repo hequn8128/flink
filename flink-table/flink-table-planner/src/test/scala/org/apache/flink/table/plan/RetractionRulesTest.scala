@@ -23,6 +23,7 @@ import org.apache.flink.api.scala._
 import org.apache.flink.table.api.{Table, TableImpl, Tumble}
 import org.apache.flink.table.api.scala._
 import org.apache.flink.table.plan.nodes.datastream._
+import org.apache.flink.table.plan.nodes.decorate.DecorateRel
 import org.apache.flink.table.runtime.utils.JavaUserDefinedAggFunctions.CountDistinct
 import org.apache.flink.table.utils.TableTestUtil._
 import org.apache.flink.table.utils.{StreamTableTestUtil, TableTestBase}
@@ -40,7 +41,7 @@ class RetractionRulesTest extends TableTestBase {
     val util = streamTestForRetractionUtil()
     val table = util.addTable[(String, Int)]('word, 'number)
 
-    val resultTable = table.select('word, 'number)
+    val resultTable = table.select('word)
 
     val expected = s"DataStreamScan(false, Acc)"
 
@@ -51,7 +52,7 @@ class RetractionRulesTest extends TableTestBase {
   @Test
   def testGroupBy(): Unit = {
     val util = streamTestForRetractionUtil()
-    val table = util.addTable[(String, Int)]('word, 'number)
+    val table = util.addTable[(String, Int, String)]('word, 'number, 'comment)
     val defaultStatus = "false, Acc"
 
     val resultTable = table
@@ -525,14 +526,7 @@ object TraitUtil {
       i += 1
     }
 
-    val inputOutputUpdateModeString = ""
-//    val inputOutputUpdateModeString =
-//      if (rel.getTraitSet.getTrait(InputOutputUpdateModeTraitDef.INSTANCE) == null) {
-//      "nullUpdateAsRetract"
-//    } else {
-//      rel.getTraitSet.getTrait(InputOutputUpdateModeTraitDef.INSTANCE).toString
-//    }
-
+    val inputOutputUpdateModeString = rel.asInstanceOf[DecorateRel].getInnerNode.getDigest
 
     s"""$className($inputOutputUpdateModeString)
        |$childString

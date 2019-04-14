@@ -48,7 +48,8 @@ class DataStreamCalc(
     inputSchema: RowSchema,
     schema: RowSchema,
     calcProgram: RexProgram,
-    ruleDescription: String)
+    ruleDescription: String,
+    val inOutUpdateMode: Option[(UpdateMode, UpdateMode)] = None)
   extends Calc(cluster, traitSet, input, calcProgram)
   with CommonCalc
   with DataStreamRel {
@@ -59,6 +60,19 @@ class DataStreamCalc(
       (UpdateMode.Upsert, UpdateMode.Upsert),
       (UpdateMode.Retract, UpdateMode.Retract)
     )
+  }
+
+  override def getDecidedInputOutputMode: Option[(UpdateMode, UpdateMode)] = {
+    inOutUpdateMode
+  }
+
+  def getInputOutputString: String = {
+    inOutUpdateMode.getOrElse("null").toString
+  }
+
+  override def computeDigest(): String = {
+    val xx = super.computeDigest() + ", " + getInputOutputString
+    xx
   }
 
   override def deriveRowType(): RelDataType = schema.relDataType
@@ -74,6 +88,22 @@ class DataStreamCalc(
       ruleDescription)
   }
 
+  def copy(
+    traitSet: RelTraitSet,
+    child: RelNode,
+    program: RexProgram,
+    inOutUpdateMode1: Option[(UpdateMode, UpdateMode)]): Calc = {
+    new DataStreamCalc(
+      cluster,
+      traitSet,
+      child,
+      inputSchema,
+      schema,
+      program,
+      ruleDescription,
+      inOutUpdateMode1)
+  }
+
   override def toString: String = calcToString(calcProgram, getExpressionString)
 
   override def explainTerms(pw: RelWriter): RelWriter = {
@@ -82,12 +112,19 @@ class DataStreamCalc(
       .itemIf("where",
         conditionToString(calcProgram, getExpressionString),
         calcProgram.getCondition != null)
+      .item("updatemode", getInputOutputString)
   }
 
   override def computeSelfCost(planner: RelOptPlanner, metadata: RelMetadataQuery): RelOptCost = {
     val child = this.getInput
     val rowCnt = metadata.getRowCount(child)
-    computeSelfCost(calcProgram, planner, rowCnt)
+    val cost = computeSelfCost(calcProgram, planner, rowCnt)
+
+    if (inOutUpdateMode.isDefined) {
+      cost.multiplyBy(0.8)
+    } else {
+      cost
+    }
   }
 
   override def estimateRowCount(metadata: RelMetadataQuery): Double = {
