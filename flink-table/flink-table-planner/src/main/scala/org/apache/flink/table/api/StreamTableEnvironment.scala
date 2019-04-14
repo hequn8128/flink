@@ -816,7 +816,6 @@ abstract class StreamTableEnvironment(
     val logicalPlan = optimizeLogicalPlan(normalizedPlan)
 
     val physicalPlan = optimizePhysicalPlan(logicalPlan, FlinkConventions.DATASTREAM)
-    optimizeDecoratePlan(physicalPlan, updatesAsRetraction)
     val decoratePlan = optimizeDecoratePlan2(
       physicalPlan, FlinkConventions.DECORATE, updatesAsRetraction)
     decoratePlan

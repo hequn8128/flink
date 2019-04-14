@@ -151,7 +151,7 @@ object UpdateMode extends Enumeration {
 
   val Append = Value
 
-  val Update = Value
+  val Upsert = Value
 
   val Retract = Value
 }

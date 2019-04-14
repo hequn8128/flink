@@ -28,6 +28,7 @@ import org.apache.flink.streaming.api.functions.KeyedProcessFunction
 import org.apache.flink.table.api.{StreamQueryConfig, StreamTableEnvironment}
 import org.apache.flink.table.codegen.AggregationCodeGenerator
 import org.apache.flink.table.plan.nodes.CommonAggregate
+import org.apache.flink.table.plan.nodes.datastream.UpdateMode.UpdateMode
 import org.apache.flink.table.plan.rules.datastream.DataStreamRetractionRules
 import org.apache.flink.table.plan.schema.RowSchema
 import org.apache.flink.table.runtime.CRowKeySelector
@@ -62,6 +63,16 @@ class DataStreamGroupAggregate(
     with CommonAggregate
     with DataStreamRel
     with Logging {
+
+  override def supportedInputOutputMode: Seq[(UpdateMode, UpdateMode)] = {
+    // todo: different agg contains differenct input output mode.
+    Seq(
+      (UpdateMode.Append, UpdateMode.Upsert),
+      (UpdateMode.Append, UpdateMode.Retract),
+      (UpdateMode.Retract, UpdateMode.Upsert),
+      (UpdateMode.Retract, UpdateMode.Retract)
+    )
+  }
 
   override def deriveRowType() = schema.relDataType
 

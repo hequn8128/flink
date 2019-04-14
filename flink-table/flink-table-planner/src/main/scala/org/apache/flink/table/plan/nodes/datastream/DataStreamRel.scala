@@ -21,6 +21,7 @@ package org.apache.flink.table.plan.nodes.datastream
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.table.api.{StreamQueryConfig, StreamTableEnvironment}
 import org.apache.flink.table.plan.nodes.FlinkRelNode
+import org.apache.flink.table.plan.nodes.datastream.UpdateMode.UpdateMode
 import org.apache.flink.table.runtime.types.CRow
 
 trait DataStreamRel extends FlinkRelNode {
@@ -58,4 +59,6 @@ trait DataStreamRel extends FlinkRelNode {
     * It might forward retraction messages nevertheless.
     */
   def producesRetractions: Boolean = false
+
+  def supportedInputOutputMode: Seq[(UpdateMode, UpdateMode)] = Seq()
 }

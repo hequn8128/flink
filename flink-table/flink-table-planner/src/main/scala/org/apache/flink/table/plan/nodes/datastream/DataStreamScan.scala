@@ -26,6 +26,7 @@ import org.apache.calcite.rex.RexNode
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.table.api.{StreamQueryConfig, StreamTableEnvironment}
 import org.apache.flink.table.expressions.Cast
+import org.apache.flink.table.plan.nodes.datastream.UpdateMode.UpdateMode
 import org.apache.flink.table.plan.schema.RowSchema
 import org.apache.flink.table.plan.schema.DataStreamTable
 import org.apache.flink.table.runtime.types.CRow
@@ -43,6 +44,10 @@ class DataStreamScan(
     schema: RowSchema)
   extends TableScan(cluster, traitSet, table)
   with StreamScan {
+
+  override def supportedInputOutputMode: Seq[(UpdateMode, UpdateMode)] = {
+    Seq((null, UpdateMode.Append))
+  }
 
   val dataStreamTable: DataStreamTable[Any] = getTable.unwrap(classOf[DataStreamTable[Any]])
 

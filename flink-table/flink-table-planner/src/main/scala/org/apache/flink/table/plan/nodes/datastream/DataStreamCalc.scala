@@ -30,6 +30,7 @@ import org.apache.flink.table.api.{StreamQueryConfig, StreamTableEnvironment}
 import org.apache.flink.table.calcite.RelTimeIndicatorConverter
 import org.apache.flink.table.codegen.FunctionCodeGenerator
 import org.apache.flink.table.plan.nodes.CommonCalc
+import org.apache.flink.table.plan.nodes.datastream.UpdateMode.UpdateMode
 import org.apache.flink.table.plan.schema.RowSchema
 import org.apache.flink.table.runtime.CRowProcessRunner
 import org.apache.flink.table.runtime.types.{CRow, CRowTypeInfo}
@@ -51,6 +52,14 @@ class DataStreamCalc(
   extends Calc(cluster, traitSet, input, calcProgram)
   with CommonCalc
   with DataStreamRel {
+
+  override def supportedInputOutputMode: Seq[(UpdateMode, UpdateMode)] = {
+    Seq(
+      (UpdateMode.Append, UpdateMode.Append),
+      (UpdateMode.Upsert, UpdateMode.Upsert),
+      (UpdateMode.Retract, UpdateMode.Retract)
+    )
+  }
 
   override def deriveRowType(): RelDataType = schema.relDataType
 
