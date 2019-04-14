@@ -22,6 +22,7 @@ import org.apache.calcite.plan._
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.core.TableScan
+import org.apache.calcite.rel.metadata.RelMetadataQuery
 import org.apache.calcite.rex.RexNode
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.table.api.{StreamQueryConfig, StreamTableEnvironment}
@@ -41,9 +42,22 @@ class DataStreamScan(
     cluster: RelOptCluster,
     traitSet: RelTraitSet,
     table: RelOptTable,
-    schema: RowSchema)
+    schema: RowSchema,
+    val inOutUpdateMode: Option[(UpdateMode, UpdateMode)] = None)
   extends TableScan(cluster, traitSet, table)
   with StreamScan {
+
+  override def computeSelfCost(planner: RelOptPlanner, mq: RelMetadataQuery): RelOptCost = {
+    if (inOutUpdateMode.isDefined) {
+      super.computeSelfCost(planner, mq).multiplyBy(0.5)
+    } else {
+      super.computeSelfCost(planner, mq)
+    }
+  }
+
+  override def computeDigest(): String = {
+    super.computeDigest() + ", " + inOutUpdateMode.getOrElse("null").toString
+  }
 
   override def supportedInputOutputMode: Seq[(UpdateMode, UpdateMode)] = {
     Seq((null, UpdateMode.Append))
@@ -53,12 +67,26 @@ class DataStreamScan(
 
   override def deriveRowType(): RelDataType = schema.relDataType
 
+  def copy(
+    traitSet: RelTraitSet,
+    inputs: java.util.List[RelNode],
+    inOutUpdateMode1: Option[(UpdateMode, UpdateMode)]): RelNode = {
+    new DataStreamScan(
+      cluster,
+      traitSet,
+      getTable,
+      schema,
+      inOutUpdateMode1
+    )
+  }
+
   override def copy(traitSet: RelTraitSet, inputs: java.util.List[RelNode]): RelNode = {
     new DataStreamScan(
       cluster,
       traitSet,
       getTable,
-      schema
+      schema,
+      inOutUpdateMode
     )
   }
 

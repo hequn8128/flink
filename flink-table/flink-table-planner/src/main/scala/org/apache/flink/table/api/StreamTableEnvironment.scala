@@ -41,7 +41,7 @@ import org.apache.flink.table.descriptors.{ConnectorDescriptor, StreamTableDescr
 import org.apache.flink.table.explain.PlanJsonParser
 import org.apache.flink.table.expressions._
 import org.apache.flink.table.plan.nodes.FlinkConventions
-import org.apache.flink.table.plan.nodes.datastream.{DataStreamRel, UpdateAsRetractionTrait}
+import org.apache.flink.table.plan.nodes.datastream.{DataStreamRel, InputOutputUpdateModeTrait, UpdateAsRetractionTrait, UpdateMode}
 import org.apache.flink.table.plan.rules.FlinkRuleSets
 import org.apache.flink.table.plan.schema._
 import org.apache.flink.table.plan.util.UpdatingPlanChecker
@@ -826,7 +826,10 @@ abstract class StreamTableEnvironment(
     convention: Convention,
     updatesAsRetraction: Boolean): RelNode = {
     val decorateOptRuleSet = FlinkRuleSets.DATASTREAM_DECO_RULES2
-    val decorateOutputProps = relNode.getTraitSet.replace(convention).simplify()
+    val decorateOutputProps = relNode
+      .getTraitSet
+      .replace(convention)
+      .simplify()
     if (decorateOptRuleSet.iterator().hasNext) {
       runVolcanoPlanner(decorateOptRuleSet, relNode, decorateOutputProps)
     } else {

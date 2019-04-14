@@ -525,12 +525,14 @@ object TraitUtil {
       i += 1
     }
 
-    val inputOutputUpdateModeString =
-      if (rel.getTraitSet.getTrait(InputOutputUpdateModeTraitDef.INSTANCE) == null) {
-      "nullUpdateAsRetract"
-    } else {
-      rel.getTraitSet.getTrait(InputOutputUpdateModeTraitDef.INSTANCE).toString
-    }
+    val inputOutputUpdateModeString = ""
+//    val inputOutputUpdateModeString =
+//      if (rel.getTraitSet.getTrait(InputOutputUpdateModeTraitDef.INSTANCE) == null) {
+//      "nullUpdateAsRetract"
+//    } else {
+//      rel.getTraitSet.getTrait(InputOutputUpdateModeTraitDef.INSTANCE).toString
+//    }
+
 
     s"""$className($inputOutputUpdateModeString)
        |$childString

@@ -18,16 +18,21 @@
 
 package org.apache.flink.table.plan.nodes.decorate
 
-import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
+import org.apache.calcite.plan.{RelOptCluster, RelOptCost, RelOptPlanner, RelTraitSet}
 import org.apache.calcite.rel.core.TableScan
-import org.apache.flink.table.plan.nodes.datastream.DataStreamRel
+import org.apache.calcite.rel.metadata.RelMetadataQuery
+import org.apache.flink.table.plan.nodes.datastream.{DataStreamRel, DataStreamScan}
 
 class DecorateScanNode(
   cluster: RelOptCluster,
   traitSet: RelTraitSet,
   innerScanNode: TableScan,
-  innerNode: DataStreamRel)
+  scan: DataStreamScan)
   extends TableScan(cluster, traitSet, innerScanNode.getTable)
     with DecorateRel{
-  override def getInnerNode: DataStreamRel = innerNode
+  override def getInnerNode: DataStreamRel = scan
+
+  override def computeSelfCost(planner: RelOptPlanner, mq: RelMetadataQuery): RelOptCost = {
+    planner.getCostFactory.makeTinyCost()
+  }
 }

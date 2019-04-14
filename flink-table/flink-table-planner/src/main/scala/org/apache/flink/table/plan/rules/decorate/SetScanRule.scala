@@ -32,11 +32,10 @@ class SetScanRule extends RelOptRule(
     val scan = call.rel(0).asInstanceOf[DataStreamScan]
 
     val traitSet = scan.getTraitSet
-    val inputOutputUpdateModeTrait = traitSet.getTrait(InputOutputUpdateModeTraitDef.INSTANCE)
-    if (inputOutputUpdateModeTrait.getInputUpdateMode == UpdateMode.UnKnow) {
-      val newRel = scan.copy(
-        traitSet.plus(new InputOutputUpdateModeTrait(UpdateMode.Append, UpdateMode.Append)),
-        scan.getInputs)
+    val inputOutputUpdateMode = scan.inOutUpdateMode
+    if (inputOutputUpdateMode.isEmpty) {
+      val newRel =
+        scan.copy(traitSet, scan.getInputs, Some((UpdateMode.Append, UpdateMode.Append)))
       call.transformTo(newRel)
     }
   }

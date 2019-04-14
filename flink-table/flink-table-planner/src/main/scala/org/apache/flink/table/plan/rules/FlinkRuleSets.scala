@@ -248,6 +248,6 @@ object FlinkRuleSets {
 
 
     // convert rules
-    ConvertToDecorateRelNodeRule.INSTANCE
+    ConvertScanToDecorateRelNodeRule.INSTANCE
   )
 }

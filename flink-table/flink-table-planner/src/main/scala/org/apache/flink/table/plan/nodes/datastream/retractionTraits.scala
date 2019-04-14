@@ -84,8 +84,8 @@ object AccModeTrait {
 
 class InputOutputUpdateModeTrait extends RelTrait {
 
-  private var inputUpdateMode: UpdateMode = UpdateMode.UnKnow
-  private var outputUpdateMode: UpdateMode = UpdateMode.UnKnow
+  private var inputUpdateMode: UpdateMode = _
+  private var outputUpdateMode: UpdateMode = _
 
   def this(inputMode: UpdateMode, outputMode: UpdateMode) {
     this()
@@ -102,7 +102,16 @@ class InputOutputUpdateModeTrait extends RelTrait {
 
   override def satisfies(`trait`: RelTrait): Boolean = this.equals(`trait`)
 
-  override def toString: String = inputUpdateMode.toString + ", " + outputUpdateMode.toString
+  private def getUpdateModeString(updateMode: UpdateMode): String = {
+    if (updateMode == null) {
+      "null"
+    } else {
+      updateMode.toString
+    }
+  }
+
+  override def toString: String =
+    getUpdateModeString(inputUpdateMode) + ", " + getUpdateModeString(outputUpdateMode)
 }
 
 object InputOutputUpdateModeTrait {
@@ -147,8 +156,6 @@ object AccMode extends Enumeration {
 
 object UpdateMode extends Enumeration {
   type UpdateMode = Value
-
-  val UnKnow = Value
 
   val Append = Value
 
