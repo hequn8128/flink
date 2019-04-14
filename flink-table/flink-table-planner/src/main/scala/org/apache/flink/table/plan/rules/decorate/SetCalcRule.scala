@@ -26,23 +26,26 @@ import org.apache.flink.table.plan.nodes.decorate.DecorateRel
 
 class SetCalcRule extends RelOptRule(
   operand(
-    classOf[DataStreamCalc], none()),
+    classOf[DataStreamCalc],
+    operand(classOf[DataStreamRel], none())),
   "SetCalcRule") {
 
   override def matches(call: RelOptRuleCall): Boolean = {
     val calc = call.rel(0).asInstanceOf[DataStreamCalc]
-    calc.getDecidedInputOutputMode.isEmpty
+    val rel = call.rel(1).asInstanceOf[DataStreamRel]
+    rel.getDecidedInputOutputMode.isDefined && calc.getDecidedInputOutputMode.isEmpty
   }
 
   override def onMatch(call: RelOptRuleCall): Unit = {
     val calc = call.rel(0).asInstanceOf[DataStreamCalc]
+    val rel = call.rel(1).asInstanceOf[DataStreamRel]
 
     val traitSet = calc.getTraitSet
     val newRel = calc.copy(
-        traitSet,
-        calc.getInput(0),
-        calc.getProgram,
-        Some((UpdateMode.Append, UpdateMode.Append)))
+      traitSet,
+      calc.getInput(0),
+      calc.getProgram,
+      rel.getDecidedInputOutputMode)
     call.transformTo(newRel)
   }
 }

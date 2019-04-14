@@ -40,7 +40,7 @@ class ConvertCalcToDecorateRelNodeRule extends ConverterRule(
   def convert(rel: RelNode): RelNode = {
     val calc = rel.asInstanceOf[DataStreamCalc]
     val traitSet = calc.getTraitSet.replace(FlinkConventions.DECORATE)
-    val convInput: RelNode = RelOptRule.convert(calc.getInput, FlinkConventions.DATASTREAM)
+    val convInput: RelNode = RelOptRule.convert(calc.getInput, FlinkConventions.DECORATE)
 
     new DecorateCalcRelNode(
       calc.getCluster,
