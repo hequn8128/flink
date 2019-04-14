@@ -33,6 +33,7 @@ import org.apache.flink.table.calcite.FlinkRelBuilder.NamedWindowProperty
 import org.apache.flink.table.expressions.WindowProperty
 import org.apache.flink.table.plan.logical.LogicalWindow
 import org.apache.flink.table.plan.logical.rel.LogicalWindowAggregate
+import org.apache.flink.table.plan.nodes.datastream.InputOutputUpdateModeTraitDef
 
 /**
   * Flink specific [[RelBuilder]] that changes the default type factory to a [[FlinkTypeFactory]].
@@ -85,6 +86,7 @@ object FlinkRelBuilder {
     val planner = new VolcanoPlanner(config.getCostFactory, Contexts.empty())
     planner.setExecutor(config.getExecutor)
     planner.addRelTraitDef(ConventionTraitDef.INSTANCE)
+    planner.addRelTraitDef(InputOutputUpdateModeTraitDef.INSTANCE)
     val cluster = FlinkRelOptClusterFactory.create(planner, new RexBuilder(typeFactory))
     val calciteSchema = CalciteSchema.from(config.getDefaultSchema)
     val relOptSchema = new CalciteCatalogReader(

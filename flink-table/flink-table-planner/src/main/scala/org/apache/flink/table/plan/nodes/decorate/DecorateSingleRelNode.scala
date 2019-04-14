@@ -16,21 +16,19 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.plan.nodes
+package org.apache.flink.table.plan.nodes.decorate
 
-import org.apache.calcite.plan.Convention
-import org.apache.flink.table.plan.nodes.dataset.DataSetRel
+import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
+import org.apache.calcite.rel.{RelNode, SingleRel}
 import org.apache.flink.table.plan.nodes.datastream.DataStreamRel
-import org.apache.flink.table.plan.nodes.decorate.DecorateRel
-import org.apache.flink.table.plan.nodes.logical.FlinkLogicalRel
 
-object FlinkConventions {
+class DecorateSingleRelNode(
+  cluster: RelOptCluster,
+  traitSet: RelTraitSet,
+  input: RelNode,
+  innerNode: DataStreamRel)
+  extends SingleRel(cluster, traitSet, input)
+    with DecorateRel {
 
-  val LOGICAL: Convention = new Convention.Impl("LOGICAL", classOf[FlinkLogicalRel])
-
-  val DATASET: Convention = new Convention.Impl("DATASET", classOf[DataSetRel])
-
-  val DATASTREAM: Convention = new Convention.Impl("DATASTREAM", classOf[DataStreamRel])
-
-  val DECORATE: Convention = new Convention.Impl("DECORATE", classOf[DecorateRel])
+  override def getInnerNode: DataStreamRel = innerNode
 }

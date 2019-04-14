@@ -27,6 +27,7 @@ import org.apache.flink.table.plan.rules.logical._
 import org.apache.flink.table.plan.rules.dataSet._
 import org.apache.flink.table.plan.rules.datastream._
 import org.apache.flink.table.plan.nodes.logical._
+import org.apache.flink.table.plan.rules.decorate._
 
 object FlinkRuleSets {
 
@@ -243,7 +244,10 @@ object FlinkRuleSets {
 
   val DATASTREAM_DECO_RULES2: RuleSet = RuleSets.ofList(
     // retraction rules
+    SetScanRule.INSTANCE,
 
+
+    // convert rules
+    ConvertToDecorateRelNodeRule.INSTANCE
   )
-
 }
