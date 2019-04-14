@@ -24,7 +24,7 @@ import org.apache.calcite.rel.convert.ConverterRule
 import org.apache.calcite.rel.core.TableScan
 import org.apache.flink.table.plan.nodes.FlinkConventions
 import org.apache.flink.table.plan.nodes.datastream._
-import org.apache.flink.table.plan.nodes.decorate.{DecorateScanNode, DecorateSingleRelNode}
+import org.apache.flink.table.plan.nodes.decorate.{DecorateScanNode, DecorateCalcRelNode}
 
 class ConvertCalcToDecorateRelNodeRule extends ConverterRule(
   classOf[DataStreamCalc],
@@ -33,8 +33,8 @@ class ConvertCalcToDecorateRelNodeRule extends ConverterRule(
   "ConvertCalcToDecorateRelNodeRule") {
 
   override def matches(call: RelOptRuleCall): Boolean = {
-    val scan = call.rel(0).asInstanceOf[DataStreamCalc]
-    scan.inOutUpdateMode.isDefined
+    val calc = call.rel(0).asInstanceOf[DataStreamCalc]
+    calc.inOutUpdateMode.isDefined
   }
 
   def convert(rel: RelNode): RelNode = {
@@ -42,7 +42,7 @@ class ConvertCalcToDecorateRelNodeRule extends ConverterRule(
     val traitSet = calc.getTraitSet.replace(FlinkConventions.DECORATE)
     val convInput: RelNode = RelOptRule.convert(calc.getInput, FlinkConventions.DATASTREAM)
 
-    new DecorateSingleRelNode(
+    new DecorateCalcRelNode(
       calc.getCluster,
       traitSet,
       convInput,

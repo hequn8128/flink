@@ -18,17 +18,33 @@
 
 package org.apache.flink.table.plan.nodes.decorate
 
-import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
-import org.apache.calcite.rel.{RelNode, SingleRel}
-import org.apache.flink.table.plan.nodes.datastream.DataStreamRel
+import java.util
 
-class DecorateSingleRelNode(
+import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
+import org.apache.calcite.rel.`type`.RelDataType
+import org.apache.calcite.rel.{RelNode, SingleRel}
+import org.apache.flink.table.plan.nodes.datastream.{DataStreamCalc, DataStreamRel}
+
+class DecorateCalcRelNode(
   cluster: RelOptCluster,
   traitSet: RelTraitSet,
   input: RelNode,
-  innerNode: DataStreamRel)
+  calc: DataStreamCalc)
   extends SingleRel(cluster, traitSet, input)
     with DecorateRel {
 
-  override def getInnerNode: DataStreamRel = innerNode
+  override def getInnerNode: DataStreamRel = calc
+
+  override def deriveRowType(): RelDataType = {
+    calc.getRowType
+  }
+
+  override def copy(traitSet: RelTraitSet, inputs: util.List[RelNode]): RelNode = {
+    new DecorateCalcRelNode(
+      cluster,
+      traitSet,
+      inputs.get(0),
+      calc
+    )
+  }
 }

@@ -21,36 +21,28 @@ package org.apache.flink.table.plan.rules.decorate
 import org.apache.calcite.plan.RelOptRule.{none, operand}
 import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall}
 import org.apache.calcite.rel.RelNode
-import org.apache.flink.table.plan.nodes.datastream.{DataStreamCalc, DataStreamRel}
+import org.apache.flink.table.plan.nodes.datastream.{DataStreamCalc, DataStreamRel, UpdateMode}
 import org.apache.flink.table.plan.nodes.decorate.DecorateRel
 
 class SetCalcRule extends RelOptRule(
   operand(
-    classOf[DataStreamCalc],
-    operand(classOf[RelNode], none())),
+    classOf[DataStreamCalc], none()),
   "SetCalcRule") {
 
   override def matches(call: RelOptRuleCall): Boolean = {
     val calc = call.rel(0).asInstanceOf[DataStreamCalc]
-    val input = call.rel(1).asInstanceOf[RelNode]
-
-    val inputInOutUpdateMode = input match {
-      case datastreamRel: DataStreamRel => datastreamRel.getDecidedInputOutputMode
-      case decorateRel: DecorateRel => decorateRel.getInnerNode.getDecidedInputOutputMode
-    }
-    inputInOutUpdateMode.isDefined && calc.getDecidedInputOutputMode.isEmpty
+    calc.getDecidedInputOutputMode.isEmpty
   }
 
   override def onMatch(call: RelOptRuleCall): Unit = {
     val calc = call.rel(0).asInstanceOf[DataStreamCalc]
-    val input = call.rel(1).asInstanceOf[RelNode]
-    val inputInOutUpdateMode = input match {
-      case datastreamRel: DataStreamRel => datastreamRel.getDecidedInputOutputMode
-      case decorateRel: DecorateRel => decorateRel.getInnerNode.getDecidedInputOutputMode
-    }
 
     val traitSet = calc.getTraitSet
-    val newRel = calc.copy(traitSet, input, calc.getProgram, inputInOutUpdateMode)
+    val newRel = calc.copy(
+        traitSet,
+        calc.getInput(0),
+        calc.getProgram,
+        Some((UpdateMode.Append, UpdateMode.Append)))
     call.transformTo(newRel)
   }
 }
