@@ -525,8 +525,16 @@ object TraitUtil {
       i += 1
     }
 
-    val retractString = rel.getTraitSet.getTrait(UpdateAsRetractionTraitDef.INSTANCE).toString
-    val accModetString = rel.getTraitSet.getTrait(AccModeTraitDef.INSTANCE).toString
+    val retractString = if (rel.getTraitSet.getTrait(UpdateAsRetractionTraitDef.INSTANCE) == null) {
+      "nullUpdateAsRetract"
+    } else {
+      rel.getTraitSet.getTrait(UpdateAsRetractionTraitDef.INSTANCE).toString
+    }
+    val accModetString = if (rel.getTraitSet.getTrait(AccModeTraitDef.INSTANCE) == null) {
+      "nullAccMode"
+    } else {
+      rel.getTraitSet.getTrait(AccModeTraitDef.INSTANCE).toString
+    }
 
     s"""$className($retractString, $accModetString)
        |$childString

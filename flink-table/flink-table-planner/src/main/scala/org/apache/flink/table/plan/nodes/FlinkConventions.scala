@@ -30,4 +30,6 @@ object FlinkConventions {
   val DATASET: Convention = new Convention.Impl("DATASET", classOf[DataSetRel])
 
   val DATASTREAM: Convention = new Convention.Impl("DATASTREAM", classOf[DataStreamRel])
+
+  val DECORATE: Convention = new Convention.Impl("DECORATE", classOf[DataStreamRel])
 }

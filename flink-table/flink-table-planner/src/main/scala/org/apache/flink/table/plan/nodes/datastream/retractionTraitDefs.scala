@@ -79,3 +79,31 @@ class AccModeTraitDef extends RelTraitDef[AccModeTrait] {
 object AccModeTraitDef {
   val INSTANCE = new AccModeTraitDef
 }
+
+class InputOutputUpdateModeTraitDef extends RelTraitDef[InputOutputUpdateModeTrait] {
+
+  override def convert(
+    planner: RelOptPlanner,
+    rel: RelNode,
+    toTrait: InputOutputUpdateModeTrait,
+    allowInfiniteCostConverters: Boolean): RelNode = {
+
+    rel.copy(rel.getTraitSet.plus(toTrait), rel.getInputs)
+  }
+
+  override def canConvert(
+    planner: RelOptPlanner,
+    fromTrait: InputOutputUpdateModeTrait,
+    toTrait: InputOutputUpdateModeTrait): Boolean = true
+
+  override def getTraitClass: Class[InputOutputUpdateModeTrait]
+  = classOf[InputOutputUpdateModeTrait]
+
+  override def getSimpleName: String = this.getClass.getSimpleName
+
+  override def getDefault: InputOutputUpdateModeTrait = InputOutputUpdateModeTrait.DEFAULT
+}
+
+object InputOutputUpdateModeTraitDef {
+  val INSTANCE = new InputOutputUpdateModeTraitDef
+}

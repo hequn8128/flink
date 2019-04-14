@@ -21,7 +21,7 @@ package org.apache.flink.table.api
 import _root_.java.lang.{Boolean => JBool}
 import _root_.java.util.concurrent.atomic.AtomicInteger
 
-import org.apache.calcite.plan.RelOptUtil
+import org.apache.calcite.plan.{Convention, RelOptUtil}
 import org.apache.calcite.plan.hep.HepMatchOrder
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.`type`.{RelDataType, RelDataTypeField, RelDataTypeFieldImpl, RelRecordType}
@@ -817,6 +817,22 @@ abstract class StreamTableEnvironment(
 
     val physicalPlan = optimizePhysicalPlan(logicalPlan, FlinkConventions.DATASTREAM)
     optimizeDecoratePlan(physicalPlan, updatesAsRetraction)
+    val decoratePlan = optimizeDecoratePlan2(
+      physicalPlan, FlinkConventions.DECORATE, updatesAsRetraction)
+    decoratePlan
+  }
+
+  private[flink] def optimizeDecoratePlan2(
+    relNode: RelNode,
+    convention: Convention,
+    updatesAsRetraction: Boolean): RelNode = {
+    val decorateOptRuleSet = FlinkRuleSets.DATASTREAM_DECO_RULES2
+    val decorateOutputProps = relNode.getTraitSet.replace(convention).simplify()
+    if (decorateOptRuleSet.iterator().hasNext) {
+      runVolcanoPlanner(decorateOptRuleSet, relNode, decorateOutputProps)
+    } else {
+      relNode
+    }
   }
 
   private[flink] def optimizeDecoratePlan(

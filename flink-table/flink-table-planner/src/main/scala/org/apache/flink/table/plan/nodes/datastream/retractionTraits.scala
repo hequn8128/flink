@@ -20,6 +20,7 @@ package org.apache.flink.table.plan.nodes.datastream
 
 import org.apache.calcite.plan.{RelOptPlanner, RelTrait, RelTraitDef}
 import org.apache.flink.table.plan.nodes.datastream.AccMode.AccMode
+import org.apache.flink.table.plan.nodes.datastream.UpdateMode.UpdateMode
 
 /** Tracks if a [[org.apache.calcite.rel.RelNode]] needs to send update and delete changes as
   * retraction messages.
@@ -81,6 +82,33 @@ object AccModeTrait {
   val DEFAULT = new AccModeTrait(AccMode.Acc)
 }
 
+class InputOutputUpdateModeTrait extends RelTrait {
+
+  private var inputUpdateMode: UpdateMode = _
+  private var outputUpdateMode: UpdateMode = _
+
+  def this(inputMode: UpdateMode, outputMode: UpdateMode) {
+    this()
+    inputUpdateMode = inputMode
+    outputUpdateMode = outputMode
+  }
+
+  def getInputUpdateMode: UpdateMode = inputUpdateMode
+  def getOutputUpdateMode: UpdateMode = outputUpdateMode
+
+  override def register(planner: RelOptPlanner): Unit = { }
+
+  override def getTraitDef: RelTraitDef[_ <: RelTrait] = AccModeTraitDef.INSTANCE
+
+  override def satisfies(`trait`: RelTrait): Boolean = this.equals(`trait`)
+
+  override def toString: String = inputUpdateMode.toString + ", " + outputUpdateMode.toString
+}
+
+object InputOutputUpdateModeTrait {
+  val DEFAULT = new InputOutputUpdateModeTrait()
+}
+
 /**
   * The [[AccMode]] determines how insert, update, and delete changes of tables are encoded
   * by the messeages that an operator emits.
@@ -116,5 +144,18 @@ object AccMode extends Enumeration {
     */
   val AccRetract = Value
 }
+
+
+object UpdateMode extends Enumeration {
+  type UpdateMode = Value
+
+  val Append = Value
+
+  val Update = Value
+
+  val Retract = Value
+}
+
+
 
 

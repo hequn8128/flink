@@ -241,4 +241,9 @@ object FlinkRuleSets {
     DataStreamRetractionRules.ACCMODE_INSTANCE
   )
 
+  val DATASTREAM_DECO_RULES2: RuleSet = RuleSets.ofList(
+    // retraction rules
+
+  )
+
 }
