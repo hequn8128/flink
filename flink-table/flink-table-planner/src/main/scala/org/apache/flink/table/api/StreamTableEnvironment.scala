@@ -36,7 +36,7 @@ import org.apache.flink.api.scala.typeutils.CaseClassTypeInfo
 import org.apache.flink.streaming.api.TimeCharacteristic
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
-import org.apache.flink.table.calcite.{FlinkTypeFactory, RelTimeIndicatorConverter}
+import org.apache.flink.table.calcite.{CalciteConfig, FlinkTypeFactory, RelTimeIndicatorConverter}
 import org.apache.flink.table.descriptors.{ConnectorDescriptor, StreamTableDescriptor}
 import org.apache.flink.table.explain.PlanJsonParser
 import org.apache.flink.table.expressions._
@@ -769,8 +769,12 @@ abstract class StreamTableEnvironment(
     * including a custom RuleSet configuration.
     */
   protected def getDecoRuleSet: RuleSet = {
-    val calciteConfig = config.getCalciteConfig
-    calciteConfig.getDecoRuleSet match {
+    val calciteConfig: CalciteConfig = config.getPlannerConfig
+      .orElse(CalciteConfig.DEFAULT)
+      .unwrap(classOf[CalciteConfig])
+      .orElse(CalciteConfig.DEFAULT)
+
+    calciteConfig.decoRuleSet match {
 
       case None =>
         getBuiltInDecoRuleSet
