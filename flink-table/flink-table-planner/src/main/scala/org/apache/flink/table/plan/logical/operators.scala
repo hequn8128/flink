@@ -29,7 +29,7 @@ import org.apache.calcite.tools.RelBuilder
 import org.apache.flink.api.common.typeinfo.BasicTypeInfo._
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.operators.join.JoinType
-import org.apache.flink.table.api.{StreamTableEnvironment, TableEnvironment, Types, UnresolvedException}
+import org.apache.flink.table.api._
 import org.apache.flink.table.calcite.{FlinkRelBuilder, FlinkTypeFactory}
 import org.apache.flink.table.expressions.PlannerExpressionUtils.isRowCountLiteral
 import org.apache.flink.table.expressions._
@@ -39,8 +39,8 @@ import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils._
 import org.apache.flink.table.plan.schema.FlinkTableFunctionImpl
 import org.apache.flink.table.validate.{ValidationFailure, ValidationSuccess}
 
-import scala.collection.JavaConverters._
-import scala.collection.mutable
+import _root_.scala.collection.JavaConverters._
+import _root_.scala.collection.mutable
 
 case class Project(
     projectList: JList[PlannerExpression],
@@ -118,7 +118,7 @@ case class Sort(order: Seq[PlannerExpression], child: LogicalNode) extends Unary
   }
 
   override def validate(tableEnv: TableEnvironment): LogicalNode = {
-    if (tableEnv.isInstanceOf[StreamTableEnvironment]) {
+    if (tableEnv.isInstanceOf[StreamTableEnvImpl]) {
       failValidation(s"Sort on stream tables is currently not supported.")
     }
     this
@@ -134,7 +134,7 @@ case class Limit(offset: Int, fetch: Int = -1, child: LogicalNode) extends Unary
   }
 
   override def validate(tableEnv: TableEnvironment): LogicalNode = {
-    if (tableEnv.isInstanceOf[StreamTableEnvironment]) {
+    if (tableEnv.isInstanceOf[StreamTableEnvImpl]) {
       failValidation(s"Limit on stream tables is currently not supported.")
     }
     if (!child.isInstanceOf[Sort]) {
@@ -187,7 +187,7 @@ case class Aggregate(
   }
 
   override def validate(tableEnv: TableEnvironment): LogicalNode = {
-    implicit val relBuilder: RelBuilder = tableEnv.getRelBuilder
+    implicit val relBuilder: RelBuilder = tableEnv.asInstanceOf[TableEnvImpl].getRelBuilder
     val groupingExprs = groupingExpressions
     val aggregateExprs = aggregateExpressions
     aggregateExprs.foreach(validateAggregateExpression)
@@ -246,7 +246,7 @@ case class Minus(left: LogicalNode, right: LogicalNode, all: Boolean) extends Bi
   }
 
   override def validate(tableEnv: TableEnvironment): LogicalNode = {
-    if (tableEnv.isInstanceOf[StreamTableEnvironment]) {
+    if (tableEnv.isInstanceOf[StreamTableEnvImpl]) {
       failValidation(s"Minus on stream tables is currently not supported.")
     }
 
@@ -277,7 +277,7 @@ case class Union(left: LogicalNode, right: LogicalNode, all: Boolean) extends Bi
   }
 
   override def validate(tableEnv: TableEnvironment): LogicalNode = {
-    if (tableEnv.isInstanceOf[StreamTableEnvironment] && !all) {
+    if (tableEnv.isInstanceOf[StreamTableEnvImpl] && !all) {
       failValidation(s"Union on stream tables is currently not supported.")
     }
 
@@ -308,7 +308,7 @@ case class Intersect(left: LogicalNode, right: LogicalNode, all: Boolean) extend
   }
 
   override def validate(tableEnv: TableEnvironment): LogicalNode = {
-    if (tableEnv.isInstanceOf[StreamTableEnvironment]) {
+    if (tableEnv.isInstanceOf[StreamTableEnvImpl]) {
       failValidation(s"Intersect on stream tables is currently not supported.")
     }
 
@@ -541,7 +541,7 @@ case class WindowAggregate(
   }
 
   override def validate(tableEnv: TableEnvironment): LogicalNode = {
-    implicit val relBuilder: RelBuilder = tableEnv.getRelBuilder
+    implicit val relBuilder: RelBuilder = tableEnv.asInstanceOf[TableEnvImpl].getRelBuilder
     val groupingExprs = groupingExpressions
     val aggregateExprs = aggregateExpressions
     aggregateExprs.foreach(validateAggregateExpression)

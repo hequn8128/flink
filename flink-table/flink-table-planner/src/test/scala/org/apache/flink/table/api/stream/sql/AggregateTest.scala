@@ -64,7 +64,7 @@ class AggregateTest extends TableTestBase {
   def testUserDefinedAggregateFunctionWithScalaAccumulator(): Unit = {
     streamUtil.addFunction("udag", new MyAgg)
     val aggFunctionDefinition = streamUtil
-      .tableEnv
+      .tableEnv.asInstanceOf[StreamTableEnvImpl]
       .functionCatalog
       .lookupFunction("udag")
       .asInstanceOf[AggregateFunctionDefinition]
@@ -78,7 +78,7 @@ class AggregateTest extends TableTestBase {
 
     streamUtil.addFunction("udag2", new MyAgg2)
     val aggFunctionDefinition2 = streamUtil
-      .tableEnv
+      .tableEnv.asInstanceOf[StreamTableEnvImpl]
       .functionCatalog
       .lookupFunction("udag2")
       .asInstanceOf[AggregateFunctionDefinition]
