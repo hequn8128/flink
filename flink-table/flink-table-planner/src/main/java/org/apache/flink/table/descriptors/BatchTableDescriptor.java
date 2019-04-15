@@ -16,16 +16,20 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.descriptors
+package org.apache.flink.table.descriptors;
 
-import org.apache.flink.table.api.BatchTableEnvironment
+import org.apache.flink.annotation.PublicEvolving;
+import org.apache.flink.table.api.TableEnvironment;
 
 /**
-  * Descriptor for specifying a table source and/or sink in a batch environment.
-  */
-class BatchTableDescriptor(
-    tableEnv: BatchTableEnvironment,
-    connectorDescriptor: ConnectorDescriptor)
-  extends ConnectTableDescriptor[BatchTableDescriptor](
-    tableEnv,
-    connectorDescriptor)
+ * Descriptor for specifying a table source and/or sink in a batch environment.
+ */
+@PublicEvolving
+public class BatchTableDescriptor extends ConnectTableDescriptor<BatchTableDescriptor> {
+
+	public BatchTableDescriptor(
+		TableEnvironment tableEnv,
+		ConnectorDescriptor connectorDescriptor) {
+		super(tableEnv, connectorDescriptor);
+	}
+}
