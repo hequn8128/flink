@@ -16,20 +16,18 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.descriptors
+package org.apache.flink.table.expressions;
+
+import org.apache.flink.annotation.PublicEvolving;
+import org.apache.flink.api.common.typeinfo.TypeInformation;
 
 /**
-  * A trait for descriptors that allow to define a format and schema.
-  */
-trait SchematicDescriptor[D <: SchematicDescriptor[D]] extends Descriptor {
+ * A reference to a field in an input which has been resolved.
+ */
+@PublicEvolving
+public interface ResolvedFieldReference {
 
-  /**
-    * Specifies the format that defines how to read data from a connector.
-    */
-  def withFormat(format: FormatDescriptor): D
+	TypeInformation<?> resultType();
 
-  /**
-    * Specifies the resulting table schema.
-    */
-  def withSchema(schema: Schema): D
+	String name();
 }
