@@ -18,8 +18,10 @@
 
 package org.apache.flink.table.plan.rules.logical;
 
+import org.apache.calcite.rel.SingleRel;
 import org.apache.flink.table.expressions.ResolvedFieldReference;
 import org.apache.flink.table.plan.logical.LogicalWindow;
+import org.apache.flink.table.plan.logical.rel.LogicalTableAggregate;
 import org.apache.flink.table.plan.logical.rel.LogicalWindowAggregate;
 
 import org.apache.calcite.plan.RelOptRuleCall;
@@ -58,7 +60,7 @@ public class ExtendedAggregateExtractProjectRule extends AggregateExtractProject
 
 	public static final ExtendedAggregateExtractProjectRule INSTANCE =
 		new ExtendedAggregateExtractProjectRule(
-			operand(Aggregate.class,
+			operand(SingleRel.class,
 				operand(RelNode.class, any())), RelFactories.LOGICAL_BUILDER);
 
 	public ExtendedAggregateExtractProjectRule(
@@ -70,19 +72,29 @@ public class ExtendedAggregateExtractProjectRule extends AggregateExtractProject
 
 	@Override
 	public boolean matches(RelOptRuleCall call) {
-		final Aggregate aggregate = call.rel(0);
-		return aggregate instanceof LogicalWindowAggregate || aggregate instanceof LogicalAggregate;
+		final SingleRel relNode = call.rel(0);
+		return relNode instanceof LogicalWindowAggregate ||
+			relNode instanceof LogicalAggregate ||
+			relNode instanceof LogicalTableAggregate;
 	}
 
 	@Override
 	public void onMatch(RelOptRuleCall call) {
-		final Aggregate aggregate = call.rel(0);
+		final RelNode relNode = call.rel(0);
 		final RelNode input = call.rel(1);
 		final RelBuilder relBuilder = call.builder().push(input);
 
-		Mapping mapping = extractProjectsAndMapping(aggregate, input, relBuilder);
-		RelNode newAggregate = getNewAggregate(aggregate, relBuilder, mapping);
-		call.transformTo(newAggregate);
+		if (relNode instanceof LogicalAggregate || relNode instanceof LogicalWindowAggregate) {
+			Mapping mapping = extractProjectsAndMapping((Aggregate) relNode, input, relBuilder);
+			RelNode newAggregate = getNewAggregate((Aggregate) relNode, relBuilder, mapping);
+			call.transformTo(newAggregate);
+		} else if (relNode instanceof LogicalTableAggregate) {
+			LogicalAggregate logicalAggregate =
+				LogicalTableAggregate.getCorrespondingAggregate((LogicalTableAggregate) relNode);
+			Mapping mapping = extractProjectsAndMapping(logicalAggregate, input, relBuilder);
+			RelNode newAggregate = getNewAggregate(logicalAggregate, relBuilder, mapping);
+			call.transformTo(LogicalTableAggregate.create((Aggregate) newAggregate));
+		}
 	}
 
 	/**

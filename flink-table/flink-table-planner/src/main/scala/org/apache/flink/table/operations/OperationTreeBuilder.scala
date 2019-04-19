@@ -47,6 +47,7 @@ class OperationTreeBuilder(private val tableEnv: TableEnvironment) {
   private val projectionOperationFactory = new ProjectionOperationFactory(expressionBridge)
   private val sortOperationFactory = new SortOperationFactory(expressionBridge, isStreaming)
   private val calculatedTableFactory = new CalculatedTableFactory(expressionBridge)
+  private val tableAggFunctionCallFactory = new TableAggFunctionCallFactory(expressionBridge)
   private val noWindowPropertyChecker = new NoWindowPropertyChecker(
     "Window start and end properties are not available for Over windows.")
 
@@ -166,6 +167,22 @@ class OperationTreeBuilder(private val tableEnv: TableEnvironment) {
       resolver: ExpressionResolver)
     : Seq[PlannerExpression] = {
     resolver.resolve(expressions).asScala.map(bridgeExpression)
+  }
+
+  def tableAggregate(
+    groupingExpressions: JList[Expression],
+    tableAggFunction: Expression,
+    child: TableOperation)
+  : TableOperation = {
+
+    val childNode = child.asInstanceOf[LogicalNode]
+    val resolver = resolverFor(tableCatalog, functionCatalog, child).build
+
+    val convertedGroupings = resolveExpressions(groupingExpressions, resolver)
+    val resolvedFunction = resolveSingleExpression(tableAggFunction, resolver)
+    val tableAggFunctionCall = tableAggFunctionCallFactory.create(resolvedFunction)
+
+    TableAggregate(convertedGroupings, tableAggFunctionCall, childNode).validate(tableEnv)
   }
 
   def windowAggregate(

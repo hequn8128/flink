@@ -23,10 +23,11 @@ import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
 import org.apache.calcite.rel.core.AggregateCall
 import org.apache.calcite.rel.{RelNode, RelWriter, SingleRel}
 import org.apache.flink.api.java.functions.NullByteKeySelector
+import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.functions.KeyedProcessFunction
 import org.apache.flink.table.api.{StreamQueryConfig, StreamTableEnvironment}
-import org.apache.flink.table.plan.nodes.CommonAggregate
+import org.apache.flink.table.plan.nodes.CommonTableAggregate
 import org.apache.flink.table.plan.rules.datastream.DataStreamRetractionRules
 import org.apache.flink.table.plan.schema.RowSchema
 import org.apache.flink.table.runtime.CRowKeySelector
@@ -38,27 +39,27 @@ import org.apache.flink.types.Row
 
 /**
   *
-  * Flink RelNode for data stream unbounded group aggregate
+  * Flink RelNode for data stream unbounded table aggregate
   *
   * @param cluster         Cluster of the RelNode, represent for an environment of related
   *                        relational expressions during the optimization of a query.
   * @param traitSet        Trait set of the RelNode
   * @param inputNode       The input RelNode of aggregation
-  * @param namedAggregates List of calls to aggregate functions and their output field names
-  * @param inputSchema     The type of the rows consumed by this RelNode
   * @param schema          The type of the rows emitted by this RelNode
+  * @param inputSchema     The type of the rows consumed by this RelNode
+  * @param namedAggregates List of calls to aggregate functions and their output field names
   * @param groupings       The position (in the input Row) of the grouping keys
   */
-class DataStreamGroupAggregate(
-    cluster: RelOptCluster,
-    traitSet: RelTraitSet,
-    inputNode: RelNode,
-    namedAggregates: Seq[CalcitePair[AggregateCall, String]],
-    schema: RowSchema,
-    inputSchema: RowSchema,
-    groupings: Array[Int])
+class DataStreamGroupTableAggregate(
+  cluster: RelOptCluster,
+  traitSet: RelTraitSet,
+  inputNode: RelNode,
+  schema: RowSchema,
+  inputSchema: RowSchema,
+  val namedAggregates: Seq[CalcitePair[AggregateCall, String]],
+  val groupings: Array[Int])
   extends SingleRel(cluster, traitSet, inputNode)
-    with CommonAggregate
+    with CommonTableAggregate
     with DataStreamRel
     with Logging {
 
@@ -70,27 +71,25 @@ class DataStreamGroupAggregate(
 
   override def consumesRetractions = true
 
-  def getGroupings: Array[Int] = groupings
-
   override def copy(traitSet: RelTraitSet, inputs: java.util.List[RelNode]): RelNode = {
-    new DataStreamGroupAggregate(
+    new DataStreamGroupTableAggregate(
       cluster,
       traitSet,
       inputs.get(0),
-      namedAggregates,
       schema,
       inputSchema,
+      namedAggregates,
       groupings)
   }
 
   override def toString: String = {
-    s"Aggregate(${
+    s"TableAggregate(${
       if (!groupings.isEmpty) {
         s"groupBy: (${groupingToString(inputSchema.relDataType, groupings)}), "
       } else {
         ""
       }
-    }select:(${aggregationToString(
+    } flatAggregate:(${aggregationToString(
       inputSchema.relDataType, groupings, getRowType, namedAggregates, Nil)}))"
   }
 
@@ -98,13 +97,13 @@ class DataStreamGroupAggregate(
     super.explainTerms(pw)
       .itemIf("groupBy", groupingToString(
         inputSchema.relDataType, groupings), !groupings.isEmpty)
-      .item("select", aggregationToString(
+      .item("flatAggregate", aggregationToString(
         inputSchema.relDataType, groupings, getRowType, namedAggregates, Nil))
   }
 
   override def translateToPlan(
-      tableEnv: StreamTableEnvironment,
-      queryConfig: StreamQueryConfig): DataStream[CRow] = {
+    tableEnv: StreamTableEnvironment,
+    queryConfig: StreamQueryConfig): DataStream[CRow] = {
 
     if (groupings.length > 0 && queryConfig.getMinIdleStateRetentionTime < 0) {
       LOG.warn(
@@ -113,23 +112,15 @@ class DataStreamGroupAggregate(
         "state size. You may specify a retention time of 0 to not clean up the state.")
     }
 
-    val inputDS = input.asInstanceOf[DataStreamRel].translateToPlan(tableEnv, queryConfig)
-
+    val inputDS = getInput.asInstanceOf[DataStreamRel].translateToPlan(tableEnv, queryConfig)
     val outRowType = CRowTypeInfo(schema.typeInfo)
 
-    val aggString = aggregationToString(
-      inputSchema.relDataType,
-      groupings,
-      getRowType,
-      namedAggregates,
-      Nil)
-
-    val keyedAggOpName = s"groupBy: (${groupingToString(inputSchema.relDataType, groupings)}), " +
-      s"select: ($aggString)"
-    val nonKeyedAggOpName = s"select: ($aggString)"
+    val tableAggOutputRowType = new RowTypeInfo(
+      schema.fieldTypeInfos.drop(groupings.size).toArray,
+      schema.fieldNames.drop(groupings.size).toArray)
 
     def createKeyedProcessFunction[K]: KeyedProcessFunction[K, CRow, CRow] = {
-      AggregateUtil.createGroupAggregateFunction[K](
+      AggregateUtil.createGroupTableAggregateFunction[K](
         tableEnv.getConfig,
         false,
         inputSchema.typeInfo,
@@ -137,6 +128,7 @@ class DataStreamGroupAggregate(
         namedAggregates,
         inputSchema.relDataType,
         inputSchema.fieldTypeInfos,
+        tableAggOutputRowType,
         groupings,
         queryConfig,
         tableEnv.getConfig,
@@ -148,22 +140,22 @@ class DataStreamGroupAggregate(
     // grouped / keyed aggregation
       if (groupings.nonEmpty) {
         inputDS
-        .keyBy(new CRowKeySelector(groupings, inputSchema.projectedTypeInfo(groupings)))
-        .process(createKeyedProcessFunction[Row])
-        .returns(outRowType)
-        .name(keyedAggOpName)
-        .asInstanceOf[DataStream[CRow]]
+          .keyBy(new CRowKeySelector(groupings, inputSchema.projectedTypeInfo(groupings)))
+          .process(createKeyedProcessFunction[Row])
+          .returns(outRowType)
+          .name(this.toString)
+          .asInstanceOf[DataStream[CRow]]
       }
       // global / non-keyed aggregation
       else {
         inputDS
-        .keyBy(new NullByteKeySelector[CRow])
-        .process(createKeyedProcessFunction[JByte])
-        .setParallelism(1)
-        .setMaxParallelism(1)
-        .returns(outRowType)
-        .name(nonKeyedAggOpName)
-        .asInstanceOf[DataStream[CRow]]
+          .keyBy(new NullByteKeySelector[CRow])
+          .process(createKeyedProcessFunction[JByte])
+          .setParallelism(1)
+          .setMaxParallelism(1)
+          .returns(outRowType)
+          .name(this.toString)
+          .asInstanceOf[DataStream[CRow]]
       }
     result
   }

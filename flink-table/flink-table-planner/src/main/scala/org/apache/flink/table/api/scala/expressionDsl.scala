@@ -27,7 +27,7 @@ import org.apache.flink.table.expressions.ApiExpressionUtils._
 import org.apache.flink.table.expressions.BuiltInFunctionDefinitions.{E => FDE, UUID => FDUUID, _}
 import org.apache.flink.table.expressions._
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils.{getAccumulatorTypeOfAggregateFunction, getResultTypeOfAggregateFunction}
-import org.apache.flink.table.functions.{AggregateFunction, ScalarFunction, TableFunction}
+import org.apache.flink.table.functions._
 
 import _root_.scala.language.implicitConversions
 
@@ -1090,8 +1090,8 @@ trait ImplicitExpressionConversions {
     }
   }
 
-  implicit class AggregateFunctionCall[T: TypeInformation, ACC: TypeInformation]
-      (val a: AggregateFunction[T, ACC]) {
+  implicit class UserDefinedAggregateFunctionCall[T: TypeInformation, ACC: TypeInformation]
+      (val a: UserDefinedAggregateFunction[T, ACC]) {
 
     private def createFunctionDefinition(): AggregateFunctionDefinition = {
       val resultTypeInfo: TypeInformation[_] = getResultTypeOfAggregateFunction(

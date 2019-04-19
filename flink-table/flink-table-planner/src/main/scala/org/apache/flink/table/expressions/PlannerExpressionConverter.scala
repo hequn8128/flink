@@ -21,6 +21,7 @@ package org.apache.flink.table.expressions
 import org.apache.flink.table.api.{TableException, ValidationException}
 import org.apache.flink.table.expressions.BuiltInFunctionDefinitions._
 import org.apache.flink.table.expressions.{E => PlannerE, UUID => PlannerUUID}
+import org.apache.flink.table.functions.{AggregateFunction, TableAggregateFunction}
 
 import _root_.scala.collection.JavaConverters._
 
@@ -82,12 +83,22 @@ class PlannerExpressionConverter private extends ApiExpressionVisitor[PlannerExp
           args,
           tfd.getResultType)
 
-      case afd: AggregateFunctionDefinition =>
+      case afd: AggregateFunctionDefinition
+        if afd.getAggregateFunction.isInstanceOf[AggregateFunction[_, _]] =>
         AggFunctionCall(
-          afd.getAggregateFunction,
+          afd.getAggregateFunction.asInstanceOf[AggregateFunction[_, _]],
           afd.getResultTypeInfo,
           afd.getAccumulatorTypeInfo,
           args)
+
+      case tafd: AggregateFunctionDefinition
+        if tafd.getAggregateFunction.isInstanceOf[TableAggregateFunction[_, _]] =>
+        TableAggFunctionCall(
+          tafd.getAggregateFunction.asInstanceOf[TableAggregateFunction[_, _]],
+          tafd.getResultTypeInfo,
+          tafd.getAccumulatorTypeInfo,
+          args.asJava,
+          Seq().asJava)
 
       case fd: FunctionDefinition =>
         fd match {

@@ -1025,4 +1025,35 @@ public interface Table {
 	 * </pre>
 	 */
 	Table map(Expression mapFunction);
+
+	/**
+	 * Perform a global flatAggregate without groupBy. FlatAggregate takes a TableAggregateFunction
+	 * which returns multiple rows. Use a selection after the flatAggregate.
+	 *
+	 * <p>Example:
+	 *
+	 * <pre>
+	 * {@code
+	 *   TableAggregateFunction tableAggFunc = new MyTableAggregateFunction();
+	 *   tableEnv.registerFunction("myTableAggFunc", tableAggFunc);
+	 *   tab.flatAggregate("myTableAggFunc(a, b) as (x, y, z)").select("x, y, z")
+	 * }
+	 * </pre>
+	 */
+	GroupedFlatAggTable flatAggregate(String tableAggFunction);
+
+	/**
+	 * Perform a global flatAggregate without groupBy. FlatAggregate takes a TableAggregateFunction
+	 * which returns multiple rows. Use a selection after the flatAggregate.
+	 *
+	 * <p>Scala Example:
+	 *
+	 * <pre>
+	 * {@code
+	 *   val tableAggFunc = new MyTableAggregateFunction
+	 *   tab.flatAggregate(tableAggFunc('a, 'b) as ('x, 'y, 'z)).select('x, 'y, 'z)
+	 * }
+	 * </pre>
+	 */
+	GroupedFlatAggTable flatAggregate(Expression tableAggFunction);
 }

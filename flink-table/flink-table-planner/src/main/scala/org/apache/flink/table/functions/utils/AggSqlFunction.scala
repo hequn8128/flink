@@ -19,10 +19,8 @@
 package org.apache.flink.table.functions.utils
 
 import java.util
-import java.util.Collections
 
 import org.apache.calcite.rel.`type`.RelDataType
-import org.apache.calcite.sql
 import org.apache.calcite.sql._
 import org.apache.calcite.sql.`type`._
 import org.apache.calcite.sql.`type`.SqlOperandTypeChecker.Consistency
@@ -32,7 +30,7 @@ import org.apache.calcite.util.Optionality
 import org.apache.flink.api.common.typeinfo._
 import org.apache.flink.table.api.ValidationException
 import org.apache.flink.table.calcite.FlinkTypeFactory
-import org.apache.flink.table.functions.AggregateFunction
+import org.apache.flink.table.functions.{AggregateFunction, UserDefinedAggregateFunction}
 import org.apache.flink.table.functions.utils.AggSqlFunction.{createOperandTypeChecker, createOperandTypeInference, createReturnTypeInference}
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils._
 
@@ -99,7 +97,7 @@ object AggSqlFunction {
   }
 
   private[flink] def createOperandTypeInference(
-      aggregateFunction: AggregateFunction[_, _],
+      aggregateFunction: UserDefinedAggregateFunction[_, _],
       typeFactory: FlinkTypeFactory)
   : SqlOperandTypeInference = {
     /**
@@ -149,7 +147,7 @@ object AggSqlFunction {
     }
   }
 
-  private[flink] def createOperandTypeChecker(aggregateFunction: AggregateFunction[_, _])
+  private[flink] def createOperandTypeChecker(aggregateFunction: UserDefinedAggregateFunction[_, _])
   : SqlOperandTypeChecker = {
 
     val methods = checkAndExtractMethods(aggregateFunction, "accumulate")

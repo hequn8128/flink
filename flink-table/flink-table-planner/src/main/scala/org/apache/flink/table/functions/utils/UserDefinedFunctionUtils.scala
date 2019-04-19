@@ -38,12 +38,12 @@ import org.apache.flink.table.api.{TableEnvironment, TableException, ValidationE
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.dataview._
 import org.apache.flink.table.expressions._
-import org.apache.flink.table.functions.{AggregateFunction, ScalarFunction, TableFunction, UserDefinedFunction}
-import org.apache.flink.table.plan.logical._
+import org.apache.flink.table.functions._
 import org.apache.flink.table.plan.schema.FlinkTableFunctionImpl
 import org.apache.flink.util.InstantiationUtil
 
 import scala.collection.mutable
+import scala.collection.JavaConverters._
 
 object UserDefinedFunctionUtils {
 
@@ -99,11 +99,11 @@ object UserDefinedFunctionUtils {
     * of [[TypeInformation]]. Elements of the signature can be null (act as a wildcard).
     */
   def getAccumulateMethodSignature(
-      function: AggregateFunction[_, _],
+      function: UserDefinedAggregateFunction[_, _],
       signature: Seq[TypeInformation[_]])
   : Option[Array[Class[_]]] = {
     val accType = TypeExtractor.createTypeInfo(
-      function, classOf[AggregateFunction[_, _]], function.getClass, 1)
+      function, classOf[UserDefinedAggregateFunction[_, _]], function.getClass, 1)
     val input = (Array(accType) ++ signature).toSeq
     getUserDefinedMethod(
       function,
@@ -324,7 +324,7 @@ object UserDefinedFunctionUtils {
   def createAggregateSqlFunction(
       name: String,
       displayName: String,
-      aggFunction: AggregateFunction[_, _],
+      aggFunction: UserDefinedAggregateFunction[_, _],
       resultType: TypeInformation[_],
       accTypeInfo: TypeInformation[_],
       typeFactory: FlinkTypeFactory)
@@ -332,14 +332,26 @@ object UserDefinedFunctionUtils {
     //check if a qualified accumulate method exists before create Sql function
     checkAndExtractMethods(aggFunction, "accumulate")
 
-    AggSqlFunction(
-      name,
-      displayName,
-      aggFunction,
-      resultType,
-      accTypeInfo,
-      typeFactory,
-      aggFunction.requiresOver)
+    aggFunction match {
+      case aggFunction: AggregateFunction[_, _] =>
+        AggSqlFunction(
+          name,
+          displayName,
+          aggFunction,
+          resultType,
+          accTypeInfo,
+          typeFactory,
+          aggFunction.requiresOver)
+      case tableAggFunction: TableAggregateFunction[_, _] =>
+        TableAggSqlFunction(
+          name,
+          displayName,
+          tableAggFunction,
+          Seq(),
+          resultType,
+          accTypeInfo,
+          typeFactory)
+    }
   }
 
   /**
@@ -573,7 +585,7 @@ object UserDefinedFunctionUtils {
     * @return The inferred result type of the AggregateFunction.
     */
   def getResultTypeOfAggregateFunction(
-      aggregateFunction: AggregateFunction[_, _],
+      aggregateFunction: UserDefinedAggregateFunction[_, _],
       extractedType: TypeInformation[_] = null)
     : TypeInformation[_] = {
 
@@ -605,7 +617,7 @@ object UserDefinedFunctionUtils {
     * @return The inferred accumulator type of the AggregateFunction.
     */
   def getAccumulatorTypeOfAggregateFunction(
-    aggregateFunction: AggregateFunction[_, _],
+    aggregateFunction: UserDefinedAggregateFunction[_, _],
     extractedType: TypeInformation[_] = null)
   : TypeInformation[_] = {
 
@@ -638,12 +650,12 @@ object UserDefinedFunctionUtils {
     */
   @throws(classOf[InvalidTypesException])
   private def extractTypeFromAggregateFunction(
-      aggregateFunction: AggregateFunction[_, _],
+      aggregateFunction: UserDefinedAggregateFunction[_, _],
       parameterTypePos: Int): TypeInformation[_] = {
 
     TypeExtractor.createTypeInfo(
       aggregateFunction,
-      classOf[AggregateFunction[_, _]],
+      classOf[UserDefinedAggregateFunction[_, _]],
       aggregateFunction.getClass,
       parameterTypePos).asInstanceOf[TypeInformation[_]]
   }
@@ -765,6 +777,49 @@ object UserDefinedFunctionUtils {
     // arrays
     (candidate.isArray && expected.isArray &&
       (candidate.getComponentType == expected.getComponentType))
+
+  /**
+    * Extract alias for a [[TableAggFunctionCall]].
+    *
+    * @param callExpr an expression of a TableAggFunctionCall with or without alias.
+    * @return A [[TableAggFunctionCall]] with the alias processed.
+    */
+  def extractAliasForTableAggFunctionCall(callExpr: PlannerExpression): TableAggFunctionCall = {
+
+    var alias: Seq[String] = Seq()
+
+    // unwrap an Expression until we get a TableAggFunctionCall
+    def unwrap(expr: PlannerExpression): TableAggFunctionCall = expr match {
+      case Alias(child, name, extraNames) =>
+        alias = Seq(name) ++ extraNames
+        unwrap(child)
+      case c: TableAggFunctionCall => c
+      case _ =>
+        throw new TableException(
+          "A flatAggregate only accepts an expression which defines a table aggregate" +
+            "function that might be followed by some alias.")
+    }
+
+    val tableAggFunctionCall = unwrap(callExpr)
+    val originNames = getFieldInfo(tableAggFunctionCall.resultType)._1
+
+    // valid alias
+    if (alias.size > 0 && alias.length != originNames.length) {
+      throw new ValidationException(
+        s"List of column aliases must have same degree as table; " +
+          s"the returned table of function '${tableAggFunctionCall.toString}' has " +
+          s"${originNames.length} columns (${originNames.mkString(",")}), " +
+          s"whereas alias list has ${alias.length} columns")
+    }
+
+    new TableAggFunctionCall(
+      tableAggFunctionCall.aggregateFunction,
+      tableAggFunctionCall.resultTypeInfo,
+      tableAggFunctionCall.accTypeInfo,
+      tableAggFunctionCall.args,
+      alias.asJava
+    )
+  }
 
   def getOperandTypeInfo(callBinding: SqlCallBinding): Seq[TypeInformation[_]] = {
     val operandTypes = for (i <- 0 until callBinding.getOperandCount)

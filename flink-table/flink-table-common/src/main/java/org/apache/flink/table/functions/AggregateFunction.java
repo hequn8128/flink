@@ -100,15 +100,7 @@ import org.apache.flink.api.common.typeinfo.TypeInformation;
  *              AggregateFunction must be put into the accumulator.
  */
 @PublicEvolving
-public abstract class AggregateFunction<T, ACC> extends UserDefinedFunction {
-
-	/**
-	 * Creates and initializes the accumulator for this {@link AggregateFunction}. The accumulator
-	 * is used to keep the aggregated values which are needed to compute an aggregation result.
-	 *
-	 * @return the accumulator with the initial value
-	 */
-	public abstract ACC createAccumulator();
+public abstract class AggregateFunction<T, ACC> extends UserDefinedAggregateFunction<T, ACC> {
 
 	/**
 	 * Called every time when an aggregation result should be materialized.
@@ -131,25 +123,5 @@ public abstract class AggregateFunction<T, ACC> extends UserDefinedFunction {
 	 */
 	public boolean requiresOver() {
 		return false;
-	}
-
-	/**
-	 * Returns the {@link TypeInformation} of the {@link AggregateFunction}'s result.
-	 *
-	 * @return The {@link TypeInformation} of the {@link AggregateFunction}'s result or
-	 *         <code>null</code> if the result type should be automatically inferred.
-	 */
-	public TypeInformation<T> getResultType() {
-		return null;
-	}
-
-	/**
-	 * Returns the {@link TypeInformation} of the {@link AggregateFunction}'s accumulator.
-	 *
-	 * @return The {@link TypeInformation} of the {@link AggregateFunction}'s accumulator or
-	 *         <code>null</code> if the accumulator type should be automatically inferred.
-	 */
-	public TypeInformation<ACC> getAccumulatorType() {
-		return null;
 	}
 }

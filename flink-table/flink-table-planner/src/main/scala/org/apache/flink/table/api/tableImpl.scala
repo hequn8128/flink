@@ -459,6 +459,14 @@ class TableImpl(
     wrap(operationTreeBuilder.map(mapFunction, operationTree))
   }
 
+  override def flatAggregate(tableAggFunction: String): GroupedFlatAggTable = {
+    groupBy().flatAggregate(tableAggFunction)
+  }
+
+  override def flatAggregate(tableAggFunction: Expression): GroupedFlatAggTable = {
+    groupBy().flatAggregate(tableAggFunction)
+  }
+
   /**
     * Registers an unique table name under the table environment
     * and return the registered table name.
@@ -511,6 +519,54 @@ class GroupedTableImpl(
           tableImpl.operationTree
         )
       ))
+  }
+
+  override def flatAggregate(tableAggFunction: String): GroupedFlatAggTable = {
+    flatAggregate(ExpressionParser.parseExpression(tableAggFunction))
+  }
+
+  override def flatAggregate(tableAggFunction: Expression): GroupedFlatAggTable = {
+    new GroupFlatAggTableImpl(table, groupKey, tableAggFunction)
+  }
+}
+
+class GroupFlatAggTableImpl(
+  private[flink] val table: Table,
+  private[flink] val groupKey: Seq[Expression],
+  private[flink] val tableAggFunction: Expression) extends GroupedFlatAggTable {
+
+  private val tableImpl = table.asInstanceOf[TableImpl]
+
+  override def select(fields: String): Table = {
+    select(ExpressionParser.parseExpressionList(fields).asScala: _*)
+  }
+
+  override def select(fields: Expression*): Table = {
+    val expressionsWithResolvedCalls = fields.map(_.accept(tableImpl.callResolver)).asJava
+    val resolvedTableAggFunction = tableAggFunction.accept(tableImpl.callResolver)
+    val extracted = extractAggregationsAndProperties(expressionsWithResolvedCalls,
+      tableImpl.getUniqueAttributeSupplier)
+
+    val aggNames = extracted.getAggregations
+    val propNames = extracted.getWindowProperties
+
+    if (!propNames.isEmpty) {
+      throw new ValidationException("Window properties can only be used on windowed tables.")
+    }
+
+    if (!aggNames.isEmpty) {
+      throw new ValidationException("Currently, can't use aggregate functions in the " +
+        "select after flatAggregate, use table aggregate function instead.")
+    }
+
+    val flatAggTable = new TableImpl(tableImpl.tableEnv,
+      tableImpl.operationTreeBuilder.tableAggregate(
+        groupKey.asJava,
+        resolvedTableAggFunction,
+        tableImpl.operationTree
+      ))
+
+    flatAggTable.select(fields: _*)
   }
 }
 
