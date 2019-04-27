@@ -24,10 +24,12 @@ import org.apache.calcite.plan.RelOptCluster
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.core.AggregateCall
-import org.apache.calcite.util.ImmutableBitSet
+import org.apache.calcite.util.{ImmutableBitSet, Pair, Util}
 import org.apache.flink.table.calcite.FlinkTypeFactory
+import org.apache.flink.table.runtime.aggregate.AggregateUtil.CalcitePair
 
 import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 
 trait CommonTableAggregate extends CommonAggregate {
 
@@ -49,5 +51,37 @@ trait CommonTableAggregate extends CommonAggregate {
     // agg fields
     aggCalls.get(0).`type`.getFieldList.foreach(builder.add)
     builder.build()
+  }
+
+  /**
+    * Concat output fields of table aggregate function into a single string for display.
+    */
+  override protected def getOutStringForEachField(
+    namedAggregates: Seq[CalcitePair[AggregateCall, String]],
+    groupSize: Int,
+    rowType: RelDataType): Seq[String] = {
+
+    val outFields = rowType.getFieldNames.asScala
+    val tableAggOutputArity = namedAggregates.head.left.getType.getFieldCount
+    val outFieldsOfTableAgg = outFields.subList(groupSize, groupSize + tableAggOutputArity)
+    val tableAggOutputFiels = Seq(s"(${outFieldsOfTableAgg.mkString(", ")})")
+
+    outFields.subList(0, groupSize) ++
+      tableAggOutputFiels ++
+      outFields.drop(groupSize + tableAggOutputArity)
+  }
+
+  def getNamedAggCalls(
+    aggCalls: util.List[AggregateCall],
+    rowType: RelDataType,
+    indicator: Boolean,
+    groupSet: ImmutableBitSet)
+  : util.List[Pair[AggregateCall, String]] = {
+
+    def getGroupCount: Int = groupSet.cardinality
+    def getIndicatorCount: Int = if (indicator) getGroupCount else 0
+
+    val offset = getGroupCount + getIndicatorCount
+    Pair.zip(aggCalls, Util.skip(rowType.getFieldNames, offset))
   }
 }

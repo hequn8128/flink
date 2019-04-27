@@ -34,6 +34,13 @@ trait CommonAggregate {
     grouping.map( inFields(_) ).mkString(", ")
   }
 
+  protected def getOutStringForEachField(
+    namedAggregates: Seq[CalcitePair[AggregateCall, String]],
+    groupSize: Int,
+    rowType: RelDataType): Seq[String] = {
+    rowType.getFieldNames.asScala
+  }
+
   private[flink] def aggregationToString(
       inputType: RelDataType,
       grouping: Array[Int],
@@ -43,7 +50,7 @@ trait CommonAggregate {
     : String = {
 
     val inFields = inputType.getFieldNames.asScala
-    val outFields = rowType.getFieldNames.asScala
+    val outFields = getOutStringForEachField(namedAggregates, grouping.size, rowType)
 
     val groupStrings = grouping.map( inFields(_) )
 
