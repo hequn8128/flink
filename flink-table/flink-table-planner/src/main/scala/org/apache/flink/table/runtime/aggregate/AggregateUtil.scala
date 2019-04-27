@@ -38,7 +38,7 @@ import org.apache.flink.table.api.dataview.DataViewSpec
 import org.apache.flink.table.api.{StreamQueryConfig, TableConfig, TableException}
 import org.apache.flink.table.calcite.FlinkRelBuilder.NamedWindowProperty
 import org.apache.flink.table.calcite.FlinkTypeFactory
-import org.apache.flink.table.codegen.AggregationCodeGenerator
+import org.apache.flink.table.codegen.{AggregationCodeGenerator, TableAggregationCodeGenerator}
 import org.apache.flink.table.expressions.PlannerExpressionUtils.isTimeIntervalLiteral
 import org.apache.flink.table.expressions._
 import org.apache.flink.table.functions.aggfunctions._
@@ -221,6 +221,82 @@ object AggregateUtil {
       .getAggregatesAccumulatorTypes: _*)
     new GroupAggProcessFunction[K](
       generator.generateAggregations,
+      aggregationStateType,
+      generateRetraction,
+      queryConfig)
+
+  }
+
+  /**
+    * Create an [[org.apache.flink.streaming.api.functions.ProcessFunction]] for group (without
+    * window) aggregate to evaluate final table aggregate value.
+    *
+    * @param generator       code generator instance
+    * @param namedAggregates List of calls to aggregate functions and their output field names
+    * @param inputRowType    Input row type
+    * @param inputFieldTypes Types of the physical input fields
+    * @param groupings       the position (in the input Row) of the grouping keys
+    * @param queryConfig     The configuration of the query to generate.
+    * @param generateRetraction It is a tag that indicates whether generate retract record.
+    * @param consumeRetraction It is a tag that indicates whether consume the retract record.
+    * @return [[org.apache.flink.streaming.api.functions.ProcessFunction]]
+    */
+  private[flink] def createGroupTableAggregateFunction[K](
+    config: TableConfig,
+    nullableInput: Boolean,
+    input: TypeInformation[_ <: Any],
+    constants: Option[Seq[RexLiteral]],
+    namedAggregates: Seq[CalcitePair[AggregateCall, String]],
+    inputRowType: RelDataType,
+    inputFieldTypes: Seq[TypeInformation[_]],
+    tableAggOutputRowType: RowTypeInfo,
+    groupings: Array[Int],
+    queryConfig: StreamQueryConfig,
+    tableConfig: TableConfig,
+    generateRetraction: Boolean,
+    consumeRetraction: Boolean): KeyedProcessFunction[K, CRow, CRow] = {
+
+    val aggregateMetadata = extractAggregateMetadata(
+      namedAggregates.map(_.getKey),
+      inputRowType,
+      inputFieldTypes.length,
+      consumeRetraction,
+      tableConfig,
+      isStateBackedDataViews = true)
+
+    val aggMapping = aggregateMetadata.getAdjustedMapping(groupings.length)
+    val outputArity = groupings.length + tableAggOutputRowType.getTotalFields
+    val tableAggOutputType = namedAggregates
+      .head.left.getAggregation.asInstanceOf[AggSqlFunction].returnType
+
+    val generator = new TableAggregationCodeGenerator(
+      config,
+      nullableInput,
+      input,
+      constants,
+      "NonWindowedTableAggregationHelper",
+      inputFieldTypes,
+      tableAggOutputRowType,
+      tableAggOutputType,
+      aggregateMetadata.getAggregateFunctions,
+      aggregateMetadata.getAggregateIndices,
+      aggMapping,
+      aggregateMetadata.getDistinctAccMapping,
+      isStateBackedDataViews = true,
+      partialResults = false,
+      groupings,
+      None,
+      outputArity,
+      consumeRetraction,
+      needMerge = false,
+      needReset = false,
+      accConfig = Some(aggregateMetadata.getAggregatesAccumulatorSpecs)
+    )
+
+    val aggregationStateType: RowTypeInfo = new RowTypeInfo(aggregateMetadata
+      .getAggregatesAccumulatorTypes: _*)
+    new GroupTableAggProcessFunction[K](
+      generator.generateTableAggregations,
       aggregationStateType,
       generateRetraction,
       queryConfig)
