@@ -1892,6 +1892,27 @@ Table table = input
 {% endhighlight %}
       </td>
     </tr>
+    
+    <tr>
+      <td>
+        <strong>GroupBy TableAggregation</strong><br>
+        <span class="label label-primary">Streaming</span><br>
+        <span class="label label-info">Result Updating</span>
+      </td>
+      <td>
+        <p>Similar to a <b>GroupBy Aggregation</b>. Groups the rows on the grouping keys with a following running table aggregation operator to aggregate rows group-wise. The difference from an AggregateFunction is that TableAggregateFunction may return 0 or more records for a group. You have to close the "flatAggregate" with a select statement. And the select statement does not support aggregate functions.</p>
+{% highlight java %}
+TableAggregateFunction tableAggFunc = new MyTableAggregateFunction();
+tableEnv.registerFunction("myTableAggFunc", tableAggFunc);
+Table orders = tableEnv.scan("Orders");
+Table result = orders
+    .groupBy("a")
+    .flatAggregate("myTableAggFunc(a, b, c) as (x, y, z)")
+    .select("a, x, y, z");
+{% endhighlight %}
+        <p><b>Note:</b> For streaming queries the required state to compute the query result might grow infinitely depending on the type of aggregation and the number of distinct grouping keys. Please provide a query configuration with valid retention interval to prevent excessive state size. See <a href="streaming/query_configuration.html">Query Configuration</a> for details.</p>
+      </td>
+    </tr>
   </tbody>
 </table>
 </div>
@@ -1958,6 +1979,26 @@ val func = new MyFlatMapFunction
 val table = input
   .flatMap(func('c)).as('a, 'b)
 {% endhighlight %}
+      </td>
+    </tr>
+    
+    <tr>
+      <td>
+        <strong>GroupBy TableAggregation</strong><br>
+        <span class="label label-primary">Streaming</span><br>
+        <span class="label label-info">Result Updating</span>
+      </td>
+      <td>
+        <p>Similar to a <b>GroupBy Aggregation</b>. Groups the rows on the grouping keys with a following running table aggregation operator to aggregate rows group-wise. The difference from an AggregateFunction is that TableAggregateFunction may return 0 or more records for a group. You have to close the "flatAggregate" with a select statement. And the select statement does not support aggregate functions.</p>
+{% highlight scala %}
+val tableAggFunc: TableAggregateFunction = new MyTableAggregateFunction
+val orders: Table = tableEnv.scan("Orders")
+val result = orders
+    .groupBy('a)
+    .flatAggregate(tableAggFunc('a, 'b, 'c) as ('x, 'y, 'z))
+    .select('a, 'x, 'y, 'z)
+{% endhighlight %}
+        <p><b>Note:</b> For streaming queries the required state to compute the query result might grow infinitely depending on the type of aggregation and the number of distinct grouping keys. Please provide a query configuration with valid retention interval to prevent excessive state size. See <a href="streaming/query_configuration.html">Query Configuration</a> for details.</p>
       </td>
     </tr>
   </tbody>
