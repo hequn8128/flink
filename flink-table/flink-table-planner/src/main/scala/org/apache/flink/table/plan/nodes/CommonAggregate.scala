@@ -18,10 +18,14 @@
 
 package org.apache.flink.table.plan.nodes
 
+import java.util
+
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.core.AggregateCall
 import org.apache.flink.table.calcite.FlinkRelBuilder
 import FlinkRelBuilder.NamedWindowProperty
+import org.apache.flink.table.functions.TableAggregateFunction
+import org.apache.flink.table.functions.utils.AggSqlFunction
 import org.apache.flink.table.runtime.aggregate.AggregateUtil._
 
 import scala.collection.JavaConverters._

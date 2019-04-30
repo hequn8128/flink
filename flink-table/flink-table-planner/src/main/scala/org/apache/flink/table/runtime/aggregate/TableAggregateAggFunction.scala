@@ -24,25 +24,56 @@ import org.apache.flink.types.Row
 import java.util
 import java.util.{List => JList}
 
+import org.apache.flink.util.Collector
+
 /**
-  * Aggregate Function used for the aggregate operator in
-  * [[org.apache.flink.streaming.api.datastream.WindowedStream]]
+  * Table Aggregate Function used for the aggregate operator in
+  * [[org.apache.flink.streaming.api.datastream.WindowedStream]].
   *
   * @param genAggregations Generated aggregate helper function
   */
-class AggregateAggFunction[F <: GeneratedAggregations](
+class TableAggregateAggFunction[F <: GeneratedTableAggregations](
   genAggregations: GeneratedAggregationsFunction)
   extends AggregateAggFunctionBase[JList[Row], F](genAggregations) {
-
 
   override def getResult(accumulatorRow: Row): JList[Row] = {
     if (function == null) {
       initFunction()
     }
-    val output = function.createOutputRow()
-    function.setAggregationResults(accumulatorRow, output)
-    val list = new util.LinkedList[Row]()
-    list.add(output)
-    list
+
+    // new buffer collector
+    val bufferCollector = new BufferedCollector()
+    bufferCollector.init()
+    // Output data into a memory buffer.
+    // There is no way to emit data in [[org.apache.flink.api.common.functions.AggregateFunction]],
+    // we have to buffer the data in a list and return to the WindowFunction.
+    function.emit(accumulatorRow, bufferCollector)
+    bufferCollector.getResults
+  }
+
+  /**
+    * Collect data into a memory buffer.
+    */
+  private class BufferedCollector extends Collector[Row] {
+
+    private var list: JList[Row] = _
+
+    def init(): Unit = {
+      list = new util.LinkedList[Row]
+    }
+
+    def getResults(): JList[Row] = list
+
+    /**
+      * Emits a record into the buffer.
+      */
+    override def collect(record: Row): Unit = {
+      // can't reuse here, need to copy
+      list.add(Row.copy(record))
+    }
+
+    override def close(): Unit = {
+      list.clear()
+    }
   }
 }

@@ -23,9 +23,10 @@ import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.convert.ConverterRule
 import org.apache.flink.table.api.TableException
 import org.apache.flink.table.plan.nodes.FlinkConventions
-import org.apache.flink.table.plan.nodes.datastream.DataStreamGroupWindowAggregate
+import org.apache.flink.table.plan.nodes.datastream.{DataStreamGroupWindowAggregate, DataStreamGroupWindowTableAggregate}
 import org.apache.flink.table.plan.nodes.logical.FlinkLogicalWindowAggregate
 import org.apache.flink.table.plan.schema.RowSchema
+import org.apache.flink.table.runtime.aggregate.AggregateUtil
 
 import scala.collection.JavaConversions._
 
@@ -53,18 +54,31 @@ class DataStreamGroupWindowAggregateRule
     val traitSet: RelTraitSet = rel.getTraitSet.replace(FlinkConventions.DATASTREAM)
     val convInput: RelNode = RelOptRule.convert(agg.getInput, FlinkConventions.DATASTREAM)
 
-    new DataStreamGroupWindowAggregate(
-      agg.getWindow,
-      agg.getNamedProperties,
-      rel.getCluster,
-      traitSet,
-      convInput,
-      agg.getNamedAggCalls,
-      new RowSchema(rel.getRowType),
-      new RowSchema(agg.getInput.getRowType),
-      agg.getGroupSet.toArray)
+    if (AggregateUtil.isTableAggregate(agg.getAggCallList)) {
+      new DataStreamGroupWindowTableAggregate(
+        agg.getWindow,
+        agg.getNamedProperties,
+        rel.getCluster,
+        traitSet,
+        convInput,
+        agg.getNamedAggCalls,
+        new RowSchema(rel.getRowType),
+        new RowSchema(agg.getInput.getRowType),
+        agg.getGroupSet.toArray)
+    } else {
+      new DataStreamGroupWindowAggregate(
+        agg.getWindow,
+        agg.getNamedProperties,
+        rel.getCluster,
+        traitSet,
+        convInput,
+        agg.getNamedAggCalls,
+        new RowSchema(rel.getRowType),
+        new RowSchema(agg.getInput.getRowType),
+        agg.getGroupSet.toArray)
     }
   }
+}
 
 object DataStreamGroupWindowAggregateRule {
   val INSTANCE: RelOptRule = new DataStreamGroupWindowAggregateRule

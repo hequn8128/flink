@@ -239,6 +239,75 @@ class OperationTreeBuilder(private val tableEnv: TableEnvImpl) {
       child)
   }
 
+  def windowTableAggregate(
+    groupingExpressions: JList[Expression],
+    window: GroupWindow,
+    windowProperties: JList[Expression],
+    tableAggFunction: Expression,
+    child: TableOperation)
+  : TableOperation = {
+
+    // Step1: add a default name to the call in the grouping expressions, e.g., groupBy(a % 5) to
+    // groupBy(a % 5 as TMP_0). We need a name for every column so that to perform alias for the
+    // table aggregate function in Step4.
+    var attrNameCntr: Int = 0
+    val usedFieldNames = child.getTableSchema.getFieldNames.toBuffer
+    val newGroupingExpressions = groupingExpressions.map {
+      case c: CallExpression
+        if !c.getFunctionDefinition.getName.equals(BuiltInFunctionDefinitions.AS.getName) => {
+        val tempName = getUniqueName("TMP_" + attrNameCntr, usedFieldNames)
+        usedFieldNames.append(tempName)
+        attrNameCntr += 1
+        new CallExpression(
+          BuiltInFunctionDefinitions.AS,
+          Seq(c, new ValueLiteralExpression(tempName))
+        )
+      }
+      case e => e
+    }
+
+    // Step2: resolve expressions
+    val resolver = resolverFor(tableCatalog, functionCatalog, child).build()
+    val resolvedWindow = aggregateOperationFactory.createResolvedWindow(window, resolver)
+
+    val resolverWithWindowReferences = resolverFor(tableCatalog, functionCatalog, child)
+      .withLocalReferences(
+        new LocalReferenceExpression(
+          resolvedWindow.getAlias,
+          resolvedWindow.getTimeAttribute.getResultType))
+      .build
+
+    val convertedGroupings = resolverWithWindowReferences.resolve(newGroupingExpressions)
+
+    val convertedAggregates = resolverWithWindowReferences.resolve(Seq(tableAggFunction))
+
+    val convertedProperties = resolverWithWindowReferences.resolve(windowProperties)
+
+    val resolvedFunctionAndAlias = aggregateOperationFactory.extractTableAggFunctionAndAliases(
+      convertedAggregates.get(0))
+
+    // Step3: create table agg operation
+    val tableAggOperation = aggregateOperationFactory.createWindowAggregate(
+      convertedGroupings,
+      Seq(resolvedFunctionAndAlias.f0),
+      convertedProperties,
+      resolvedWindow,
+      child)
+
+    // Step4: add a top project to alias the output fields of the table aggregate. Also, project the
+    // window attribute.
+    val aliasName = resolvedFunctionAndAlias.f1
+    if (aliasName.nonEmpty) {
+      val namesBeforeAlias = tableAggOperation.getTableSchema.getFieldNames
+      val namesAfterAlias = namesBeforeAlias.take(groupingExpressions.size()) ++ aliasName ++
+        namesBeforeAlias.takeRight(convertedProperties.size())
+      this.alias(namesAfterAlias.map(e =>
+        new UnresolvedReferenceExpression(e)).toList, tableAggOperation)
+    } else {
+      tableAggOperation
+    }
+  }
+
   def join(
       left: TableOperation,
       right: TableOperation,
