@@ -29,10 +29,7 @@ import org.apache.flink.table.expressions.LocalReferenceExpression;
 import org.apache.flink.table.expressions.LookupCallExpression;
 import org.apache.flink.table.expressions.TableReferenceExpression;
 
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -109,6 +106,21 @@ public class OperationExpressionsUtils {
 		return new CategorizedExpressions(projections, aggregates, properties);
 	}
 
+	public static CategorizedExpressions extractProperties(
+		List<Expression> expressions,
+		Supplier<String> uniqueAttributeGenerator) {
+		PropertiesSplitter splitter = new PropertiesSplitter(uniqueAttributeGenerator);
+		expressions.forEach(expr -> expr.accept(splitter));
+
+		List<Expression> projections = expressions.stream()
+			.map(expr -> expr.accept(new AggregationAndPropertiesReplacer(new HashMap<>(),
+				splitter.properties)))
+			.collect(Collectors.toList());
+
+		List<Expression> properties = nameExpressions(splitter.properties);
+		return new CategorizedExpressions(projections, new LinkedList<>(), properties);
+	}
+
 	/**
 	 * Extracts names from given expressions if they have one. Expressions that have names are:
 	 * <ul>
@@ -169,6 +181,37 @@ public class OperationExpressionsUtils {
 			if (isFunctionOfType(call, AGGREGATE_FUNCTION)) {
 				aggregates.computeIfAbsent(call, expr -> uniqueAttributeGenerator.get());
 			} else if (WINDOW_PROPERTIES.contains(functionDefinition)) {
+				properties.computeIfAbsent(call, expr -> uniqueAttributeGenerator.get());
+			} else {
+				call.getChildren().forEach(c -> c.accept(this));
+			}
+			return null;
+		}
+
+		@Override
+		protected Void defaultMethod(Expression expression) {
+			return null;
+		}
+	}
+
+	private static class PropertiesSplitter extends ApiExpressionDefaultVisitor<Void> {
+
+		private final Map<Expression, String> properties = new LinkedHashMap<>();
+		private final Supplier<String> uniqueAttributeGenerator;
+
+		private PropertiesSplitter(Supplier<String> uniqueAttributeGenerator) {
+			this.uniqueAttributeGenerator = uniqueAttributeGenerator;
+		}
+
+		@Override
+		public Void visitLookupCall(LookupCallExpression unresolvedCall) {
+			throw new IllegalStateException("All calls should be resolved by now. Got: " + unresolvedCall);
+		}
+
+		@Override
+		public Void visitCall(CallExpression call) {
+			FunctionDefinition functionDefinition = call.getFunctionDefinition();
+			if (WINDOW_PROPERTIES.contains(functionDefinition)) {
 				properties.computeIfAbsent(call, expr -> uniqueAttributeGenerator.get());
 			} else {
 				call.getChildren().forEach(c -> c.accept(this));

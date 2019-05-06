@@ -22,22 +22,23 @@ import org.apache.flink.table.codegen.GeneratedAggregationsFunction
 import org.apache.flink.types.Row
 
 /**
-  * Aggregate Function used for the aggregate operator in
-  * [[org.apache.flink.streaming.api.datastream.WindowedStream]]
+  * Table Aggregate Function used for the aggregate operator in
+  * [[org.apache.flink.streaming.api.datastream.WindowedStream]].
   *
   * @param genAggregations Generated aggregate helper function
   */
-class AggregateAggFunction[F <: GeneratedAggregations](
+class TableAggregateAggFunction[F <: GeneratedTableAggregations](
   genAggregations: GeneratedAggregationsFunction)
   extends AggregateAggFunctionBase[Row, F](genAggregations) {
-
 
   override def getResult(accumulatorRow: Row): Row = {
     if (function == null) {
       initFunction()
     }
-    val output = function.createOutputRow()
-    function.setAggregationResults(accumulatorRow, output)
-    output
+
+    val tempRow = new Row(2)
+    tempRow.setField(0, accumulatorRow)
+    tempRow.setField(1, function)
+    tempRow
   }
 }

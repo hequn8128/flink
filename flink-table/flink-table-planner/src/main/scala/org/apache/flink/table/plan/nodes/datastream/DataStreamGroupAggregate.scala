@@ -77,7 +77,7 @@ class DataStreamGroupAggregate(
     tableConfig: TableConfig,
     queryConfig: StreamQueryConfig): KeyedProcessFunction[K, CRow, CRow] = {
 
-    AggregateUtil.createGroupAggregateFunction[K](
+    AggregateUtil.createDataStreamGroupAggregateFunction[K](
       tableConfig,
       false,
       inputSchema.typeInfo,

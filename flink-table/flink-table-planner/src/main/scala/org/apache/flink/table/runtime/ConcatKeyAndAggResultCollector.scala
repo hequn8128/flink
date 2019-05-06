@@ -16,28 +16,32 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.runtime.aggregate
+package org.apache.flink.table.runtime
 
-import org.apache.flink.table.codegen.GeneratedAggregationsFunction
 import org.apache.flink.types.Row
 
 /**
-  * Aggregate Function used for the aggregate operator in
-  * [[org.apache.flink.streaming.api.datastream.WindowedStream]]
-  *
-  * @param genAggregations Generated aggregate helper function
+  * The collector is used to concat group key and table aggregate function output.
   */
-class AggregateAggFunction[F <: GeneratedAggregations](
-  genAggregations: GeneratedAggregationsFunction)
-  extends AggregateAggFunctionBase[Row, F](genAggregations) {
+class ConcatKeyAndAggResultCollector(val keyNum: Int) extends CRowWrappingCollector {
 
+  var resultRow: Row = _
 
-  override def getResult(accumulatorRow: Row): Row = {
-    if (function == null) {
-      initFunction()
+  def setResultRow(row: Row): Unit = {
+    resultRow = row
+  }
+
+  def getResultRow: Row = {
+    resultRow
+  }
+
+  override def collect(record: Row): Unit = {
+    var i = 0
+    val offset = keyNum
+    while (i < record.getArity) {
+      resultRow.setField(i + offset, record.getField(i))
+      i += 1
     }
-    val output = function.createOutputRow()
-    function.setAggregationResults(accumulatorRow, output)
-    output
+    super.collect(resultRow)
   }
 }

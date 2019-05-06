@@ -83,7 +83,7 @@ class DataStreamGroupTableAggregate(
       schema.fieldTypeInfos.drop(groupings.length).toArray,
       schema.fieldNames.drop(groupings.length).toArray)
 
-    AggregateUtil.createGroupTableAggregateFunction[K](
+    AggregateUtil.createDataStreamGroupTableAggregateFunction[K](
       tableConfig,
       false,
       inputSchema.typeInfo,

@@ -162,19 +162,33 @@ public class AggregateOperationFactory {
 		List<PlannerExpression> convertedAggregates = bridge(aggregates);
 		List<PlannerExpression> convertedWindowProperties = bridge(windowProperties);
 
+		Boolean isTableAggregate = aggregates.size() == 1 && isTableAggFunctionCall(aggregates.get(0));
+
 		TypeInformation[] fieldTypes = concat(
-			convertedGroupings.stream(),
-			convertedAggregates.stream(),
-			convertedWindowProperties.stream()
-		).map(PlannerExpression::resultType)
-			.toArray(TypeInformation[]::new);
+			convertedGroupings.stream().map(PlannerExpression::resultType),
+			convertedAggregates.stream().flatMap(expr -> {
+				if (isTableAggregate) {
+					return Stream.of(UserDefinedFunctionUtils.getFieldInfo(expr.resultType())._3());
+				} else {
+					return Stream.of(expr.resultType());
+				}
+			}),
+			convertedWindowProperties.stream().map(PlannerExpression::resultType)
+		).toArray(TypeInformation[]::new);
 
 		String[] fieldNames = concat(
-			groupings.stream(),
-			aggregates.stream(),
-			windowProperties.stream()
-		).map(expr -> extractName(expr).orElseGet(expr::toString))
-			.toArray(String[]::new);
+			groupings.stream().map(expr -> extractName(expr).orElseGet(expr::toString)),
+			aggregates.stream().flatMap(expr -> {
+				if (isTableAggregate) {
+					return Stream.of(UserDefinedFunctionUtils.getFieldInfo(
+						((AggregateFunctionDefinition) ((CallExpression) expr).getFunctionDefinition())
+							.getResultTypeInfo())._1());
+				} else {
+					return Stream.of(extractName(expr).orElseGet(expr::toString));
+				}
+			}),
+			windowProperties.stream().map(expr -> extractName(expr).orElseGet(expr::toString))
+		).toArray(String[]::new);
 
 		TableSchema tableSchema = new TableSchema(fieldNames, fieldTypes);
 
