@@ -92,3 +92,12 @@ case class GeneratedInput[F <: InputFormat[_, _], T <: Any](
   * @param code code of the generated Collector.
   */
 case class GeneratedCollector(name: String, code: String)
+
+/**
+  * Describes a generated [[org.apache.flink.streaming.api.functions.windowing.WindowFunction]] or
+  * [[org.apache.flink.streaming.api.functions.windowing.WindowFunction]]
+  *
+  * @param name class name of the window function.
+  * @param code code of the generated window function.
+  */
+case class GeneratedWindowFunction(name: String, code: String)

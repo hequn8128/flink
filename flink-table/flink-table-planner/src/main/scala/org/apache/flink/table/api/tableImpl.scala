@@ -24,7 +24,7 @@ import org.apache.calcite.rel.RelNode
 import org.apache.flink.table.expressions.{Expression, ExpressionParser, LookupCallResolver}
 import org.apache.flink.table.functions.{TemporalTableFunction, TemporalTableFunctionImpl}
 import org.apache.flink.table.operations.JoinTableOperation.JoinType
-import org.apache.flink.table.operations.OperationExpressionsUtils.extractAggregationsAndProperties
+import org.apache.flink.table.operations.OperationExpressionsUtils.{extractAggregationsAndProperties, extractProperties}
 import org.apache.flink.table.operations.{OperationTreeBuilder, TableOperation}
 import org.apache.flink.table.util.JavaScalaConversionUtil.toJava
 
@@ -589,6 +589,53 @@ class WindowGroupedTableImpl(
           window,
           extracted.getWindowProperties,
           extracted.getAggregations,
+          tableImpl.operationTree
+        ),
+        // required for proper resolution of the time attribute in multi-windows
+        explicitAlias = true
+      ))
+  }
+
+  override def flatAggregate(tableAggregateFunction: String): FlatAggregateTable = {
+    flatAggregate(ExpressionParser.parseExpression(tableAggregateFunction))
+  }
+
+  override def flatAggregate(tableAggregateFunction: Expression): FlatAggregateTable = {
+    new WindowFlatAggregateTableImpl(table, groupKeys, tableAggregateFunction, window)
+  }
+}
+
+/**
+  * The implementation of a [[WindowGroupedTable]] that has been windowed and grouped on
+  * [[GroupWindow]]s for table aggregate.
+  */
+class WindowFlatAggregateTableImpl(
+    private[flink] val table: Table,
+    private[flink] val groupKeys: Seq[Expression],
+    private[flink] val tableAggFunction: Expression,
+    private[flink] val window: GroupWindow)
+  extends FlatAggregateTable {
+
+  private val tableImpl = table.asInstanceOf[TableImpl]
+
+  override def select(fields: String): Table = {
+    select(ExpressionParser.parseExpressionList(fields).asScala: _*)
+  }
+
+  override def select(fields: Expression*): Table = {
+    val expressionsWithResolvedCalls = fields.map(_.accept(tableImpl.callResolver)).asJava
+    val extracted = extractProperties(
+      expressionsWithResolvedCalls,
+      tableImpl.getUniqueAttributeSupplier)
+
+    new TableImpl(tableImpl.tableEnv,
+      tableImpl.operationTreeBuilder.project(
+        extracted.getProjections,
+        tableImpl.operationTreeBuilder.windowTableAggregate(
+          groupKeys.asJava,
+          window,
+          extracted.getWindowProperties,
+          tableAggFunction,
           tableImpl.operationTree
         ),
         // required for proper resolution of the time attribute in multi-windows

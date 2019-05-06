@@ -74,7 +74,11 @@ final class ReferenceResolverRule implements ResolverRule {
 		}
 
 		private ValidationException failForField(UnresolvedReferenceExpression fieldReference) {
-			return new ValidationException(format("Cannot resolve field [%s]", fieldReference.getName()));
+			return new ValidationException(format("Cannot resolve field [%s], input fields: [%s]", fieldReference.getName(),
+				String.join(
+					", ",
+					resolutionContext.referenceLookup().getAllInputFields()
+						.stream().map(p -> p.getName()).collect(Collectors.toList()))));
 		}
 
 		@Override
