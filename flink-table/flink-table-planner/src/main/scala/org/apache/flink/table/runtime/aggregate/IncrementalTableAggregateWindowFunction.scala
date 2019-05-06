@@ -22,6 +22,7 @@ import java.lang.Iterable
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.streaming.api.functions.windowing.RichWindowFunction
 import org.apache.flink.streaming.api.windowing.windows.Window
+import org.apache.flink.table.runtime.ConcatKeyAndAggResultCollector
 import org.apache.flink.table.runtime.types.CRow
 import org.apache.flink.types.Row
 import org.apache.flink.util.Collector
@@ -33,16 +34,19 @@ import org.apache.flink.util.Collector
   * @param numAggregates The number of aggregates.
   * @param finalRowArity The arity of the final output row.
   */
-class IncrementalAggregateWindowFunction[W <: Window](
+class IncrementalTableAggregateWindowFunction[W <: Window](
     private val numGroupingKey: Int,
     private val numAggregates: Int,
     private val finalRowArity: Int)
   extends RichWindowFunction[Row, CRow, Row, W] {
 
-  private var output: CRow = _
+  private var output: Row = _
+  private var appendKeyCollector: ConcatKeyAndAggResultCollector = _
 
   override def open(parameters: Configuration): Unit = {
-    output = new CRow(new Row(finalRowArity), true)
+    output = new Row(finalRowArity)
+    appendKeyCollector = new ConcatKeyAndAggResultCollector(numGroupingKey)
+    appendKeyCollector.setResultRow(output)
   }
 
   /**
@@ -62,16 +66,14 @@ class IncrementalAggregateWindowFunction[W <: Window](
 
       var i = 0
       while (i < numGroupingKey) {
-        output.row.setField(i, key.getField(i))
-        i += 1
-      }
-      i = 0
-      while (i < numAggregates) {
-        output.row.setField(numGroupingKey + i, record.getField(i))
+        output.setField(i, key.getField(i))
         i += 1
       }
 
-      out.collect(output)
+      appendKeyCollector.out = out
+      val data = record.getField(0).asInstanceOf[Row]
+      val func = record.getField(1).asInstanceOf[GeneratedTableAggregations]
+      func.emit(data, appendKeyCollector)
     }
   }
 }

@@ -19,59 +19,49 @@ package org.apache.flink.table.runtime.aggregate
 
 import java.lang.Iterable
 
-import org.apache.flink.configuration.Configuration
-import org.apache.flink.streaming.api.functions.windowing.RichWindowFunction
-import org.apache.flink.streaming.api.windowing.windows.Window
-import org.apache.flink.table.runtime.types.CRow
 import org.apache.flink.types.Row
+import org.apache.flink.configuration.Configuration
+import org.apache.flink.streaming.api.windowing.windows.TimeWindow
+import org.apache.flink.table.runtime.types.CRow
 import org.apache.flink.util.Collector
 
 /**
+  *
   * Computes the final aggregate value from incrementally computed aggregates.
   *
-  * @param numGroupingKey The number of grouping keys.
-  * @param numAggregates The number of aggregates.
-  * @param finalRowArity The arity of the final output row.
+  * @param windowStartOffset the offset of the window start property
+  * @param windowEndOffset   the offset of the window end property
+  * @param windowRowtimeOffset the offset of the window rowtime property
+  * @param finalRowArity  The arity of the final output row.
   */
-class IncrementalAggregateWindowFunction[W <: Window](
-    private val numGroupingKey: Int,
-    private val numAggregates: Int,
+class IncrementalAggregateAllTimeWindowFunction(
+    private val windowStartOffset: Option[Int],
+    private val windowEndOffset: Option[Int],
+    private val windowRowtimeOffset: Option[Int],
     private val finalRowArity: Int)
-  extends RichWindowFunction[Row, CRow, Row, W] {
+  extends IncrementalAggregateAllWindowFunction[TimeWindow](
+    finalRowArity) {
 
-  private var output: CRow = _
+  private var collector: DataStreamTimeWindowPropertyCollector = _
 
   override def open(parameters: Configuration): Unit = {
-    output = new CRow(new Row(finalRowArity), true)
+    collector = new DataStreamTimeWindowPropertyCollector(
+      windowStartOffset,
+      windowEndOffset,
+      windowRowtimeOffset)
+    super.open(parameters)
   }
 
-  /**
-    * Calculate aggregated values output by aggregate buffer, and set them into output
-    * Row based on the mapping relation between intermediate aggregate data and output data.
-    */
   override def apply(
-      key: Row,
-      window: W,
+      window: TimeWindow,
       records: Iterable[Row],
       out: Collector[CRow]): Unit = {
 
-    val iterator = records.iterator
+    // set collector and window
+    collector.wrappedCollector = out
+    collector.windowStart = window.getStart
+    collector.windowEnd = window.getEnd
 
-    if (iterator.hasNext) {
-      val record = iterator.next()
-
-      var i = 0
-      while (i < numGroupingKey) {
-        output.row.setField(i, key.getField(i))
-        i += 1
-      }
-      i = 0
-      while (i < numAggregates) {
-        output.row.setField(numGroupingKey + i, record.getField(i))
-        i += 1
-      }
-
-      out.collect(output)
-    }
+    super.apply(window, records, collector)
   }
 }

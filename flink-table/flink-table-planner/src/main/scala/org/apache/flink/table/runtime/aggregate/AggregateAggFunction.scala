@@ -21,9 +21,6 @@ package org.apache.flink.table.runtime.aggregate
 import org.apache.flink.table.codegen.GeneratedAggregationsFunction
 import org.apache.flink.types.Row
 
-import java.util
-import java.util.{List => JList}
-
 /**
   * Aggregate Function used for the aggregate operator in
   * [[org.apache.flink.streaming.api.datastream.WindowedStream]]
@@ -32,17 +29,15 @@ import java.util.{List => JList}
   */
 class AggregateAggFunction[F <: GeneratedAggregations](
   genAggregations: GeneratedAggregationsFunction)
-  extends AggregateAggFunctionBase[JList[Row], F](genAggregations) {
+  extends AggregateAggFunctionBase[Row, F](genAggregations) {
 
 
-  override def getResult(accumulatorRow: Row): JList[Row] = {
+  override def getResult(accumulatorRow: Row): Row = {
     if (function == null) {
       initFunction()
     }
     val output = function.createOutputRow()
     function.setAggregationResults(accumulatorRow, output)
-    val list = new util.LinkedList[Row]()
-    list.add(output)
-    list
+    output
   }
 }

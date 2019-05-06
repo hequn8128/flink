@@ -19,40 +19,26 @@ package org.apache.flink.table.runtime.aggregate
 
 import java.lang.Iterable
 
+import org.apache.flink.types.Row
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.streaming.api.functions.windowing.RichAllWindowFunction
 import org.apache.flink.streaming.api.windowing.windows.Window
 import org.apache.flink.table.runtime.types.CRow
-import org.apache.flink.types.Row
 import org.apache.flink.util.Collector
-import org.apache.flink.table.codegen.{Compiler, GeneratedWindowFunction}
-import org.apache.flink.table.util.Logging
-import java.util.{List => JList}
 
 /**
   * Computes the final aggregate value from incrementally computed aggregates.
   *
-  * @param generatedWindowFunction The Code-generated [[GeneratedWindowFunction]].
+  * @param finalRowArity The arity of the final output row.
   */
 class IncrementalAggregateAllWindowFunction[W <: Window](
-  generatedWindowFunction: GeneratedWindowFunction)
-  extends RichAllWindowFunction[JList[Row], CRow, W]
-    with Compiler[RichAllWindowFunction[JList[Row], CRow, W]]
-    with Logging {
+    private val finalRowArity: Int)
+  extends RichAllWindowFunction[Row, CRow, W] {
 
-  protected var function: RichAllWindowFunction[JList[Row], CRow, W] = _
+  private var output: CRow = _
 
   override def open(parameters: Configuration): Unit = {
-    LOG.debug(s"Compiling AllWindowFunctionHelper: $generatedWindowFunction.name \n\n " +
-      s"Code:\n$generatedWindowFunction.code")
-    val clazz = compile(
-      Thread.currentThread().getContextClassLoader,
-      generatedWindowFunction.name,
-      generatedWindowFunction.code)
-    LOG.debug("Instantiating AllWindowFunctionHelper.")
-    function = clazz.newInstance()
-
-    function.open(parameters)
+    output = new CRow(new Row(finalRowArity), true)
   }
 
   /**
@@ -60,9 +46,20 @@ class IncrementalAggregateAllWindowFunction[W <: Window](
     * Row based on the mapping relation between intermediate aggregate data and output data.
     */
   override def apply(
-    window: W,
-    records: Iterable[JList[Row]],
-    out: Collector[CRow]): Unit = {
-    function.apply(window, records, out)
+      window: W,
+      records: Iterable[Row],
+      out: Collector[CRow]): Unit = {
+
+    val iterator = records.iterator
+
+    if (iterator.hasNext) {
+      val record = iterator.next()
+      var i = 0
+      while (i < record.getArity) {
+        output.row.setField(i, record.getField(i))
+        i += 1
+      }
+      out.collect(output)
+    }
   }
 }

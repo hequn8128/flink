@@ -169,10 +169,10 @@ abstract class DataStreamGroupWindowAggregateBase(
       val windowFunction = AggregateUtil.createAggregationGroupWindowFunction(
         window,
         grouping.length,
-        namedAggregates,
+        namedAggregates.size,
         schema.arity,
-        namedProperties,
-        tableEnv.getConfig)
+        namedAggregates,
+        namedProperties)
 
       val keySelector = new CRowKeySelector(grouping, inputSchema.projectedTypeInfo(grouping))
 
@@ -204,8 +204,8 @@ abstract class DataStreamGroupWindowAggregateBase(
       val windowFunction = AggregateUtil.createAggregationAllWindowFunction(
         window,
         schema.arity,
-        namedProperties,
-        tableEnv.getConfig)
+        namedAggregates,
+        namedProperties)
 
       val windowedStream =
         createNonKeyedWindowedStream(queryConfig, window, timestampedInput)

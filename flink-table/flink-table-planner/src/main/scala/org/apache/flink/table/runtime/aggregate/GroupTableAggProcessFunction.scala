@@ -25,7 +25,7 @@ import org.apache.flink.configuration.Configuration
 import org.apache.flink.streaming.api.functions.KeyedProcessFunction
 import org.apache.flink.table.api.{StreamQueryConfig, Types}
 import org.apache.flink.table.codegen.{Compiler, GeneratedAggregationsFunction}
-import org.apache.flink.table.runtime.CRowWrappingCollector
+import org.apache.flink.table.runtime.ConcatKeyAndAggResultCollector
 import org.apache.flink.table.runtime.types.CRow
 import org.apache.flink.table.util.Logging
 import org.apache.flink.types.Row
@@ -41,6 +41,7 @@ class GroupTableAggProcessFunction[K](
     private val genTableAggregations: GeneratedAggregationsFunction,
     private val aggregationStateType: RowTypeInfo,
     private val generateRetraction: Boolean,
+    private val keyNum: Int,
     private val queryConfig: StreamQueryConfig)
   extends ProcessFunctionWithCleanupState[K, CRow, CRow](queryConfig)
     with Compiler[GeneratedTableAggregations]
@@ -54,7 +55,7 @@ class GroupTableAggProcessFunction[K](
   // counts the number of added and retracted input records
   private var cntState: ValueState[JLong] = _
 
-  private var appendKeyCollector: AppendKeyCRowCollector = _
+  private var appendKeyCollector: ConcatKeyAndAggResultCollector = _
 
   override def open(config: Configuration) {
     LOG.debug(s"Compiling TableAggregateHelper: ${genTableAggregations.name} \n\n " +
@@ -74,7 +75,7 @@ class GroupTableAggProcessFunction[K](
       new ValueStateDescriptor[JLong]("GroupTableAggregateInputCounter", Types.LONG)
     cntState = getRuntimeContext.getState(inputCntDescriptor)
 
-    appendKeyCollector = new AppendKeyCRowCollector
+    appendKeyCollector = new ConcatKeyAndAggResultCollector(keyNum)
     appendKeyCollector.setResultRow(function.createOutputRow())
 
     initCleanupTimeState("GroupTableAggregateCleanupTime")
@@ -166,31 +167,5 @@ class GroupTableAggProcessFunction[K](
 
   override def close(): Unit = {
     function.close()
-  }
-}
-
-/**
-  * The collector is used to assemble group key and table function output.
-  */
-class AppendKeyCRowCollector() extends CRowWrappingCollector {
-
-  var resultRow: Row = _
-
-  def setResultRow(row: Row): Unit = {
-    resultRow = row
-  }
-
-  def getResultRow: Row = {
-    resultRow
-  }
-
-  override def collect(record: Row): Unit = {
-    var i = 0
-    val offset = resultRow.getArity - record.getArity
-    while (i < record.getArity) {
-      resultRow.setField(i + offset, record.getField(i))
-      i += 1
-    }
-    super.collect(resultRow)
   }
 }

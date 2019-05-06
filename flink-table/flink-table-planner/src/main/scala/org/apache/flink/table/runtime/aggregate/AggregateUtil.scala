@@ -308,6 +308,7 @@ object AggregateUtil {
       generator.generateTableAggregations(tableAggOutputRowType, tableAggOutputType),
       aggregationStateType,
       generateRetraction,
+      groupings.length,
       queryConfig)
 
   }
@@ -1171,25 +1172,37 @@ object AggregateUtil {
   private[flink] def createAggregationAllWindowFunction(
     window: LogicalWindow,
     finalRowArity: Int,
-    properties: Seq[NamedWindowProperty],
-    tableConfig: TableConfig)
-  : AllWindowFunction[JList[Row], CRow, DataStreamWindow] = {
+    namedAggregates: Seq[CalcitePair[AggregateCall, String]],
+    properties: Seq[NamedWindowProperty])
+  : AllWindowFunction[Row, CRow, DataStreamWindow] = {
 
-    if (isTimeWindow(window)) {
-
-      val generator = new WindowFunctionCodeGenerator(tableConfig)
-      val allWindowFunction = generator.generateAggregateAllTimeWindowFunction(
-        "IncrementalAggregateAllTimeWindowFunction",
-        properties,
-        finalRowArity)
-      new IncrementalAggregateAllWindowFunction(allWindowFunction)
-
+    val isTableAggregate = this.isTableAggregate(namedAggregates.map(_.getKey))
+    if (isTableAggregate) {
+      if (isTimeWindow(window)) {
+        val (startPos, endPos, timePos) = computeWindowPropertyPos(properties)
+        new IncrementalTableAggregateAllTimeWindowFunction(
+          startPos,
+          endPos,
+          timePos,
+          finalRowArity)
+          .asInstanceOf[AllWindowFunction[Row, CRow, DataStreamWindow]]
+      } else {
+        new IncrementalTableAggregateAllWindowFunction(
+          finalRowArity)
+      }
     } else {
-      val generator = new WindowFunctionCodeGenerator(tableConfig)
-      val allWindowFunction = generator.generateAggregateAllWindowFunction(
-        "IncrementalAggregateAllWindowFunction",
-        finalRowArity)
-      new IncrementalAggregateAllWindowFunction(allWindowFunction)
+      if (isTimeWindow(window)) {
+        val (startPos, endPos, timePos) = computeWindowPropertyPos(properties)
+        new IncrementalAggregateAllTimeWindowFunction(
+          startPos,
+          endPos,
+          timePos,
+          finalRowArity)
+          .asInstanceOf[AllWindowFunction[Row, CRow, DataStreamWindow]]
+      } else {
+        new IncrementalAggregateAllWindowFunction(
+          finalRowArity)
+      }
     }
   }
 
@@ -1199,54 +1212,64 @@ object AggregateUtil {
   private[flink] def createAggregationGroupWindowFunction(
     window: LogicalWindow,
     numGroupingKeys: Int,
-    namedAggregates: Seq[CalcitePair[AggregateCall, String]],
+    numAggregates: Int,
     finalRowArity: Int,
-    properties: Seq[NamedWindowProperty],
-    tableConfig: TableConfig):
-  WindowFunction[JList[Row], CRow, Row, DataStreamWindow] = {
+    namedAggregates: Seq[CalcitePair[AggregateCall, String]],
+    properties: Seq[NamedWindowProperty]):
+  WindowFunction[Row, CRow, Row, DataStreamWindow] = {
 
-    val aggOutputArity = if (isTableAggregate(namedAggregates.map(e => e.left))) {
-      val tableAgg = namedAggregates.head.left.getAggregation.asInstanceOf[AggSqlFunction]
-      tableAgg.returnType.getArity
+    val isTableAggregate = this.isTableAggregate(namedAggregates.map(_.getKey))
+    if (isTableAggregate) {
+      if (isTimeWindow(window)) {
+        val (startPos, endPos, timePos) = computeWindowPropertyPos(properties)
+        new IncrementalTableAggregateTimeWindowFunction(
+          numGroupingKeys,
+          numAggregates,
+          startPos,
+          endPos,
+          timePos,
+          finalRowArity)
+          .asInstanceOf[WindowFunction[Row, CRow, Row, DataStreamWindow]]
+      } else {
+        new IncrementalTableAggregateWindowFunction(
+          numGroupingKeys,
+          numAggregates,
+          finalRowArity)
+      }
+
     } else {
-      namedAggregates.size
-    }
-
-    if (isTimeWindow(window)) {
-
-      val generator = new WindowFunctionCodeGenerator(tableConfig)
-      val windowFunction = generator.generateAggregateTimeWindowFunction(
-        "IncrementalAggregateTimeWindowFunction",
-        numGroupingKeys,
-        aggOutputArity,
-        properties,
-        finalRowArity)
-      new IncrementalAggregateWindowFunction(windowFunction)
-    } else {
-
-      val generator = new WindowFunctionCodeGenerator(tableConfig)
-      val windowFunction = generator.generateAggregateWindowFunction(
-        "IncrementalAggregateWindowFunction",
-        numGroupingKeys,
-        aggOutputArity,
-        finalRowArity)
-      new IncrementalAggregateWindowFunction(windowFunction)
+      if (isTimeWindow(window)) {
+        val (startPos, endPos, timePos) = computeWindowPropertyPos(properties)
+        new IncrementalAggregateTimeWindowFunction(
+          numGroupingKeys,
+          numAggregates,
+          startPos,
+          endPos,
+          timePos,
+          finalRowArity)
+          .asInstanceOf[WindowFunction[Row, CRow, Row, DataStreamWindow]]
+      } else {
+        new IncrementalAggregateWindowFunction(
+          numGroupingKeys,
+          numAggregates,
+          finalRowArity)
+      }
     }
   }
 
   private[flink] def createDataStreamGroupWindowAggregateFunction(
-      config: TableConfig,
-      nullableInput: Boolean,
-      inputTypeInfo: TypeInformation[_ <: Any],
-      constants: Option[Seq[RexLiteral]],
-      namedAggregates: Seq[CalcitePair[AggregateCall, String]],
-      inputType: RelDataType,
-      inputFieldTypeInfo: Seq[TypeInformation[_]],
-      outputType: RelDataType,
-      groupingKeys: Array[Int],
-      needMerge: Boolean,
-      tableConfig: TableConfig)
-    : (DataStreamAggFunction[CRow, Row, JList[Row]], RowTypeInfo) = {
+    config: TableConfig,
+    nullableInput: Boolean,
+    inputTypeInfo: TypeInformation[_ <: Any],
+    constants: Option[Seq[RexLiteral]],
+    namedAggregates: Seq[CalcitePair[AggregateCall, String]],
+    inputType: RelDataType,
+    inputFieldTypeInfo: Seq[TypeInformation[_]],
+    outputType: RelDataType,
+    groupingKeys: Array[Int],
+    needMerge: Boolean,
+    tableConfig: TableConfig)
+  : (DataStreamAggFunction[CRow, Row, Row], RowTypeInfo) = {
 
     val needRetract = false
     val aggregateMetadata =
@@ -1324,7 +1347,6 @@ object AggregateUtil {
       (aggFunction, accumulatorRowType)
     }
   }
-
   /**
     * Return true if all aggregates can be partially merged. False otherwise.
     */
