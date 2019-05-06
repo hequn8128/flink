@@ -33,14 +33,17 @@ import org.apache.flink.util.Collector
   * @param windowEndOffset   the offset of the window end property
   * @param windowRowtimeOffset the offset of the window rowtime property
   * @param finalRowArity  The arity of the final output row.
+  * @param isTableAggregate Whether it is table aggregate.
   */
 class IncrementalAggregateAllTimeWindowFunction(
     private val windowStartOffset: Option[Int],
     private val windowEndOffset: Option[Int],
     private val windowRowtimeOffset: Option[Int],
-    private val finalRowArity: Int)
+    private val finalRowArity: Int,
+    private val isTableAggregate: Boolean)
   extends IncrementalAggregateAllWindowFunction[TimeWindow](
-    finalRowArity) {
+    finalRowArity,
+    isTableAggregate) {
 
   private var collector: DataStreamTimeWindowPropertyCollector = _
 

@@ -1177,32 +1177,19 @@ object AggregateUtil {
   : AllWindowFunction[Row, CRow, DataStreamWindow] = {
 
     val isTableAggregate = this.isTableAggregate(namedAggregates.map(_.getKey))
-    if (isTableAggregate) {
-      if (isTimeWindow(window)) {
-        val (startPos, endPos, timePos) = computeWindowPropertyPos(properties)
-        new IncrementalTableAggregateAllTimeWindowFunction(
-          startPos,
-          endPos,
-          timePos,
-          finalRowArity)
-          .asInstanceOf[AllWindowFunction[Row, CRow, DataStreamWindow]]
-      } else {
-        new IncrementalTableAggregateAllWindowFunction(
-          finalRowArity)
-      }
+    if (isTimeWindow(window)) {
+      val (startPos, endPos, timePos) = computeWindowPropertyPos(properties)
+      new IncrementalAggregateAllTimeWindowFunction(
+        startPos,
+        endPos,
+        timePos,
+        finalRowArity,
+        isTableAggregate)
+        .asInstanceOf[AllWindowFunction[Row, CRow, DataStreamWindow]]
     } else {
-      if (isTimeWindow(window)) {
-        val (startPos, endPos, timePos) = computeWindowPropertyPos(properties)
-        new IncrementalAggregateAllTimeWindowFunction(
-          startPos,
-          endPos,
-          timePos,
-          finalRowArity)
-          .asInstanceOf[AllWindowFunction[Row, CRow, DataStreamWindow]]
-      } else {
-        new IncrementalAggregateAllWindowFunction(
-          finalRowArity)
-      }
+      new IncrementalAggregateAllWindowFunction(
+        finalRowArity,
+        isTableAggregate)
     }
   }
 
@@ -1219,41 +1206,23 @@ object AggregateUtil {
   WindowFunction[Row, CRow, Row, DataStreamWindow] = {
 
     val isTableAggregate = this.isTableAggregate(namedAggregates.map(_.getKey))
-    if (isTableAggregate) {
-      if (isTimeWindow(window)) {
-        val (startPos, endPos, timePos) = computeWindowPropertyPos(properties)
-        new IncrementalTableAggregateTimeWindowFunction(
-          numGroupingKeys,
-          numAggregates,
-          startPos,
-          endPos,
-          timePos,
-          finalRowArity)
-          .asInstanceOf[WindowFunction[Row, CRow, Row, DataStreamWindow]]
-      } else {
-        new IncrementalTableAggregateWindowFunction(
-          numGroupingKeys,
-          numAggregates,
-          finalRowArity)
-      }
-
+    if (isTimeWindow(window)) {
+      val (startPos, endPos, timePos) = computeWindowPropertyPos(properties)
+      new IncrementalAggregateTimeWindowFunction(
+        numGroupingKeys,
+        numAggregates,
+        startPos,
+        endPos,
+        timePos,
+        finalRowArity,
+        isTableAggregate)
+        .asInstanceOf[WindowFunction[Row, CRow, Row, DataStreamWindow]]
     } else {
-      if (isTimeWindow(window)) {
-        val (startPos, endPos, timePos) = computeWindowPropertyPos(properties)
-        new IncrementalAggregateTimeWindowFunction(
-          numGroupingKeys,
-          numAggregates,
-          startPos,
-          endPos,
-          timePos,
-          finalRowArity)
-          .asInstanceOf[WindowFunction[Row, CRow, Row, DataStreamWindow]]
-      } else {
-        new IncrementalAggregateWindowFunction(
-          numGroupingKeys,
-          numAggregates,
-          finalRowArity)
-      }
+      new IncrementalAggregateWindowFunction(
+        numGroupingKeys,
+        numAggregates,
+        finalRowArity,
+        isTableAggregate)
     }
   }
 

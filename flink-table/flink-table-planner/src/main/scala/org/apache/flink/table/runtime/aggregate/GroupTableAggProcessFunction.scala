@@ -55,7 +55,7 @@ class GroupTableAggProcessFunction[K](
   // counts the number of added and retracted input records
   private var cntState: ValueState[JLong] = _
 
-  private var appendKeyCollector: ConcatKeyAndAggResultCollector = _
+  private var concatCollector: ConcatKeyAndAggResultCollector = _
 
   override def open(config: Configuration) {
     LOG.debug(s"Compiling TableAggregateHelper: ${genTableAggregations.name} \n\n " +
@@ -75,8 +75,8 @@ class GroupTableAggProcessFunction[K](
       new ValueStateDescriptor[JLong]("GroupTableAggregateInputCounter", Types.LONG)
     cntState = getRuntimeContext.getState(inputCntDescriptor)
 
-    appendKeyCollector = new ConcatKeyAndAggResultCollector(keyNum)
-    appendKeyCollector.setResultRow(function.createOutputRow())
+    concatCollector = new ConcatKeyAndAggResultCollector(keyNum)
+    concatCollector.setResultRow(function.createOutputRow())
 
     initCleanupTimeState("GroupTableAggregateCleanupTime")
   }
@@ -111,14 +111,14 @@ class GroupTableAggProcessFunction[K](
     }
 
     // Set group keys value to the final output
-    function.setForwardedFields(input, appendKeyCollector.getResultRow)
+    function.setForwardedFields(input, concatCollector.getResultRow)
 
-    appendKeyCollector.out = out
+    concatCollector.out = out
     if (!firstRow) {
       if (generateRetraction) {
-        appendKeyCollector.setChange(false)
-        function.emit(accumulators, appendKeyCollector)
-        appendKeyCollector.setChange(true)
+        concatCollector.setChange(false)
+        function.emit(accumulators, concatCollector)
+        concatCollector.setChange(true)
       }
     }
 
@@ -145,7 +145,7 @@ class GroupTableAggProcessFunction[K](
       cntState.update(inputCnt)
 
       // emit the new result
-      function.emit(accumulators, appendKeyCollector)
+      function.emit(accumulators, concatCollector)
 
     } else {
       // and clear all state
