@@ -34,7 +34,7 @@ import org.apache.flink.table.expressions.{Alias, ExpressionBridge, PlannerExpre
 import org.apache.flink.table.operations.TableOperation
 import org.apache.flink.table.plan.TableOperationConverter
 import org.apache.flink.table.plan.logical.LogicalWindow
-import org.apache.flink.table.plan.logical.rel.{LogicalTableAggregate, LogicalWindowAggregate}
+import org.apache.flink.table.plan.logical.rel.{LogicalTableAggregate, LogicalWindowAggregate, LogicalWindowTableAggregate}
 
 import scala.collection.JavaConverters._
 
@@ -64,11 +64,15 @@ class FlinkRelBuilder(
   override def getTypeFactory: FlinkTypeFactory =
     super.getTypeFactory.asInstanceOf[FlinkTypeFactory]
 
+  /**
+    * Build window aggregate for both aggregate or table aggregate.
+    */
   def aggregate(
       window: LogicalWindow,
       groupKey: GroupKey,
       windowProperties: JList[PlannerExpression],
-      aggCalls: Iterable[AggCall])
+      aggCalls: Iterable[AggCall],
+      isTableAggregate: Boolean)
     : RelBuilder = {
     // build logical aggregate
     val aggregate = super.aggregate(groupKey, aggCalls).build().asInstanceOf[LogicalAggregate]
@@ -80,18 +84,29 @@ class FlinkRelBuilder(
     }
 
     // build logical window aggregate from it
-    push(LogicalWindowAggregate.create(window, namedProperties, aggregate))
-    this
+    if (isTableAggregate) {
+      push(LogicalWindowTableAggregate.create(window, namedProperties, aggregate))
+    } else {
+      push(LogicalWindowAggregate.create(window, namedProperties, aggregate))
+    }
   }
 
-  def tableAggregate(
+  /**
+    * Build non-window aggregate for both aggregate or table aggregate.
+    */
+  def aggregate(
     groupKey: GroupKey,
-    aggCalls: Iterable[AggCall]): RelBuilder = {
+    aggCalls: Iterable[AggCall],
+    isTableAggregate: Boolean): RelBuilder = {
 
-    // build logical aggregate
-    val aggregate = super.aggregate(groupKey, aggCalls).build().asInstanceOf[LogicalAggregate]
-    // build logical table aggregate from it
-    push(LogicalTableAggregate.create(aggregate))
+    if (isTableAggregate) {
+      // build logical aggregate
+      val aggregate = super.aggregate(groupKey, aggCalls).build().asInstanceOf[LogicalAggregate]
+      // build logical table aggregate from it
+      push(LogicalTableAggregate.create(aggregate))
+    } else {
+      super.aggregate(groupKey, aggCalls)
+    }
   }
 
   def tableOperation(tableOperation: TableOperation): RelBuilder= {

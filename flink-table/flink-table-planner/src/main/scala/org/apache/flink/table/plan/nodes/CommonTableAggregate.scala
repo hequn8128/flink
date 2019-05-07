@@ -61,7 +61,7 @@ trait CommonTableAggregate extends CommonAggregate {
 
     val outFields = rowType.getFieldNames
     val tableAggOutputArity = namedAggregates.head.left.getType.getFieldCount
-    val groupSize = grouping.size
+    val groupSize = grouping.length
     val outFieldsOfTableAgg = outFields.subList(groupSize, groupSize + tableAggOutputArity)
     val tableAggOutputFields = Seq(s"(${outFieldsOfTableAgg.mkString(", ")})")
 

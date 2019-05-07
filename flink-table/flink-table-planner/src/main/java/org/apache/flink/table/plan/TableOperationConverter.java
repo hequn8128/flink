@@ -151,12 +151,7 @@ public class TableOperationConverter extends TableOperationDefaultVisitor<RelNod
 
 			List<RexNode> groupings = convertToRexNodes(aggregate.getGroupingExpressions());
 			GroupKey groupKey = relBuilder.groupKey(groupings);
-
-			if (isTableAggregate) {
-				return ((FlinkRelBuilder) relBuilder).tableAggregate(groupKey, aggregations).build();
-			} else {
-				return relBuilder.aggregate(groupKey, aggregations).build();
-			}
+			return ((FlinkRelBuilder) relBuilder).aggregate(groupKey, aggregations, isTableAggregate).build();
 		}
 
 		@Override
@@ -182,7 +177,7 @@ public class TableOperationConverter extends TableOperationDefaultVisitor<RelNod
 				.collect(toList());
 			GroupKey groupKey = relBuilder.groupKey(groupings);
 			LogicalWindow logicalWindow = toLogicalWindow(windowAggregate.getGroupWindow());
-			return flinkRelBuilder.aggregate(logicalWindow, groupKey, windowProperties, aggregations).build();
+			return flinkRelBuilder.aggregate(logicalWindow, groupKey, windowProperties, aggregations, isTableAggregate).build();
 		}
 
 		@Override

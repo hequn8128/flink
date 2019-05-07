@@ -30,11 +30,9 @@ import org.apache.calcite.sql.SqlKind
 import org.apache.calcite.util.ImmutableBitSet
 import org.apache.flink.table.calcite.FlinkRelBuilder.NamedWindowProperty
 import org.apache.flink.table.calcite.FlinkTypeFactory
-import org.apache.flink.table.functions.utils.AggSqlFunction
 import org.apache.flink.table.plan.logical.LogicalWindow
 import org.apache.flink.table.plan.logical.rel.LogicalWindowAggregate
 import org.apache.flink.table.plan.nodes.{CommonAggregate, FlinkConventions}
-import org.apache.flink.table.runtime.aggregate.AggregateUtil
 
 import scala.collection.JavaConverters._
 
@@ -83,18 +81,8 @@ class FlinkLogicalWindowAggregate(
     val aggregateRowType = super.deriveRowType()
     val typeFactory = getCluster.getTypeFactory.asInstanceOf[FlinkTypeFactory]
     val builder = typeFactory.builder
-    if (AggregateUtil.isTableAggregate(aggCalls)) {
-      val resultType = aggCalls.get(0).getAggregation.asInstanceOf[AggSqlFunction].returnType
-      val groupKeyTypes = aggregateRowType.getFieldList.subList(0, groupSet.toArray.length)
-
-      // add group key types
-      builder.addAll(groupKeyTypes)
-      // add agg types
-      builder.addAll(typeFactory.createTypeFromTypeInfo(resultType, true).getFieldList)
-    } else {
-      // add group ley types and agg types
-      builder.addAll(aggregateRowType.getFieldList)
-    }
+    // add group ley types and agg types
+    builder.addAll(aggregateRowType.getFieldList)
     namedProperties.foreach { namedProp =>
       builder.add(
         namedProp.name,

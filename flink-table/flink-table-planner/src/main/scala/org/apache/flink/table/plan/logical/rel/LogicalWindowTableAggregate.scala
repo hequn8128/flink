@@ -23,7 +23,7 @@ import java.util
 import org.apache.calcite.plan.{Convention, RelOptCluster, RelTraitSet}
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.core.{Aggregate, AggregateCall}
-import org.apache.calcite.rel.{RelNode, RelShuttle, RelWriter, SingleRel}
+import org.apache.calcite.rel.{RelNode, RelShuttle, RelWriter}
 import org.apache.calcite.util.ImmutableBitSet
 import org.apache.flink.table.calcite.FlinkRelBuilder.NamedWindowProperty
 import org.apache.flink.table.calcite.FlinkTypeFactory
@@ -34,12 +34,12 @@ class LogicalWindowTableAggregate(
     namedProperties: Seq[NamedWindowProperty],
     cluster: RelOptCluster,
     traitSet: RelTraitSet,
-    child: RelNode,
+    input: RelNode,
     indicatorFlag: Boolean,
     groupSet: ImmutableBitSet,
     groupSets: util.List[ImmutableBitSet],
     aggCalls: util.List[AggregateCall])
-  extends SingleRel(cluster, traitSet, child) {
+  extends TableAggregate(cluster, traitSet, input, indicatorFlag, groupSet, groupSets, aggCalls) {
 
   def getWindow: LogicalWindow = window
 
@@ -53,13 +53,13 @@ class LogicalWindowTableAggregate(
     pw
   }
 
-  override def copy(traitSet: RelTraitSet, inputs: util.List[RelNode]): RelNode = {
+  override def copy(traitSet: RelTraitSet, inputs: util.List[RelNode]): TableAggregate = {
     new LogicalWindowTableAggregate(
       window,
       namedProperties,
       cluster,
       traitSet,
-      input,
+      inputs.get(0),
       indicatorFlag,
       groupSet,
       groupSets,
@@ -80,6 +80,20 @@ class LogicalWindowTableAggregate(
       )
     }
     builder.build()
+  }
+
+  override private[flink] def getCorrespondingAggregate: Aggregate = {
+    new LogicalWindowAggregate(
+      window,
+      namedProperties,
+      cluster,
+      traitSet,
+      getInput,
+      indicatorFlag,
+      groupSet,
+      groupSets,
+      aggCalls
+    )
   }
 }
 

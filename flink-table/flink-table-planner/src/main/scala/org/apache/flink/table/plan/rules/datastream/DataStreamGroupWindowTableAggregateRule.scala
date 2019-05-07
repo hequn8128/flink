@@ -23,37 +23,38 @@ import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.convert.ConverterRule
 import org.apache.flink.table.api.TableException
 import org.apache.flink.table.plan.nodes.FlinkConventions
-import org.apache.flink.table.plan.nodes.datastream.DataStreamGroupWindowAggregate
-import org.apache.flink.table.plan.nodes.logical.FlinkLogicalWindowAggregate
+import org.apache.flink.table.plan.nodes.datastream.DataStreamGroupWindowTableAggregate
+import org.apache.flink.table.plan.nodes.logical.FlinkLogicalWindowTableAggregate
 import org.apache.flink.table.plan.schema.RowSchema
 
 import scala.collection.JavaConversions._
 
-class DataStreamGroupWindowAggregateRule
+class DataStreamGroupWindowTableAggregateRule
   extends ConverterRule(
-    classOf[FlinkLogicalWindowAggregate],
+    classOf[FlinkLogicalWindowTableAggregate],
     FlinkConventions.LOGICAL,
     FlinkConventions.DATASTREAM,
-    "DataStreamGroupWindowAggregateRule") {
+    "DataStreamGroupWindowTableAggregateRule") {
 
   override def matches(call: RelOptRuleCall): Boolean = {
-    val agg: FlinkLogicalWindowAggregate = call.rel(0).asInstanceOf[FlinkLogicalWindowAggregate]
+    val agg: FlinkLogicalWindowTableAggregate =
+      call.rel(0).asInstanceOf[FlinkLogicalWindowTableAggregate]
 
     // check if we have grouping sets
     val groupSets = agg.getGroupSets.size() != 1 || agg.getGroupSets.get(0) != agg.getGroupSet
-    if (groupSets || agg.indicator) {
+    if (groupSets || agg.getIndicator) {
       throw new TableException("GROUPING SETS are currently not supported.")
     }
 
-    !groupSets && !agg.indicator
+    !groupSets && !agg.getIndicator
   }
 
   override def convert(rel: RelNode): RelNode = {
-    val agg: FlinkLogicalWindowAggregate = rel.asInstanceOf[FlinkLogicalWindowAggregate]
+    val agg: FlinkLogicalWindowTableAggregate = rel.asInstanceOf[FlinkLogicalWindowTableAggregate]
     val traitSet: RelTraitSet = rel.getTraitSet.replace(FlinkConventions.DATASTREAM)
     val convInput: RelNode = RelOptRule.convert(agg.getInput, FlinkConventions.DATASTREAM)
 
-    new DataStreamGroupWindowAggregate(
+    new DataStreamGroupWindowTableAggregate(
       agg.getWindow,
       agg.getNamedProperties,
       rel.getCluster,
@@ -66,6 +67,6 @@ class DataStreamGroupWindowAggregateRule
   }
 }
 
-object DataStreamGroupWindowAggregateRule {
-  val INSTANCE: RelOptRule = new DataStreamGroupWindowAggregateRule
+object DataStreamGroupWindowTableAggregateRule {
+  val INSTANCE: RelOptRule = new DataStreamGroupWindowTableAggregateRule
 }
