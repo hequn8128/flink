@@ -19,15 +19,16 @@
 package org.apache.flink.table.plan.nodes.dataset
 
 import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
+import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.core.AggregateCall
-import org.apache.calcite.rel.RelNode
 import org.apache.flink.table.runtime.aggregate.AggregateUtil.CalcitePair
+import org.apache.flink.table.plan.logical.rel.LogicalTableAggregate
 
 /**
-  * Flink RelNode which matches along with a LogicalAggregate.
+  * Flink RelNode which matches along with a [[LogicalTableAggregate]].
   */
-class DataSetAggregate(
+class DataSetTableAggregate(
     cluster: RelOptCluster,
     traitSet: RelTraitSet,
     inputNode: RelNode,
@@ -43,10 +44,10 @@ class DataSetAggregate(
     rowRelDataType,
     inputType,
     grouping,
-    "Aggregate") {
+    "TableAggregate") {
 
   override def copy(traitSet: RelTraitSet, inputs: java.util.List[RelNode]): RelNode = {
-    new DataSetAggregate(
+    new DataSetTableAggregate(
       cluster,
       traitSet,
       inputs.get(0),
