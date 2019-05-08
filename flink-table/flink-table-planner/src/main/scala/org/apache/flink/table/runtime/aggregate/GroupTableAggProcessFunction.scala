@@ -55,7 +55,8 @@ class GroupTableAggProcessFunction[K](
   // counts the number of added and retracted input records
   private var cntState: ValueState[JLong] = _
 
-  private var concatCollector: ConcatKeyAndAggResultCollector = _
+  private var resultRow: CRow = _
+  private var concatCollector: ConcatKeyAndAggResultCollector[CRow] = _
 
   override def open(config: Configuration) {
     LOG.debug(s"Compiling TableAggregateHelper: ${genTableAggregations.name} \n\n " +
@@ -75,8 +76,9 @@ class GroupTableAggProcessFunction[K](
       new ValueStateDescriptor[JLong]("GroupTableAggregateInputCounter", Types.LONG)
     cntState = getRuntimeContext.getState(inputCntDescriptor)
 
+    resultRow = new CRow(function.createOutputRow(), true)
     concatCollector = new ConcatKeyAndAggResultCollector(keyNum)
-    concatCollector.setResultRow(function.createOutputRow())
+    concatCollector.setResultRow(resultRow)
 
     initCleanupTimeState("GroupTableAggregateCleanupTime")
   }
@@ -111,14 +113,14 @@ class GroupTableAggProcessFunction[K](
     }
 
     // Set group keys value to the final output
-    function.setForwardedFields(input, concatCollector.getResultRow)
+    function.setForwardedFields(input, concatCollector.getResultRow.row)
 
     concatCollector.out = out
     if (!firstRow) {
       if (generateRetraction) {
-        concatCollector.setChange(false)
+        resultRow.change = false
         function.emit(accumulators, concatCollector)
-        concatCollector.setChange(true)
+        resultRow.change = true
       }
     }
 

@@ -18,20 +18,23 @@
 
 package org.apache.flink.table.runtime
 
+import org.apache.flink.table.runtime.types.CRow
 import org.apache.flink.types.Row
+import org.apache.flink.util.Collector
 
 /**
   * The collector is used to concat group key and table aggregate function output.
   */
-class ConcatKeyAndAggResultCollector(val keyNum: Int) extends CRowWrappingCollector {
+class ConcatKeyAndAggResultCollector[R](val keyNum: Int) extends Collector[Row] {
 
-  var resultRow: Row = _
+  var resultRow: R = _
+  var out: Collector[R] = _
 
-  def setResultRow(row: Row): Unit = {
+  def setResultRow(row: R): Unit = {
     resultRow = row
   }
 
-  def getResultRow: Row = {
+  def getResultRow: R = {
     resultRow
   }
 
@@ -39,9 +42,14 @@ class ConcatKeyAndAggResultCollector(val keyNum: Int) extends CRowWrappingCollec
     var i = 0
     val offset = keyNum
     while (i < record.getArity) {
-      resultRow.setField(i + offset, record.getField(i))
+      resultRow match {
+        case row: Row => row.setField(i + offset, record.getField(i))
+        case cRow: CRow => cRow.row.setField(i + offset, record.getField(i))
+      }
       i += 1
     }
-    super.collect(resultRow)
+    out.collect(resultRow)
   }
+
+  override def close(): Unit = out.close()
 }

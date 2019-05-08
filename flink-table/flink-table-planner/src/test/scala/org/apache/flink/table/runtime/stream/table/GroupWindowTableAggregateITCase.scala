@@ -28,7 +28,7 @@ import org.apache.flink.table.api.scala.{StreamTableEnvironment, _}
 import org.apache.flink.table.api._
 import org.apache.flink.table.runtime.stream.table.GroupWindowITCase._
 import org.apache.flink.table.runtime.utils.{StreamITCase, StreamTestData}
-import org.apache.flink.table.utils.Top3
+import org.apache.flink.table.utils.{Top3, Top3WithMerge}
 import org.apache.flink.test.util.AbstractTestBase
 import org.apache.flink.types.Row
 import org.junit.Assert._
@@ -113,7 +113,7 @@ class GroupWindowTableAggregateITCase extends AbstractTestBase {
    new TimestampAndWatermarkWithOffset[(Long, Int, String)](10L))
     val table = stream.toTable(tEnv, 'long, 'int, 'string, 'rowtime.rowtime)
 
-    val top3 = new Top3
+    val top3 = new Top3WithMerge
     val windowedTable = table
       .window(Session withGap 5.milli on 'rowtime as 'w)
       .groupBy('w, 'string)

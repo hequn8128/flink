@@ -43,13 +43,13 @@ class IncrementalAggregateWindowFunction[W <: Window](
   extends RichWindowFunction[Row, CRow, Row, W] {
 
   private var output: CRow = _
-  private var concatCollector: ConcatKeyAndAggResultCollector = _
+  private var concatCollector: ConcatKeyAndAggResultCollector[CRow] = _
 
   override def open(parameters: Configuration): Unit = {
     output = new CRow(new Row(finalRowArity), true)
     if (isTableAggregate) {
       concatCollector = new ConcatKeyAndAggResultCollector(numGroupingKey)
-      concatCollector.setResultRow(output.row)
+      concatCollector.setResultRow(output)
     }
   }
 

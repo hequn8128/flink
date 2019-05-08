@@ -21,6 +21,8 @@ import java.lang.reflect.Modifier
 import java.lang.{Iterable => JIterable}
 import java.util.{List => JList}
 
+import org.apache.calcite.rel.`type`.RelDataType
+import org.apache.calcite.rel.core.AggregateCall
 import org.apache.calcite.rex.RexLiteral
 import org.apache.flink.api.common.state.{ListStateDescriptor, MapStateDescriptor, State, StateDescriptor}
 import org.apache.flink.api.common.typeinfo.TypeInformation
@@ -28,13 +30,15 @@ import org.apache.flink.api.java.typeutils.RowTypeInfo
 import org.apache.flink.api.java.typeutils.TypeExtractionUtils.{extractTypeArgument, getRawClass}
 import org.apache.flink.table.api.TableConfig
 import org.apache.flink.table.api.dataview._
+import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.codegen.CodeGenUtils.{newName, reflectiveFieldWriteAccess}
 import org.apache.flink.table.codegen.Indenter.toISC
 import org.apache.flink.table.dataview.{StateListView, StateMapView}
-import org.apache.flink.table.functions.UserDefinedAggregateFunction
+import org.apache.flink.table.functions.{TableAggregateFunction, UserDefinedAggregateFunction}
 import org.apache.flink.table.functions.aggfunctions.DistinctAccumulator
-import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils
+import org.apache.flink.table.functions.utils.{AggSqlFunction, UserDefinedFunctionUtils}
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils.{getUserDefinedMethod, signatureToString}
+import org.apache.flink.table.runtime.aggregate.AggregateUtil.CalcitePair
 import org.apache.flink.table.runtime.aggregate.{GeneratedAggregations, GeneratedTableAggregations, SingleElementIterable}
 import org.apache.flink.table.utils.EncodingUtils
 import org.apache.flink.types.Row
@@ -126,6 +130,9 @@ class AggregationCodeGenerator(
   val constantExprs = constants.map(_.map(generateExpression)).getOrElse(Seq())
   val constantTypes = constantExprs.map(_.resultType)
   val constantFields = constantExprs.map(addReusableBoxedConstant)
+
+  val isTableAggregate = aggregates.length == 1 &&
+    aggregates(0).isInstanceOf[TableAggregateFunction[_, _]]
 
   /**
     * @return code block of statements that need to be placed in the cleanup() method of
@@ -261,6 +268,21 @@ class AggregationCodeGenerator(
                   s"aggregate ${a.getClass.getCanonicalName}'.")
             )
         }
+    }
+
+    if (isTableAggregate) {
+      // check and validate the emit methods
+      aggregates.zipWithIndex.map {
+        case (a, i) =>
+          val methodName = "emitValue"
+          getUserDefinedMethod(
+            a, methodName, Array(accTypeClasses(i), classOf[Collector[_]]))
+            .getOrElse(
+              throw new CodeGenException(
+                s"No matching $methodName method found for " +
+                  s"tableAggregate ${a.getClass.getCanonicalName}'.")
+            )
+      }
     }
   }
 
@@ -450,9 +472,16 @@ class AggregationCodeGenerator(
             }
           }.mkString("\n")
 
-          j"""
-             |    ${setAggs(aggIndexes)}
+          if (isTableAggregate) {
+            // we don't need to set aggregate results for final table aggregate.
+            j"""
+                |
+                """.stripMargin
+          } else {
+            j"""
+               |    ${setAggs(aggIndexes)}
                """.stripMargin
+          }
         }
       }
     }.mkString("\n")
@@ -827,8 +856,7 @@ class AggregationCodeGenerator(
   }
 
   /**
-    * Generates a [[org.apache.flink.table.runtime.aggregate.GeneratedAggregations]] that can be
-    * passed to a Java compiler.
+    * Generates a [[GeneratedTableAggregations]] that can be passed to a Java compiler.
     *
     * @return A GeneratedAggregationsFunction
     */
@@ -894,34 +922,17 @@ class AggregationCodeGenerator(
       functionGenerator.reuseInputUnboxingCode() + resultExprs.code
     }
 
-    /**
-      * Call super init and check emit methods.
-      */
-    def innerInit(): Unit = {
-      init()
-      // check and validate the emit methods
-      aggregates.zipWithIndex.map {
-        case (a, i) =>
-          val methodName = "emitValue"
-          getUserDefinedMethod(
-            a, methodName, Array(accTypeClasses(i), classOf[Collector[_]]))
-            .getOrElse(
-              throw new CodeGenException(
-                s"No matching $methodName method found for " +
-                  s"tableAggregate ${a.getClass.getCanonicalName}'.")
-            )
-      }
-    }
-
-    innerInit()
+    init()
     val aggFuncCode = Seq(
+      genSetAggregationResults,
       genAccumulate,
       genRetract,
       genCreateAccumulators,
       genCreateOutputRow,
       genSetForwardedFields,
       genMergeAccumulatorsPair,
-      genEmit).mkString("\n")
+      genEmit,
+      genResetAccumulator).mkString("\n")
 
     val generatedAggregationsClass = classOf[GeneratedTableAggregations].getCanonicalName
     val aggOutputTypeName = tableAggOutputType.getTypeClass.getCanonicalName
@@ -979,5 +990,31 @@ class AggregationCodeGenerator(
          """.stripMargin
 
     GeneratedAggregationsFunction(funcName, funcCode)
+  }
+
+  /**
+    * Generates a [[GeneratedAggregations]] or a [[GeneratedTableAggregations]] that can be passed
+    * to a Java compiler.
+    *
+    * @return A GeneratedAggregationsFunction
+    */
+  def genAggregationsOrTableAggregations(
+      outputType: RelDataType,
+      groupSize: Int,
+      namedAggregates: Seq[CalcitePair[AggregateCall, String]])
+    : GeneratedAggregationsFunction = {
+
+    if (isTableAggregate) {
+      val tableAggOutputRowType = new RowTypeInfo(
+        outputType.getFieldList
+          .map(e => FlinkTypeFactory.toTypeInfo(e.getType)).drop(groupSize).toArray,
+        outputType.getFieldNames.drop(groupSize).toArray)
+
+      generateTableAggregations(
+        tableAggOutputRowType,
+        namedAggregates.head.left.getAggregation.asInstanceOf[AggSqlFunction].returnType)
+    } else {
+      generateAggregations
+    }
   }
 }

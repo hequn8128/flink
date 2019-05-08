@@ -48,6 +48,12 @@ class Top3 extends TableAggregateFunction[JTuple2[JInt, JInt], Top3Accum] {
     acc
   }
 
+  def resetAccumulator(acc: Top3Accum): Unit = {
+    acc.data.clear()
+    acc.size = 0
+    acc.smallest = Integer.MAX_VALUE
+  }
+
   def add(acc: Top3Accum, v: Int): Unit = {
     var cnt = acc.data.get(v)
     acc.size += 1
@@ -97,6 +103,22 @@ class Top3 extends TableAggregateFunction[JTuple2[JInt, JInt], Top3Accum] {
     }
   }
 
+  def emitValue(acc: Top3Accum, out: Collector[JTuple2[JInt, JInt]]): Unit = {
+    val entries = acc.data.entrySet().iterator()
+    while (entries.hasNext) {
+      val pair = entries.next()
+      for (_ <- 0 until pair.getValue) {
+        out.collect(JTuple2.of(pair.getKey, pair.getKey))
+      }
+    }
+  }
+}
+
+/**
+  * Top3 with merge function. Used to test session window or batch pre final cases.
+  */
+class Top3WithMerge extends Top3 {
+
   def merge(acc: Top3Accum, its: JIterable[Top3Accum]): Unit = {
     val iter = its.iterator()
     while (iter.hasNext) {
@@ -110,17 +132,8 @@ class Top3 extends TableAggregateFunction[JTuple2[JInt, JInt], Top3Accum] {
       }
     }
   }
-
-  def emitValue(acc: Top3Accum, out: Collector[JTuple2[JInt, JInt]]): Unit = {
-    val entries = acc.data.entrySet().iterator()
-    while (entries.hasNext) {
-      val pair = entries.next()
-      for (_ <- 0 until pair.getValue) {
-        out.collect(JTuple2.of(pair.getKey, pair.getKey))
-      }
-    }
-  }
 }
+
 
 class Top3WithMapViewAccum {
   var data: MapView[JInt, JInt] = _

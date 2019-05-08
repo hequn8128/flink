@@ -30,7 +30,7 @@ import org.apache.flink.table.api.{BatchQueryConfig, BatchTableEnvImpl}
 import org.apache.flink.table.calcite.FlinkTypeFactory
 import org.apache.flink.table.plan.nodes.CommonAggregate
 import org.apache.flink.table.runtime.aggregate.AggregateUtil.CalcitePair
-import org.apache.flink.table.runtime.aggregate.{AggregateUtil, DataSetAggFunction, DataSetFinalAggFunction, DataSetPreAggFunction}
+import org.apache.flink.table.runtime.aggregate._
 import org.apache.flink.types.Row
 
 /**
@@ -84,20 +84,21 @@ abstract class DataSetAggregateBase(
     val rowTypeInfo = FlinkTypeFactory.toInternalRowTypeInfo(getRowType).asInstanceOf[RowTypeInfo]
 
     val (
-      preAgg: Option[DataSetPreAggFunction],
+      preAgg: Option[DataSetPreAggFunction[GeneratedAggregations]],
       preAggType: Option[TypeInformation[Row]],
-      finalAgg: Either[DataSetAggFunction, DataSetFinalAggFunction]
-      ) = AggregateUtil.createDataSetAggregateFunctions(
-        tableEnv.getConfig,
-        false,
-        inputDS.getType,
-        None,
-        namedAggregates,
-        input.getRowType,
-        inputDS.getType.asInstanceOf[RowTypeInfo].getFieldTypes,
-        rowRelDataType,
-        grouping,
-        tableEnv.getConfig)
+      finalAgg: Either[DataSetAggFunction[GeneratedAggregations],
+        DataSetFinalAggFunction[GeneratedAggregations]]
+      ) = AggregateUtil.createDataSetGroupAggregateFunctions(
+      tableEnv.getConfig,
+      false,
+      inputDS.getType,
+      None,
+      namedAggregates,
+      input.getRowType,
+      inputDS.getType.asInstanceOf[RowTypeInfo].getFieldTypes,
+      rowRelDataType,
+      grouping,
+      tableEnv.getConfig)
 
     val aggString = aggregationToString(inputType, grouping, getRowType, namedAggregates, Nil)
 

@@ -46,6 +46,7 @@ import org.apache.flink.table.functions.utils.AggSqlFunction
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils._
 import org.apache.flink.table.functions.{AggregateFunction, TableAggregateFunction, UserDefinedAggregateFunction}
 import org.apache.flink.table.plan.logical._
+import org.apache.flink.table.plan.nodes.dataset.{DataSetAggregate, DataSetTableAggregate}
 import org.apache.flink.table.plan.schema.RowSchema
 import org.apache.flink.table.runtime.types.{CRow, CRowTypeInfo}
 import org.apache.flink.table.typeutils.TypeCheckUtils._
@@ -163,7 +164,7 @@ object AggregateUtil {
 
   /**
     * Create an [[org.apache.flink.streaming.api.functions.ProcessFunction]] for group (without
-    * window) aggregate to evaluate final aggregate value.
+    * window) aggregate to evaluate final aggregate or table aggregate values.
     *
     * @param config             configuration that determines runtime behavior
     * @param nullableInput      input(s) can be null.
@@ -173,6 +174,7 @@ object AggregateUtil {
     * @param namedAggregates    List of calls to aggregate functions and their output field names
     * @param inputRowType       Input row type
     * @param inputFieldTypes    Types of the physical input fields
+    * @param outputType         Output types of the aggregate node
     * @param groupings          the position (in the input Row) of the grouping keys
     * @param queryConfig        The configuration of the query to generate.
     * @param generateRetraction It is a tag that indicates whether generate retract record.
@@ -187,11 +189,13 @@ object AggregateUtil {
       namedAggregates: Seq[CalcitePair[AggregateCall, String]],
       inputRowType: RelDataType,
       inputFieldTypes: Seq[TypeInformation[_]],
+      outputType: RelDataType,
       groupings: Array[Int],
       queryConfig: StreamQueryConfig,
       generateRetraction: Boolean,
       consumeRetraction: Boolean): KeyedProcessFunction[K, CRow, CRow] = {
 
+    val isTableAggregate = this.isTableAggregate(namedAggregates.map(_.left))
     val aggregateMetadata = extractAggregateMetadata(
         namedAggregates.map(_.getKey),
         inputRowType,
@@ -201,14 +205,13 @@ object AggregateUtil {
         isStateBackedDataViews = true)
 
     val aggMapping = aggregateMetadata.getAdjustedMapping(groupings.length)
-    val outputArity = groupings.length + aggregateMetadata.getAggregateCallsCount
 
     val generator = new AggregationCodeGenerator(
       config: TableConfig,
       nullableInput: Boolean,
       input: TypeInformation[_ <: Any],
       constants: Option[Seq[RexLiteral]],
-      "NonWindowedAggregationHelper",
+      s"NonWindowed${if (isTableAggregate) "Table" else ""}AggregationHelper",
       inputFieldTypes,
       aggregateMetadata.getAggregateFunctions,
       aggregateMetadata.getAggregateIndices,
@@ -218,99 +221,32 @@ object AggregateUtil {
       partialResults = false,
       groupings,
       None,
-      outputArity,
+      outputType.getFieldCount,
       consumeRetraction,
       needMerge = false,
       needReset = false,
       accConfig = Some(aggregateMetadata.getAggregatesAccumulatorSpecs)
     )
 
+    val genAggregations = generator
+      .genAggregationsOrTableAggregations(outputType, groupings.length, namedAggregates)
     val aggregationStateType: RowTypeInfo = new RowTypeInfo(aggregateMetadata
       .getAggregatesAccumulatorTypes: _*)
-    new GroupAggProcessFunction[K](
-      generator.generateAggregations,
-      aggregationStateType,
-      generateRetraction,
-      queryConfig)
 
-  }
-
-  /**
-    * Create an [[org.apache.flink.streaming.api.functions.ProcessFunction]] for group (without
-    * window) aggregate to evaluate final table aggregate value.
-    *
-    * @param config             configuration that determines runtime behavior
-    * @param nullableInput      input(s) can be null.
-    * @param input              type information about the input of the Function
-    * @param constants          constant expressions that act like a second input in the
-    *                           parameter indices.
-    * @param namedAggregates    List of calls to aggregate functions and their output field names
-    * @param inputRowType       Input row type
-    * @param inputFieldTypes    Types of the physical input fields
-    * @param groupings          the position (in the input Row) of the grouping keys
-    * @param queryConfig        The configuration of the query to generate.
-    * @param generateRetraction It is a tag that indicates whether generate retract record.
-    * @param consumeRetraction  It is a tag that indicates whether consume the retract record.
-    * @return [[org.apache.flink.streaming.api.functions.ProcessFunction]]
-    */
-  private[flink] def createDataStreamGroupTableAggregateFunction[K](
-    config: TableConfig,
-    nullableInput: Boolean,
-    input: TypeInformation[_ <: Any],
-    constants: Option[Seq[RexLiteral]],
-    namedAggregates: Seq[CalcitePair[AggregateCall, String]],
-    inputRowType: RelDataType,
-    inputFieldTypes: Seq[TypeInformation[_]],
-    tableAggOutputRowType: RowTypeInfo,
-    groupings: Array[Int],
-    queryConfig: StreamQueryConfig,
-    generateRetraction: Boolean,
-    consumeRetraction: Boolean): KeyedProcessFunction[K, CRow, CRow] = {
-
-    val aggregateMetadata = extractAggregateMetadata(
-      namedAggregates.map(_.getKey),
-      inputRowType,
-      inputFieldTypes.length,
-      consumeRetraction,
-      config,
-      isStateBackedDataViews = true)
-
-    val aggMapping = aggregateMetadata.getAdjustedMapping(groupings.length)
-    val outputArity = groupings.length + tableAggOutputRowType.getTotalFields
-    val tableAggOutputType = namedAggregates
-      .head.left.getAggregation.asInstanceOf[AggSqlFunction].returnType
-
-    val generator = new AggregationCodeGenerator(
-      config,
-      nullableInput,
-      input,
-      constants,
-      "NonWindowedTableAggregationHelper",
-      inputFieldTypes,
-      aggregateMetadata.getAggregateFunctions,
-      aggregateMetadata.getAggregateIndices,
-      aggMapping,
-      aggregateMetadata.getDistinctAccMapping,
-      isStateBackedDataViews = true,
-      partialResults = false,
-      groupings,
-      None,
-      outputArity,
-      consumeRetraction,
-      needMerge = false,
-      needReset = false,
-      accConfig = Some(aggregateMetadata.getAggregatesAccumulatorSpecs)
-    )
-
-    val aggregationStateType: RowTypeInfo = new RowTypeInfo(aggregateMetadata
-      .getAggregatesAccumulatorTypes: _*)
-    new GroupTableAggProcessFunction[K](
-      generator.generateTableAggregations(tableAggOutputRowType, tableAggOutputType),
-      aggregationStateType,
-      generateRetraction,
-      groupings.length,
-      queryConfig)
-
+    if (isTableAggregate) {
+      new GroupTableAggProcessFunction[K](
+        genAggregations,
+        aggregationStateType,
+        generateRetraction,
+        groupings.length,
+        queryConfig)
+    } else {
+      new GroupAggProcessFunction[K](
+        genAggregations,
+        aggregationStateType,
+        generateRetraction,
+        queryConfig)
+    }
   }
 
   /**
@@ -1024,11 +960,11 @@ object AggregateUtil {
   }
 
   /**
-    * Create functions to compute a [[org.apache.flink.table.plan.nodes.dataset.DataSetAggregate]].
+    * Create functions to compute a [[DataSetAggregate]] or a [[DataSetTableAggregate]].
     * If all aggregation functions support pre-aggregation, a pre-aggregation function and the
     * respective output type are generated as well.
     */
-  private[flink] def createDataSetAggregateFunctions(
+  private[flink] def createDataSetGroupAggregateFunctions(
       config: TableConfig,
       nullableInput: Boolean,
       inputTypeInfo: TypeInformation[_ <: Any],
@@ -1039,9 +975,12 @@ object AggregateUtil {
       outputType: RelDataType,
       groupings: Array[Int],
       tableConfig: TableConfig): (
-        Option[DataSetPreAggFunction],
+        Option[DataSetPreAggFunction[_]],
         Option[TypeInformation[Row]],
-        Either[DataSetAggFunction, DataSetFinalAggFunction]) = {
+        Either[DataSetAggFunction[_], DataSetFinalAggFunction[_]]) = {
+
+    val isTableAggregate = this.isTableAggregate(namedAggregates.map(_.left))
+    val classNamePrefix = if (isTableAggregate) "DataSetTableAggregate" else "DataSetAggregate"
 
     val needRetract = false
     val aggregateMetadata = extractAggregateMetadata(
@@ -1077,7 +1016,7 @@ object AggregateUtil {
         nullableInput,
         inputTypeInfo,
         constants,
-        "DataSetAggregatePrepareMapHelper",
+        s"${classNamePrefix}PrepareMapHelper",
         inputFieldTypeInfo,
         aggregateMetadata.getAggregateFunctions,
         aggregateMetadata.getAggregateIndices,
@@ -1093,7 +1032,9 @@ object AggregateUtil {
         needReset = true,
         None
       )
-      val genPreAggFunction = generatorPre.generateAggregations
+
+      val genPreAggFunction = generatorPre
+        .genAggregationsOrTableAggregations(outputType, groupings.length, namedAggregates)
 
       // compute mapping of forwarded grouping keys
       val gkeyMapping: Array[Int] = if (gkeyOutMapping.nonEmpty) {
@@ -1110,7 +1051,7 @@ object AggregateUtil {
         nullableInput,
         inputTypeInfo,
         constants,
-        "DataSetAggregateFinalHelper",
+        s"${classNamePrefix}FinalHelper",
         inputFieldTypeInfo,
         aggregateMetadata.getAggregateFunctions,
         aggregateMetadata.getAggregateIndices,
@@ -1126,12 +1067,13 @@ object AggregateUtil {
         needReset = true,
         None
       )
-      val genFinalAggFunction = generatorFinal.generateAggregations
+      val genFinalAggFunction = generatorFinal
+        .genAggregationsOrTableAggregations(outputType, groupings.length, namedAggregates)
 
       (
         Some(new DataSetPreAggFunction(genPreAggFunction)),
         Some(preAggRowType),
-        Right(new DataSetFinalAggFunction(genFinalAggFunction))
+        Right(new DataSetFinalAggFunction(genFinalAggFunction, groupings.length, isTableAggregate))
       )
     }
     else {
@@ -1140,7 +1082,7 @@ object AggregateUtil {
         nullableInput,
         inputTypeInfo,
         constants,
-        "DataSetAggregateHelper",
+        s"${classNamePrefix}Helper",
         inputFieldTypeInfo,
         aggregateMetadata.getAggregateFunctions,
         aggregateMetadata.getAggregateIndices,
@@ -1156,11 +1098,13 @@ object AggregateUtil {
         needReset = true,
         None
       )
+      val genFunc = generator
+        .genAggregationsOrTableAggregations(outputType, groupings.length, namedAggregates)
 
       (
         None,
         None,
-        Left(new DataSetAggFunction(generator.generateAggregations))
+        Left(new DataSetAggFunction(genFunc, groupings.length, isTableAggregate))
       )
     }
 
@@ -1537,7 +1481,7 @@ object AggregateUtil {
 
   /**
     * Prepares metadata [[AggregateMetadata]] required to generate code for
-    * [[AggregationsFunction]] for all [[AggregateCall]].
+    * [[GeneratedAggregations]] for all [[AggregateCall]].
     *
     * @param aggregateCalls calcite's aggregate function
     * @param aggregateInputType input type of given aggregates

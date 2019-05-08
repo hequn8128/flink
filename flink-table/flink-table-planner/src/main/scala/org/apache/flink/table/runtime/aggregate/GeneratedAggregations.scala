@@ -23,9 +23,10 @@ import org.apache.flink.types.Row
 import org.apache.flink.util.Collector
 
 /**
-  * Base class for code-generated aggregations and table aggregations.
+  * Base class for code-generated aggregations.
   */
-abstract class AggregationsFunction extends Function {
+abstract class GeneratedAggregations extends Function {
+
   /**
     * Setup method for [[org.apache.flink.table.functions.AggregateFunction]].
     * It can be used for initialization work. By default, this method does nothing.
@@ -33,6 +34,25 @@ abstract class AggregationsFunction extends Function {
     * @param ctx The runtime context.
     */
   def open(ctx: RuntimeContext)
+
+  /**
+    * Sets the results of the aggregations (partial or final) to the output row.
+    * Final results are computed with the aggregation function.
+    * Partial results are the accumulators themselves.
+    *
+    * @param accumulators the accumulators (saved in a row) which contains the current
+    *                     aggregated results
+    * @param output       output results collected in a row
+    */
+  def setAggregationResults(accumulators: Row, output: Row)
+
+  /**
+    * Copies forwarded fields, such as grouping keys, from input row to output row.
+    *
+    * @param input        input values bundled in a row
+    * @param output       output results collected in a row
+    */
+  def setForwardedFields(input: Row, output: Row)
 
   /**
     * Accumulates the input values to the accumulators.
@@ -60,6 +80,13 @@ abstract class AggregationsFunction extends Function {
   def createAccumulators(): Row
 
   /**
+    * Creates an output row object with the correct arity.
+    *
+    * @return an output row object with the correct arity.
+    */
+  def createOutputRow(): Row
+
+  /**
     * Merges two rows of accumulators into one row.
     *
     * @param a First row of accumulators
@@ -69,19 +96,12 @@ abstract class AggregationsFunction extends Function {
   def mergeAccumulatorsPair(a: Row, b: Row): Row
 
   /**
-    * Copies forwarded fields, such as grouping keys, from input row to output row.
+    * Resets all the accumulators.
     *
-    * @param input        input values bundled in a row
-    * @param output       output results collected in a row
+    * @param accumulators the accumulators (saved in a row) which contains the current
+    *                     aggregated results
     */
-  def setForwardedFields(input: Row, output: Row)
-
-  /**
-    * Creates an output row object with the correct arity.
-    *
-    * @return an output row object with the correct arity.
-    */
-  def createOutputRow(): Row
+  def resetAccumulator(accumulators: Row)
 
   /**
     * Cleanup for the accumulators.
@@ -96,34 +116,9 @@ abstract class AggregationsFunction extends Function {
 }
 
 /**
-  * Base class for code-generated aggregations.
-  */
-abstract class GeneratedAggregations extends AggregationsFunction {
-
-  /**
-    * Sets the results of the aggregations (partial or final) to the output row.
-    * Final results are computed with the aggregation function.
-    * Partial results are the accumulators themselves.
-    *
-    * @param accumulators the accumulators (saved in a row) which contains the current
-    *                     aggregated results
-    * @param output       output results collected in a row
-    */
-  def setAggregationResults(accumulators: Row, output: Row)
-
-  /**
-    * Resets all the accumulators.
-    *
-    * @param accumulators the accumulators (saved in a row) which contains the current
-    *                     aggregated results
-    */
-  def resetAccumulator(accumulators: Row)
-}
-
-/**
   * Base class for code-generated table aggregations.
   */
-abstract class GeneratedTableAggregations extends AggregationsFunction {
+abstract class GeneratedTableAggregations extends GeneratedAggregations {
 
   /**
     * emit results.

@@ -32,17 +32,18 @@ import org.apache.flink.util.Collector
   *
   * @param genAggregations Code-generated [[GeneratedAggregations]]
   */
-class DataSetPreAggFunction(genAggregations: GeneratedAggregationsFunction)
+class DataSetPreAggFunction[F <: GeneratedAggregations](
+    genAggregations: GeneratedAggregationsFunction)
   extends AbstractRichFunction
   with GroupCombineFunction[Row, Row]
   with MapPartitionFunction[Row, Row]
-  with Compiler[GeneratedAggregations]
+  with Compiler[F]
   with Logging {
 
   private var output: Row = _
   private var accumulators: Row = _
 
-  private var function: GeneratedAggregations = _
+  private var function: F = _
 
   override def open(config: Configuration) {
     LOG.debug(s"Compiling AggregateHelper: $genAggregations.name \n\n " +

@@ -22,6 +22,7 @@ import java.lang.Iterable
 import org.apache.flink.api.common.functions.{MapPartitionFunction, RichGroupReduceFunction}
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.table.codegen.{Compiler, GeneratedAggregationsFunction}
+import org.apache.flink.table.runtime.ConcatKeyAndAggResultCollector
 import org.apache.flink.table.util.Logging
 import org.apache.flink.types.Row
 import org.apache.flink.util.Collector
@@ -31,17 +32,22 @@ import org.apache.flink.util.Collector
   * not support pre-aggregation for batch(DataSet) queries.
   *
   * @param genAggregations Code-generated [[GeneratedAggregations]]
+  * @param numGroupingKey The number of grouping keys.
+  * @param isTableAggregate Whether it is table aggregate.
   */
-class DataSetAggFunction(
-    private val genAggregations: GeneratedAggregationsFunction)
+class DataSetAggFunction[F <: GeneratedAggregations](
+    private val genAggregations: GeneratedAggregationsFunction,
+    private val numGroupingKey: Int,
+    private val isTableAggregate: Boolean)
   extends RichGroupReduceFunction[Row, Row]
     with MapPartitionFunction[Row, Row]
-    with Compiler[GeneratedAggregations] with Logging {
+    with Compiler[F] with Logging {
 
   private var output: Row = _
   private var accumulators: Row = _
+  private var concatCollector: ConcatKeyAndAggResultCollector[Row] = _
 
-  private var function: GeneratedAggregations = _
+  private var function: F = _
 
   override def open(config: Configuration) {
     LOG.debug(s"Compiling AggregateHelper: $genAggregations.name \n\n " +
@@ -55,6 +61,11 @@ class DataSetAggFunction(
 
     output = function.createOutputRow()
     accumulators = function.createAccumulators()
+
+    if (isTableAggregate) {
+      concatCollector = new ConcatKeyAndAggResultCollector(numGroupingKey)
+      concatCollector.setResultRow(output)
+    }
   }
 
   /**
@@ -81,10 +92,14 @@ class DataSetAggFunction(
     // set group keys value to final output
     function.setForwardedFields(record, output)
 
-    // set agg results to output
-    function.setAggregationResults(accumulators, output)
-
-    out.collect(output)
+    if (isTableAggregate) {
+      concatCollector.out = out
+      function.asInstanceOf[GeneratedTableAggregations].emit(accumulators, concatCollector)
+    } else {
+      // set agg results to output
+      function.setAggregationResults(accumulators, output)
+      out.collect(output)
+    }
   }
 
   /**

@@ -31,7 +31,7 @@ import org.apache.flink.types.Row
   * @param genAggregations Generated aggregate helper function
   * @param isTableAggregate Whether it is table aggregate.
   */
-class AggregateAggFunction[F <: AggregationsFunction](
+class AggregateAggFunction[F <: GeneratedAggregations](
     genAggregations: GeneratedAggregationsFunction,
     isTableAggregate: Boolean)
   extends AggregateFunction[CRow, Row, Row]
@@ -64,7 +64,7 @@ class AggregateAggFunction[F <: AggregationsFunction](
       Row.of(accumulatorRow, function)
     } else {
       val output = function.createOutputRow()
-      function.asInstanceOf[GeneratedAggregations].setAggregationResults(accumulatorRow, output)
+      function.setAggregationResults(accumulatorRow, output)
       output
     }
   }
