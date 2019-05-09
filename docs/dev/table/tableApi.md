@@ -2027,43 +2027,49 @@ Table table = input
     <tr>
       <td>
         <strong>GroupBy TableAggregation</strong><br>
-        <span class="label label-primary">Streaming</span><br>
+        <span class="label label-primary">Batch</span> <span class="label label-primary">Streaming</span><br>
         <span class="label label-info">Result Updating</span>
       </td>
       <td>
         <p>Similar to a <b>GroupBy Aggregation</b>. Groups the rows on the grouping keys with the following running table aggregation operator to aggregate rows group-wise. The difference from an AggregateFunction is that TableAggregateFunction may return 0 or more records for a group. You have to close the "flatAggregate" with a select statement. And the select statement does not support aggregate functions.</p>
 {% highlight java %}
-    public class MyMinMaxAcc {
-        public int min = 0;
-        public int max = 0;
-    }
+public class MyMinMaxAcc {
+    public int min = 0;
+    public int max = 0;
+}
 
-    public class MyMinMax extends TableAggregateFunction<Row, MyMinMaxAcc> {
+public class MyMinMax extends TableAggregateFunction<Row, MyMinMaxAcc> {
 
-        public void accumulate(MyMinMaxAcc acc, int value) {
-            if (value < acc.min) {
-                acc.min = value;
-            }
-            if (value > acc.max) {
-                acc.max = value;
-            }
+    public void accumulate(MyMinMaxAcc acc, int value) {
+        if (value < acc.min) {
+            acc.min = value;
         }
-
-        @Override
-        public MyMinMaxAcc createAccumulator() {
-            return new MyMinMaxAcc();
-        }
-
-        public void emitValue(MyMinMaxAcc acc, Collector<Row> out) {
-            out.collect(Row.of(acc.min, acc.min));
-            out.collect(Row.of(acc.max, acc.max));
-        }
-
-        @Override
-        public TypeInformation<Row> getResultType() {
-            return new RowTypeInfo(Types.INT, Types.INT);
+        if (value > acc.max) {
+            acc.max = value;
         }
     }
+    
+    // This method is only needed for batch jobs
+    public void resetAccumulator(MyMinMaxAcc acc) {
+        acc.min = 0;
+        acc.max = 0;
+    }
+    
+    @Override
+    public MyMinMaxAcc createAccumulator() {
+        return new MyMinMaxAcc();
+    }
+
+    public void emitValue(MyMinMaxAcc acc, Collector<Row> out) {
+        out.collect(Row.of(acc.min, acc.min));
+        out.collect(Row.of(acc.max, acc.max));
+    }
+
+    @Override
+    public TypeInformation<Row> getResultType() {
+        return new RowTypeInfo(Types.INT, Types.INT);
+    }
+}
     
 TableAggregateFunction tableAggFunc = new MyMinMax();
 tableEnv.registerFunction("tableAggFunc", tableAggFunc);
@@ -2216,7 +2222,7 @@ val table = input
     <tr>
       <td>
         <strong>GroupBy TableAggregation</strong><br>
-        <span class="label label-primary">Streaming</span><br>
+        <span class="label label-primary">Batch</span> <span class="label label-primary">Streaming</span><br>
         <span class="label label-info">Result Updating</span>
       </td>
       <td>
@@ -2235,6 +2241,7 @@ class MyMinMax extends TableAggregateFunction[Row, MyMinMaxAcc] {
     }
   }
 
+  // This method is only needed for batch jobs
   def resetAccumulator(acc: MyMinMaxAcc): Unit = {
     acc.min = 0
     acc.max = 0
