@@ -30,6 +30,7 @@ import org.apache.flink.table.api.TableException;
 import org.apache.flink.table.descriptors.BatchTableDescriptor;
 import org.apache.flink.table.descriptors.ConnectorDescriptor;
 import org.apache.flink.table.functions.AggregateFunction;
+import org.apache.flink.table.functions.TableAggregateFunction;
 import org.apache.flink.table.functions.TableFunction;
 
 import java.lang.reflect.Constructor;
@@ -72,6 +73,17 @@ public interface BatchTableEnvironment extends TableEnvironment {
 	 * @param <ACC> The type of aggregate accumulator.
 	 */
 	<T, ACC> void registerFunction(String name, AggregateFunction<T, ACC> aggregateFunction);
+
+	/**
+	 * Registers a {@link TableAggregateFunction} under a unique name in the TableEnvironment's
+	 * catalog. Registered functions can be referenced in Table API and SQL queries.
+	 *
+	 * @param name The name under which the function is registered.
+	 * @param tableAggregateFunction The TableAggregateFunction to register.
+	 * @param <T> The type of the output value.
+	 * @param <ACC> The type of aggregate accumulator.
+	 */
+	<T, ACC> void registerFunction(String name, TableAggregateFunction<T, ACC> tableAggregateFunction);
 
 	/**
 	 * Converts the given {@link DataSet} into a {@link Table}.

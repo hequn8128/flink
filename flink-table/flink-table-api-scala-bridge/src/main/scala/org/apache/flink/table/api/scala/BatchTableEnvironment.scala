@@ -22,7 +22,7 @@ import org.apache.flink.api.scala.{DataSet, ExecutionEnvironment}
 import org.apache.flink.table.api.{TableEnvironment, _}
 import org.apache.flink.table.descriptors.{BatchTableDescriptor, ConnectorDescriptor}
 import org.apache.flink.table.expressions.Expression
-import org.apache.flink.table.functions.{AggregateFunction, TableFunction}
+import org.apache.flink.table.functions.{AggregateFunction, TableAggregateFunction, TableFunction}
 
 /**
   * The [[TableEnvironment]] for a Scala batch [[ExecutionEnvironment]] that works
@@ -61,6 +61,19 @@ trait BatchTableEnvironment extends TableEnvironment {
   def registerFunction[T: TypeInformation, ACC: TypeInformation](
     name: String,
     f: AggregateFunction[T, ACC]): Unit
+
+  /**
+    * Registers a [[TableAggregateFunction]] under a unique name in the TableEnvironment's catalog.
+    * Registered functions can be referenced in Table API and SQL queries.
+    *
+    * @param name The name under which the function is registered.
+    * @param f The TableAggregateFunction to register.
+    * @tparam T The type of the output value.
+    * @tparam ACC The type of aggregate accumulator.
+    */
+  def registerFunction[T: TypeInformation, ACC: TypeInformation](
+    name: String,
+    f: TableAggregateFunction[T, ACC]): Unit
 
   /**
     * Converts the given [[DataSet]] into a [[Table]].

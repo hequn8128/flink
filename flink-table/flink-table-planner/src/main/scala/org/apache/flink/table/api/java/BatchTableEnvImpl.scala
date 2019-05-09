@@ -22,7 +22,7 @@ import org.apache.flink.api.java.typeutils.TypeExtractor
 import org.apache.flink.api.java.{DataSet, ExecutionEnvironment}
 import org.apache.flink.table.api._
 import org.apache.flink.table.expressions.ExpressionParser
-import org.apache.flink.table.functions.{AggregateFunction, TableFunction}
+import org.apache.flink.table.functions.{AggregateFunction, TableAggregateFunction, TableFunction}
 
 import _root_.scala.collection.JavaConverters._
 
@@ -106,15 +106,14 @@ class BatchTableEnvImpl(
   override def registerFunction[T, ACC](
       name: String,
       f: AggregateFunction[T, ACC])
-  : Unit = {
-    implicit val typeInfo: TypeInformation[T] = TypeExtractor
-      .createTypeInfo(f, classOf[AggregateFunction[T, ACC]], f.getClass, 0)
-      .asInstanceOf[TypeInformation[T]]
+    : Unit = {
+    registerUserDefinedAggregateFunction(name, f)
+  }
 
-    implicit val accTypeInfo: TypeInformation[ACC] = TypeExtractor
-      .createTypeInfo(f, classOf[AggregateFunction[T, ACC]], f.getClass, 1)
-      .asInstanceOf[TypeInformation[ACC]]
-
-    registerAggregateFunctionInternal[T, ACC](name, f)
+  override def registerFunction[T, ACC](
+      name: String,
+      f: TableAggregateFunction[T, ACC])
+    : Unit = {
+    registerUserDefinedAggregateFunction(name, f)
   }
 }

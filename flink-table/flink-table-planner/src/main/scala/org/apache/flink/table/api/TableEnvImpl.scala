@@ -46,7 +46,7 @@ import org.apache.flink.table.catalog.{ExternalCatalog, ExternalCatalogSchema}
 import org.apache.flink.table.codegen.{ExpressionReducer, FunctionCodeGenerator, GeneratedFunction}
 import org.apache.flink.table.expressions._
 import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils._
-import org.apache.flink.table.functions.{AggregateFunction, ScalarFunction, TableFunction, UserDefinedAggregateFunction}
+import org.apache.flink.table.functions.{AggregateFunction, ScalarFunction, TableAggregateFunction, TableFunction, UserDefinedAggregateFunction}
 import org.apache.flink.table.operations.{CatalogTableOperation, OperationTreeBuilder, PlannerTableOperation}
 import org.apache.flink.table.plan.TableOperationConverter
 import org.apache.flink.table.plan.cost.DataSetCostFactory
@@ -452,7 +452,25 @@ abstract class TableEnvImpl(val config: TableConfig) extends TableEnvironment {
   }
 
   /**
-    * Registers an [[AggregateFunction]] under a unique name. Replaces already existing
+    * Common function for registering an [[AggregateFunction]] or a [[TableAggregateFunction]].
+    */
+  protected def registerUserDefinedAggregateFunction[T, ACC](
+    name: String,
+    f: UserDefinedAggregateFunction[T, ACC])
+  : Unit = {
+    implicit val typeInfo: TypeInformation[T] = TypeExtractor
+      .createTypeInfo(f, classOf[UserDefinedAggregateFunction[T, ACC]], f.getClass, 0)
+      .asInstanceOf[TypeInformation[T]]
+
+    implicit val accTypeInfo: TypeInformation[ACC] = TypeExtractor
+      .createTypeInfo(f, classOf[UserDefinedAggregateFunction[T, ACC]], f.getClass, 1)
+      .asInstanceOf[TypeInformation[ACC]]
+
+    registerAggregateFunctionInternal[T, ACC](name, f)
+  }
+
+  /**
+    * Registers a [[UserDefinedAggregateFunction]] under a unique name. Replaces already existing
     * user-defined functions under this name.
     */
   private[flink] def registerAggregateFunctionInternal[T: TypeInformation, ACC: TypeInformation](
