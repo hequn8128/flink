@@ -676,7 +676,6 @@ object AggregateUtil {
       needReset = true,
       None
     )
-    val genPreAggFunction = generatorPre.generateAggregations
 
     val generatorFinal = new AggregationCodeGenerator(
       config,
@@ -710,7 +709,7 @@ object AggregateUtil {
         if (doAllSupportPartialMerge(aggregateMetadata.getAggregateFunctions)) {
           // for incremental aggregations
           new DataSetTumbleTimeWindowAggReduceCombineFunction(
-            genPreAggFunction,
+            generatorPre.generateAggregations,
             genFinalAggFunction,
             asLong(size),
             startPos,
@@ -750,7 +749,7 @@ object AggregateUtil {
         if (doAllSupportPartialMerge(aggregateMetadata.getAggregateFunctions)) {
           // for partial aggregations
           new DataSetSlideWindowAggReduceCombineFunction(
-            genPreAggFunction,
+            generatorPre.generateAggregations,
             genFinalAggFunction,
             keysAndAggregatesArity,
             startPos,

@@ -23,6 +23,7 @@ import java.math.BigDecimal
 import org.apache.flink.api.scala._
 import org.apache.flink.table.api.{Session, Slide, Tumble}
 import org.apache.flink.table.api.scala._
+import org.apache.flink.table.functions.aggfunctions.CountAggFunction
 import org.apache.flink.table.runtime.utils.TableProgramsClusterTestBase
 import org.apache.flink.table.runtime.utils.TableProgramsTestBase.TableConfigMode
 import org.apache.flink.test.util.MultipleProgramsTestBase.TestExecutionMode
@@ -94,6 +95,8 @@ class GroupWindowITCase(
     val env = ExecutionEnvironment.getExecutionEnvironment
     val tEnv = BatchTableEnvironment.create(env, config)
 
+    val countFun = new CountAggFunction
+
     val table = env
       .fromCollection(data)
       .toTable(tEnv, 'long, 'int, 'double, 'float, 'bigdec, 'string)
@@ -102,7 +105,7 @@ class GroupWindowITCase(
     val windowedTable = table
       .window(Tumble over 5.milli on 'long as 'w)
       .groupBy('w, 'string)
-      .select('string, 'int.sum, 'w.start, 'w.end, 'w.rowtime)
+      .select('string, countFun('int), 'w.start, 'w.end, 'w.rowtime)
 
     val expected =
       "Hello world,3,1970-01-01 00:00:00.005,1970-01-01 00:00:00.01,1970-01-01 00:00:00.009\n" +

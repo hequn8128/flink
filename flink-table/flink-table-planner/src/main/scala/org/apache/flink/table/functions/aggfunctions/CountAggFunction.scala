@@ -63,13 +63,13 @@ class CountAggFunction
   override def getValue(acc: CountAccumulator): JLong = {
     acc.f0
   }
-
-  def merge(acc: CountAccumulator, its: JIterable[CountAccumulator]): Unit = {
-    val iter = its.iterator()
-    while (iter.hasNext) {
-      acc.f0 += iter.next().f0
-    }
-  }
+//
+//  def merge(acc: CountAccumulator, its: JIterable[CountAccumulator]): Unit = {
+//    val iter = its.iterator()
+//    while (iter.hasNext) {
+//      acc.f0 += iter.next().f0
+//    }
+//  }
 
   override def createAccumulator(): CountAccumulator = {
     new CountAccumulator
