@@ -29,7 +29,7 @@ import org.apache.flink.util.Collector;
  * <ul>
  *     <li>createAccumulator</li>
  *     <li>accumulate</li>
- *     <li>emitValue</li>
+ *     <li>emitValue or emitRetractValueIncrementally</li>
  * </ul>
  *
  * <p>There is another method that can be optional to have:
@@ -77,6 +77,27 @@ import org.apache.flink.util.Collector;
  * param: out                   the collector used to output data.
  *
  * public void emitValue(ACC accumulator, Collector<T> out)
+ * }
+ * </pre>
+ *
+ * <pre>
+ * {@code
+ * Called every time when an aggregation result should be materialized. The returned value could
+ * be either an early and incomplete result (periodically emitted as data arrive) or the final
+ * result of the aggregation.
+ *
+ * Different from emitValue, this method outputs data incrementally in retract mode, i.e., once
+ * there is an update, we have to retract old records before sending new updated ones.
+ * The emitRetractValueIncrementally method will be used in preference to the emitValue method if
+ * both methods are defined in the table aggregate function, because the method is treated to be
+ * more efficient than emitValue as it can output values incrementally.
+ *
+ * param: accumulator           the accumulator which contains the current aggregated results
+ * param: out                   the retractable collector used to output data. Use collect method
+ *                              to output(add) records and use retract method to retract(delete)
+ *                              records.
+ *
+ * public void emitRetractValueIncrementally(ACC accumulator, RetractableCollector<T> out)
  * }
  * </pre>
  *

@@ -2643,6 +2643,7 @@ Table table = input
       </td>
       <td>
         <p>Similar to a <b>GroupBy Aggregation</b>. Groups the rows on the grouping keys with the following running table aggregation operator to aggregate rows group-wise. The difference from an AggregateFunction is that TableAggregateFunction may return 0 or more records for a group. You have to close the "flatAggregate" with a select statement. And the select statement does not support aggregate functions.</p>
+        <p>Instead of using <code>emitValue</code> to output results, you can also use the <code>emitRetractValueIncrementally</code> method. Different from <code>emitValue</code>, this method outputs data incrementally in retract mode, i.e., once there is an update, we have to retract old records before sending new updated ones. The <code>emitRetractValueIncrementally</code> method will be used in preference to the <code>emitValue</code> method if both methods are defined in the table aggregate function, because the method is treated to be more efficient than <code>emitValue</code> as it can output values incrementally.</p>
 {% highlight java %}
     public class MyMinMaxAcc {
         public int min = 0;
