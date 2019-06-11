@@ -46,9 +46,9 @@ import org.apache.flink.table.expressions.UnresolvedReferenceExpression;
 import org.apache.flink.table.expressions.ValueLiteralExpression;
 import org.apache.flink.table.functions.AggregateFunction;
 import org.apache.flink.table.functions.TableAggregateFunction;
-import org.apache.flink.table.functions.utils.UserDefinedFunctionUtils;
 import org.apache.flink.table.operations.WindowAggregateQueryOperation.ResolvedGroupWindow;
 import org.apache.flink.table.types.logical.LogicalType;
+import org.apache.flink.table.typeutils.FieldInfoUtils;
 import org.apache.flink.table.typeutils.TimeIndicatorTypeInfo;
 import org.apache.flink.table.typeutils.TimeIntervalTypeInfo;
 
@@ -116,10 +116,11 @@ public class AggregateOperationFactory {
 			convertedAggregates.stream().flatMap(this::extractAggregateResultTypes)
 		).toArray(TypeInformation[]::new);
 
+		String[] groupNames = groupings.stream()
+			.map(expr -> extractName(expr).orElseGet(expr::toString)).toArray(String[]::new);
 		String[] fieldNames = Stream.concat(
-			groupings.stream().map(expr -> extractName(expr).orElseGet(expr::toString)),
-			aggregates.stream().flatMap(this::extractAggregateNames)
-		).toArray(String[]::new);
+			Stream.of(groupNames),
+			aggregates.stream().flatMap(p -> extractAggregateNames(p, groupNames))).toArray(String[]::new);
 
 		TableSchema tableSchema = new TableSchema(fieldNames, fieldTypes);
 
@@ -156,12 +157,12 @@ public class AggregateOperationFactory {
 			convertedWindowProperties.stream().map(PlannerExpression::resultType)
 		).toArray(TypeInformation[]::new);
 
+		String[] groupNames = groupings.stream()
+			.map(expr -> extractName(expr).orElseGet(expr::toString)).toArray(String[]::new);
 		String[] fieldNames = concat(
-			groupings.stream().map(expr -> extractName(expr).orElseGet(expr::toString)),
-			aggregates.stream().flatMap(this::extractAggregateNames),
-			windowProperties.stream().map(expr -> extractName(expr).orElseGet(expr::toString))
-		).toArray(String[]::new);
-
+			Stream.of(groupNames),
+			aggregates.stream().flatMap(p -> extractAggregateNames(p, groupNames)),
+			windowProperties.stream().map(expr -> extractName(expr).orElseGet(expr::toString))).toArray(String[]::new);
 		TableSchema tableSchema = new TableSchema(fieldNames, fieldTypes);
 
 		return new WindowAggregateQueryOperation(
@@ -178,9 +179,9 @@ public class AggregateOperationFactory {
 	 * it may return multi result types when the composite return type is flattened.
 	 */
 	private Stream<TypeInformation<?>> extractAggregateResultTypes(PlannerExpression plannerExpression) {
-		if (plannerExpression instanceof AggFunctionCall &&
-			((AggFunctionCall) plannerExpression).aggregateFunction() instanceof TableAggregateFunction) {
-			return Stream.of(UserDefinedFunctionUtils.getFieldInfo(plannerExpression.resultType())._3());
+		if ((plannerExpression instanceof AggFunctionCall) &&
+			(((AggFunctionCall) plannerExpression).aggregateFunction() instanceof TableAggregateFunction)) {
+			return Stream.of(FieldInfoUtils.getFieldTypes(plannerExpression.resultType()));
 		} else {
 			return Stream.of(plannerExpression.resultType());
 		}
@@ -190,11 +191,11 @@ public class AggregateOperationFactory {
 	 * Extract names for the aggregate or the table aggregate expression. For a table aggregate, it
 	 * may return multi output names when the composite return type is flattened.
 	 */
-	private Stream<String> extractAggregateNames(Expression expression) {
+	private Stream<String> extractAggregateNames(Expression expression, String[] groupNames) {
 		if (isTableAggFunctionCall(expression)) {
-			return Arrays.stream(UserDefinedFunctionUtils.getFieldInfo(
+			return Arrays.stream(FieldInfoUtils.getFieldNames(
 				((AggregateFunctionDefinition) ((CallExpression) expression).getFunctionDefinition())
-					.getResultTypeInfo())._1());
+					.getResultTypeInfo(), Arrays.asList(groupNames)));
 		} else {
 			return Stream.of(extractName(expression).orElseGet(expression::toString));
 		}

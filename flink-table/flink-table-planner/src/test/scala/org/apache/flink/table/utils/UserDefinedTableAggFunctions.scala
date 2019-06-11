@@ -222,3 +222,12 @@ class EmptyTableAggFunc extends TableAggregateFunction[JTuple2[JInt, JInt], Top3
 
   def emitValue(acc: Top3Accum, out: Collector[JTuple2[JInt, JInt]]): Unit = {}
 }
+
+class EmptyTableAggFuncWithIntResultType extends TableAggregateFunction[JInt, Top3Accum] {
+
+  override def createAccumulator(): Top3Accum = new Top3Accum
+
+  def accumulate(acc: Top3Accum, value: Int): Unit = {}
+
+  def emitValue(acc: Top3Accum, out: Collector[JInt]): Unit = {}
+}
