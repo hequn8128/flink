@@ -23,7 +23,8 @@ import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.scala._
 import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
 import org.apache.flink.table.api.scala._
-import org.apache.flink.table.api.{StreamQueryConfig, Types}
+import org.apache.flink.table.api.{StreamQueryConfig, Tumble, Types}
+import org.apache.flink.table.functions.TableFunction
 import org.apache.flink.table.runtime.utils.JavaUserDefinedAggFunctions.{CountDistinct, DataViewTestAgg, WeightedAvg}
 import org.apache.flink.table.runtime.utils.StreamITCase.RetractingSink
 import org.apache.flink.table.runtime.utils.{JavaUserDefinedAggFunctions, StreamITCase, StreamTestData, StreamingWithStateTestBase}
@@ -89,30 +90,17 @@ class AggregateITCase extends StreamingWithStateTestBase {
     StreamITCase.clear
 
     val data = new mutable.MutableList[(Int, Int, String)]
-    data.+=((1, 1, "A"))
-    data.+=((2, 2, "B"))
-    data.+=((2, 2, "B"))
-    data.+=((4, 3, "C"))
-    data.+=((5, 3, "C"))
-    data.+=((4, 3, "C"))
-    data.+=((7, 3, "B"))
-    data.+=((1, 4, "A"))
-    data.+=((9, 4, "D"))
-    data.+=((4, 1, "A"))
-    data.+=((3, 2, "B"))
+    data.+=((1, 1, "A A B B B C C D"))
 
-    val testAgg = new WeightedAvg
-    val t = env.fromCollection(data).toTable(tEnv, 'a, 'b, 'c)
-      .groupBy('c)
-      .select('c, 'a.count.distinct, 'a.sum.distinct,
-              testAgg.distinct('a, 'b), testAgg.distinct('b, 'a), testAgg('a, 'b))
+    val splitFunction = new SplitTableFunction
+    val t = env.fromCollection(data).toTable(tEnv, 'a, 'b, 'c, 'proctime.proctime)
+      .joinLateral(splitFunction('c) as 'word)
+      .window(Tumble.over("5.seconds").on('proctime).as('w))
+      .groupBy('w)
+      .select('word.count.distinct)
 
-    val results = t.toRetractStream[Row](queryConfig)
-    results.addSink(new StreamITCase.RetractingSink).setParallelism(1)
+    t.toAppendStream.print()
     env.execute()
-
-    val expected = mutable.MutableList("A,2,5,1,1,1", "B,3,12,4,2,3", "C,2,9,4,3,4", "D,1,9,9,4,9")
-    assertEquals(expected.sorted, StreamITCase.retractedResults.sorted)
   }
 
   @Test
@@ -378,5 +366,12 @@ class AggregateITCase extends StreamingWithStateTestBase {
 
     val expected = List("1,1,1,1", "2,2,2,3", "3,3,4,6", "4,4,7,10", "5,5,11,15", "6,6,16,21")
     assertEquals(expected.sorted, StreamITCase.retractedResults.sorted)
+  }
+}
+
+
+class SplitTableFunction extends TableFunction[String] {
+  def eval(b: String): Unit = {
+    b.split(" ").foreach(collect(_))
   }
 }
