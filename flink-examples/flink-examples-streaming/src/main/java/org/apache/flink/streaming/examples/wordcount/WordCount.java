@@ -18,8 +18,16 @@
 package org.apache.flink.streaming.examples.wordcount;
 
 import org.apache.flink.api.common.functions.FlatMapFunction;
+import org.apache.flink.api.common.state.ListState;
+import org.apache.flink.api.common.state.ListStateDescriptor;
+import org.apache.flink.api.common.state.ValueState;
+import org.apache.flink.api.common.state.ValueStateDescriptor;
+import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.utils.ParameterTool;
+import org.apache.flink.runtime.state.FunctionInitializationContext;
+import org.apache.flink.runtime.state.FunctionSnapshotContext;
+import org.apache.flink.streaming.api.checkpoint.CheckpointedFunction;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.examples.wordcount.util.WordCountData;
@@ -58,6 +66,7 @@ public class WordCount {
 
 		// make parameters available in the web interface
 		env.getConfig().setGlobalJobParameters(params);
+		env.setParallelism(2);
 
 		// get input data
 		DataStream<String> text;
@@ -71,19 +80,10 @@ public class WordCount {
 			text = env.fromElements(WordCountData.WORDS);
 		}
 
-		DataStream<Tuple2<String, Integer>> counts =
-			// split up the lines in pairs (2-tuples) containing: (word,1)
-			text.flatMap(new Tokenizer())
-			// group by the tuple field "0" and sum up tuple field "1"
-			.keyBy(0).sum(1);
-
-		// emit result
-		if (params.has("output")) {
-			counts.writeAsText(params.get("output"));
-		} else {
-			System.out.println("Printing result to stdout. Use --output to specify output path.");
-			counts.print();
-		}
+		// split up the lines in pairs (2-tuples) containing: (word,1)
+		text.flatMap(new Tokenizer())
+		// group by the tuple field "0" and sum up tuple field "1"
+		.keyBy(0).flatMap(new TestState()).print();
 
 		// execute program
 		env.execute("Streaming WordCount");
@@ -115,4 +115,47 @@ public class WordCount {
 		}
 	}
 
+	public static final class TestState implements FlatMapFunction<Tuple2<String, Integer>, Tuple2<String, Integer>>, CheckpointedFunction {
+
+		private ListState<Integer> countPerPartition;
+		private ValueState<Integer> valueState;
+		private int localCount;
+
+		@Override
+		public void snapshotState(FunctionSnapshotContext context) throws Exception {
+			// the keyed state is always up to date anyways
+			// just bring the per-partition state in shape
+			countPerPartition.clear();
+			countPerPartition.add(localCount);
+		}
+
+		@Override
+		public void initializeState(FunctionInitializationContext context) throws Exception {
+			// get the state data structure for the per-partition state
+			countPerPartition = context.getOperatorStateStore().getListState(
+				new ListStateDescriptor<>("perPartitionCount", Integer.class));
+
+			countPerPartition.add(1);
+
+			valueState = context.getKeyedStateStore()
+				.getState(new ValueStateDescriptor<Integer>("int", Types.INT));
+
+			// initialize the "local count variable" based on the operator state
+			for (Integer l : countPerPartition.get()) {
+				localCount += l;
+			}
+		}
+
+		@Override
+		public void flatMap(Tuple2<String, Integer> value, Collector<Tuple2<String, Integer>> out) throws Exception {
+
+			countPerPartition.add(1);
+			for (Integer l : countPerPartition.get()) {
+				localCount += l;
+			}
+
+			value.f1 = localCount;
+			out.collect(value);
+		}
+	}
 }

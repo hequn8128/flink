@@ -302,6 +302,24 @@ public interface Table {
 	Table join(Table right);
 
 	/**
+	 * Connects two {@link Table}s of (possibly) different data types. Connected tables are useful
+	 * for cases where operations on one table directly affect the operations on the other table.
+	 * The fields of the two connected tables must not overlap, use {@code as} to rename fields if
+	 * necessary.
+	 *
+	 * <p>Note: Both tables must be bound to the same {@code TableEnvironment} .
+	 *
+	 * <p>Example:
+	 *
+	 * <pre>
+	 * {@code
+	 *   left.connect(right)
+	 * }
+	 * </pre>
+	 */
+	ConnectedTable connect(Table right);
+
+	/**
 	 * Joins two {@link Table}s. Similar to a SQL join. The fields of the two joined
 	 * operations must not overlap, use {@code as} to rename fields if necessary.
 	 *
