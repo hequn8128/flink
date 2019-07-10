@@ -18,7 +18,10 @@
 
 package org.apache.flink.table.runtime.utils;
 
+import org.apache.flink.api.common.typeinfo.TypeInformation;
+import org.apache.flink.table.api.dataview.ListView;
 import org.apache.flink.table.functions.ScalarFunction;
+import org.apache.flink.table.functions.StatefulFunction;
 
 import java.util.Arrays;
 
@@ -27,12 +30,30 @@ import java.util.Arrays;
  */
 public class JavaUserDefinedScalarFunctions {
 
+	public static class MyState {
+		public ListView<String> listView;
+	}
 	/**
 	 * Increment input.
 	 */
-	public static class JavaFunc0 extends ScalarFunction {
+	public static class JavaFunc0 extends ScalarFunction implements StatefulFunction<MyState> {
 		public long eval(Long l) {
 			return l + 1;
+		}
+
+		@Override
+		public void initializeWithState(MyState myState) throws Exception {
+
+		}
+
+		@Override
+		public void snapshotState(MyState myState) throws Exception {
+
+		}
+
+		@Override
+		public TypeInformation<MyState> getStateType() {
+			return null;
 		}
 	}
 
