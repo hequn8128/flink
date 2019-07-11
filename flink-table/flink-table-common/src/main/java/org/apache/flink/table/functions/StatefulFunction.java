@@ -55,7 +55,7 @@ public interface StatefulFunction<STATE> {
 	 * @param state the state which has been initialized by the system.
 	 * @throws Exception
 	 */
-	public abstract void initializeWithState(STATE state) throws Exception;
+	void initializeWithState(STATE state) throws Exception;
 
 	/**
 	 * This method is called when a snapshot for a checkpoint is requested.
@@ -63,7 +63,7 @@ public interface StatefulFunction<STATE> {
 	 * @param state the state which has been initialized by the system.
 	 * @throws Exception
 	 */
-	public default void snapshotState(STATE state) throws Exception {}
+	default void snapshotState(STATE state) throws Exception {}
 
 	/**
 	 * Returns the {@link TypeInformation} of the {@link StatefulFunction}'s state.
@@ -73,5 +73,13 @@ public interface StatefulFunction<STATE> {
 	 */
 	default TypeInformation<STATE> getStateType() {
 		return null;
+	}
+
+	/**
+	 * Whether the items in state are independent from each other and eligible for redistribution
+	 * across operator instances in case of changed operator parallelism
+	 */
+	default boolean eligibleForRedistribution() {
+		return false;
 	}
 }

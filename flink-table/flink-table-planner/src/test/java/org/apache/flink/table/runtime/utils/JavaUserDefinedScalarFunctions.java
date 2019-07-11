@@ -41,6 +41,10 @@ public class JavaUserDefinedScalarFunctions {
 			return l + 1;
 		}
 
+		public long retract(Long l) {
+			return l + 1;
+		}
+
 		@Override
 		public void initializeWithState(MyState myState) throws Exception {
 
@@ -54,6 +58,11 @@ public class JavaUserDefinedScalarFunctions {
 		@Override
 		public TypeInformation<MyState> getStateType() {
 			return null;
+		}
+
+		@Override
+		public boolean eligibleForRedistribution() {
+			return true;
 		}
 	}
 
