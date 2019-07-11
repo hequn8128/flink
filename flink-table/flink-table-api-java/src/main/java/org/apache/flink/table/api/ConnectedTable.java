@@ -22,7 +22,7 @@ import org.apache.flink.annotation.PublicEvolving;
 import org.apache.flink.table.expressions.Expression;
 
 /**
- * A table that has been windowed and grouped for {@link GroupWindow}s.
+ * A connected table that contains two sub-tables.
  */
 @PublicEvolving
 public interface ConnectedTable {
@@ -47,49 +47,54 @@ public interface ConnectedTable {
 	Table map(Expression coScalarFunction);
 
 	/**
-	 * Performs a selection operation on a window grouped table. Similar to an SQL SELECT statement.
-	 * The field expressions can contain complex expressions and aggregations.
+	 * Performs a flatMap operation on a connected table. The operation calls a
+	 * {@link CoTableFunction#eval1} for each element of the first input and
+	 * {@link CoTableFunction#eval2} for each element of the second input. Each CoTableFunction
+	 * call can return any number of elements.
 	 *
 	 * <p>Scala Example:
 	 *
 	 * <pre>
 	 * {@code
-	 *   windowGroupedTable.select('key, 'window.start, 'value.avg as 'valavg)
+	 *   val coTableFunction = new CoTableFunction
+	 *   connectedTable
+	 *     .flatMap(coTableFunction('a, 'b)('c, 'd))
+	 *     .select('x, 'y, 'z)
 	 * }
 	 * </pre>
 	 */
-	Table select(Expression... fields);
+	Table flatMap(Expression coScalarFunction);
 
 	/**
-	 * Performs a flatAggregate operation on a window grouped table. FlatAggregate takes a
-	 * TableAggregateFunction which returns multiple rows. Use a selection after flatAggregate.
-	 *
-	 * <p>Example:
-	 *
-	 * <pre>
-	 * {@code
-	 *   TableAggregateFunction tableAggFunc = new MyTableAggregateFunction
-	 *   tableEnv.registerFunction("tableAggFunc", tableAggFunc);
-	 *   windowGroupedTable
-	 *     .flatAggregate("tableAggFunc(a, b) as (x, y, z)")
-	 *     .select("key, window.start, x, y, z")
-	 * }
-	 * </pre>
-	 */
-	FlatAggregateTable flatAggregate(String tableAggregateFunction);
-
-	/**
-	 * Performs a flatAggregate operation on a window grouped table. FlatAggregate takes a
-	 * TableAggregateFunction which returns multiple rows. Use a selection after flatAggregate.
+	 * Performs an aggregate operation with an aggregate function. You have to close the
+	 * {@link #aggregate(Expression)} with a select statement. The output will be flattened if the
+	 * output type is a Expression type.
 	 *
 	 * <p>Scala Example:
 	 *
 	 * <pre>
 	 * {@code
-	 *   val tableAggFunc = new MyTableAggregateFunction
-	 *   windowGroupedTable
-	 *     .flatAggregate(tableAggFunc('a, 'b) as ('x, 'y, 'z))
-	 *     .select('key, 'window.start, 'x, 'y, 'z)
+	 *   val tableAggFunc = new MyCoTableAggregateFunction
+	 *   connectedTable
+	 *     .aggregate(tableAggFunc('a)('b) as ('x, 'y, 'z))
+	 *     .select('key, 'x, 'y, 'z)
+	 * }
+	 * </pre>
+	 */
+	AggregatedTable aggregate(Expression tableAggregateFunction);
+
+	/**
+	 * Performs a flatAggregate operation on a non-grouped connected table. FlatAggregate takes a
+	 * CoTableAggregateFunction which returns multiple rows. Use a selection after flatAggregate.
+	 *
+	 * <p>Scala Example:
+	 *
+	 * <pre>
+	 * {@code
+	 *   val tableAggFunc = new MyCoTableAggregateFunction
+	 *   connectedTable
+	 *     .flatAggregate(tableAggFunc('a)('b) as ('x, 'y, 'z))
+	 *     .select('x, 'y, 'z)
 	 * }
 	 * </pre>
 	 */
