@@ -302,7 +302,7 @@ public interface Table {
 	Table join(Table right);
 
 	/**
-	 * Connects two {@link Table}s Connected tables are useful for cases where operations on one
+	 * Connects two {@link Table}s. Connected tables are useful for cases where operations on one
 	 * table directly affect the operations on the other table. The fields of the two connected
 	 * tables must not overlap, use {@code as} to rename fields if necessary.
 	 *

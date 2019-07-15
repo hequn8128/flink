@@ -22,7 +22,8 @@ import org.apache.flink.annotation.PublicEvolving;
 import org.apache.flink.table.expressions.Expression;
 
 /**
- * A connected table that contains two sub-tables.
+ * A ConnectedTable is a Table which contains two different schemas, i.e., the data in the table
+ * contains two different types. Type1 for the first input while type2 for the second input.
  */
 @PublicEvolving
 public interface ConnectedTable {

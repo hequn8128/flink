@@ -71,7 +71,7 @@ public class JavaUserDefinedAggFunctions {
 	/**
 	 * Base class for WeightedAvg.
 	 */
-	public static class WeightedAvg extends AggregateFunction<Long, WeightedAvgAccum> {
+	public static class WeightedAvg extends CoAggregateFunction<Long, WeightedAvgAccum> {
 		@Override
 		public WeightedAvgAccum createAccumulator() {
 			return new WeightedAvgAccum();
@@ -86,21 +86,15 @@ public class JavaUserDefinedAggFunctions {
 			}
 		}
 
-		// overloaded accumulate method
-		// dummy to test constants
-		public void accumulate(WeightedAvgAccum accumulator, long iValue, int iWeight, int x, String string) {
-			accumulator.sum += (iValue + Integer.parseInt(string)) * iWeight;
-			accumulator.count += iWeight;
+		public void accumulate1(WeightedAvgAccum accumulator, int iValue, int iWeight) {
+			innerAccumulate(accumulator, iValue, iWeight);
 		}
 
-		// overloaded accumulate method
-		public void accumulate(WeightedAvgAccum accumulator, long iValue, int iWeight) {
-			accumulator.sum += iValue * iWeight;
-			accumulator.count += iWeight;
+		public void accumulate2(WeightedAvgAccum accumulator, int iValue, int iWeight) {
+			innerAccumulate(accumulator, iValue, iWeight);
 		}
 
-		//Overloaded accumulate method
-		public void accumulate(WeightedAvgAccum accumulator, int iValue, int iWeight) {
+		public void innerAccumulate(WeightedAvgAccum accumulator, int iValue, int iWeight) {
 			accumulator.sum += iValue * iWeight;
 			accumulator.count += iWeight;
 		}
