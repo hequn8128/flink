@@ -69,9 +69,11 @@ class AggFunctionFactory(
       .toArray
 
     call.getAggregation match {
-      case a: SqlAvgAggFunction if a.kind == SqlKind.AVG => createAvgAggFunction(argTypes)
+      case _: SqlWindowAvgAggFunction | _: SqlAvgAggFunction
+        if call.getAggregation.kind == SqlKind.AVG => createAvgAggFunction(argTypes)
 
-      case _: SqlSumAggFunction => createSumAggFunction(argTypes, index)
+      case _: SqlSumAggFunction | _: SqlWindowSumAggFunction =>
+        createSumAggFunction(argTypes, index)
 
       case _: SqlSumEmptyIsZeroAggFunction => createSum0AggFunction(argTypes)
 
