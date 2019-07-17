@@ -31,7 +31,8 @@ import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.core.Window.Group
 import org.apache.calcite.rel.core.{AggregateCall, Window}
 import org.apache.calcite.rex.{RexCall, RexInputRef, RexLiteral, RexNode, RexProgram, RexWindowBound}
-import org.apache.calcite.sql.SqlKind
+import org.apache.calcite.sql.fun.{SqlWindowAvgAggFunction, SqlWindowSumAggFunction}
+import org.apache.calcite.sql.{SqlAggFunction, SqlKind}
 import org.apache.calcite.sql.SqlMatchRecognize.AfterOption
 
 import java.util
@@ -729,9 +730,10 @@ object RelExplainUtil {
         "*"
       }
       if (aggCall.filterArg >= 0 && aggCall.filterArg < inFields.size) {
-        s"${aggCall.getAggregation}($argListNames) FILTER ${inFields(aggCall.filterArg)}"
+        s"${getSqlAggFunctionString(aggCall.getAggregation)}($argListNames) " +
+          s"FILTER ${inFields(aggCall.filterArg)}"
       } else {
-        s"${aggCall.getAggregation}($argListNames)"
+        s"${getSqlAggFunctionString(aggCall.getAggregation)}($argListNames)"
       }
     }
 
@@ -779,6 +781,14 @@ object RelExplainUtil {
     }.mkString(", ")
   }
 
+  private def getSqlAggFunctionString(aggFunction: SqlAggFunction): String = {
+    aggFunction match {
+      case _: SqlWindowAvgAggFunction => "AVG"
+      case _: SqlWindowSumAggFunction => "SUM"
+      case _ => aggFunction.toString
+    }
+  }
+
   def streamWindowAggregationToString(
       inputType: RelDataType,
       grouping: Array[Int],
@@ -805,7 +815,7 @@ object RelExplainUtil {
       } else {
         "*"
       }
-      s"${a.getAggregation}($distinct$argList)"
+      s"${getSqlAggFunctionString(a.getAggregation)}($distinct$argList)"
     })
 
     val propStrings = namedProperties.map(_.property.toString)
