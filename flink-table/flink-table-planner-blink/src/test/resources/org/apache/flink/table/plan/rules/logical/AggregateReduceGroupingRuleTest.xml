@@ -349,7 +349,7 @@ LogicalProject(a4=[$0], c4=[$1], EXPR$2=[$3], EXPR$3=[$4])
     </Resource>
     <Resource name="planAfter">
       <![CDATA[
-FlinkLogicalWindowAggregate(group=[{0}], c4=[AUXILIARY_GROUP($2)], EXPR$2=[COUNT($1)], EXPR$3=[AVG($1)], window=[TumblingGroupWindow], properties=[])
+FlinkLogicalWindowAggregate(group=[{0}], c4=[AUXILIARY_GROUP($2)], EXPR$2=[COUNT($1)], EXPR$3=[WINDOW_AVG($1)], window=[TumblingGroupWindow], properties=[])
 +- FlinkLogicalTableSourceScan(table=[[default_catalog, default_database, T4, source: [TestTableSource(a4, b4, c4, d4)]]], fields=[a4, b4, c4, d4])
 ]]>
     </Resource>
