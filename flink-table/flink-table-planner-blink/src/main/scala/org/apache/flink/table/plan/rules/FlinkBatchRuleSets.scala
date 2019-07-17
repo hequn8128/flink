@@ -109,6 +109,7 @@ object FlinkBatchRuleSets {
       REDUCE_EXPRESSION_RULES.asScala ++
       List(
         // Transform window to LogicalWindowAggregate
+        ReplaceWindowAggregateFunctionRule.INSTANCE,
         BatchLogicalWindowAggregateRule.INSTANCE,
         WindowPropertiesRules.WINDOW_PROPERTIES_RULE,
         WindowPropertiesRules.WINDOW_PROPERTIES_HAVING_RULE,

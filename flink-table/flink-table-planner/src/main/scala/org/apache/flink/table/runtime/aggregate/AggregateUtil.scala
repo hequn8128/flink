@@ -1559,7 +1559,7 @@ object AggregateUtil {
       case _: SqlCountAggFunction =>
         new CountAggFunction
 
-      case _: SqlSumAggFunction =>
+      case _: SqlSumAggFunction | _: SqlWindowSumAggFunction =>
         if (needRetraction) {
           outputTypeName match {
             case TINYINT =>
@@ -1641,7 +1641,7 @@ object AggregateUtil {
           }
         }
 
-      case a: SqlAvgAggFunction if a.kind == SqlKind.AVG =>
+      case _:SqlWindowAvgAggFunction | _:SqlAvgAggFunction if aggFunc.kind == SqlKind.AVG =>
         outputTypeName match {
           case TINYINT =>
             new ByteAvgAggFunction

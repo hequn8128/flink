@@ -152,6 +152,7 @@ object FlinkRuleSets {
     // Transform grouping sets
     DecomposeGroupingSetRule.INSTANCE,
     // Transform window to LogicalWindowAggregate
+    ReplaceWindowAggregateFunctionRule.INSTANCE,
     DataSetLogicalWindowAggregateRule.INSTANCE,
     WindowPropertiesRule.INSTANCE,
     WindowPropertiesHavingRule.INSTANCE,
@@ -197,6 +198,7 @@ object FlinkRuleSets {
     */
   val DATASTREAM_NORM_RULES: RuleSet = RuleSets.ofList(
     // Transform window to LogicalWindowAggregate
+    ReplaceWindowAggregateFunctionRule.INSTANCE,
     DataStreamLogicalWindowAggregateRule.INSTANCE,
     WindowPropertiesRule.INSTANCE,
     WindowPropertiesHavingRule.INSTANCE,

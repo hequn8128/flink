@@ -22,6 +22,8 @@ import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rel.core.AggregateCall
 import org.apache.flink.table.calcite.FlinkRelBuilder
 import FlinkRelBuilder.NamedWindowProperty
+import org.apache.calcite.sql.SqlAggFunction
+import org.apache.calcite.sql.fun.{SqlWindowAvgAggFunction, SqlWindowSumAggFunction}
 import org.apache.flink.table.runtime.aggregate.AggregateUtil._
 
 import scala.collection.JavaConverters._
@@ -33,6 +35,14 @@ trait CommonAggregate {
 
     val inFields = inputType.getFieldNames.asScala
     grouping.map( inFields(_) ).mkString(", ")
+  }
+
+  private def getSqlAggFunctionString(aggFunction: SqlAggFunction): String = {
+    aggFunction match {
+      case _: SqlWindowAvgAggFunction => "AVG"
+      case _: SqlWindowSumAggFunction => "SUM"
+      case _ => aggFunction.toString
+    }
   }
 
   private[flink] def aggregationToString(
@@ -47,7 +57,7 @@ trait CommonAggregate {
     val groupStrings = grouping.map( inFields(_) )
 
     val aggs = namedAggregates.map(_.getKey)
-    val aggStrings = aggs.map( a => s"${a.getAggregation}(${
+    val aggStrings = aggs.map( a => s"${getSqlAggFunctionString(a.getAggregation)}(${
       val prefix = if (a.isDistinct) "DISTINCT " else ""
       prefix + (if (a.getArgList.size() > 0) {
         a.getArgList.asScala.map(inFields(_)).mkString(", ")
