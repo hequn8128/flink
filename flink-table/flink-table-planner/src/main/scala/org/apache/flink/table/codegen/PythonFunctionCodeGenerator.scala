@@ -18,11 +18,13 @@
 package org.apache.flink.table.codegen
 
 import org.apache.flink.api.common.typeinfo.TypeInformation
-import org.apache.flink.table.codegen.CodeGenUtils.{primitiveDefaultValue, primitiveTypeTermForTypeInfo, newName}
+import org.apache.flink.api.java.typeutils.RowTypeInfo
+import org.apache.flink.table.codegen.CodeGenUtils.{newName, primitiveDefaultValue, primitiveTypeTermForTypeInfo}
 import org.apache.flink.table.codegen.Indenter.toISC
-import org.apache.flink.table.functions.{UserDefinedFunction, FunctionLanguage, ScalarFunction}
+import org.apache.flink.table.functions.{FunctionLanguage, ScalarFunction, TableFunction, UserDefinedFunction}
 import org.apache.flink.table.functions.python.{PythonEnv, PythonFunction}
 import org.apache.flink.table.utils.EncodingUtils
+import org.apache.flink.types.Row
 
 /**
   * A code generator for generating Python [[UserDefinedFunction]]s.
@@ -30,6 +32,7 @@ import org.apache.flink.table.utils.EncodingUtils
 object PythonFunctionCodeGenerator extends Compiler[UserDefinedFunction] {
 
   private val PYTHON_SCALAR_FUNCTION_NAME = "PythonScalarFunction"
+  private val PYTHON_TABLE_FUNCTION_NAME = "PythonTableFunction"
 
   /**
     * Generates a [[ScalarFunction]] for the specified Python user-defined function.
@@ -125,4 +128,93 @@ object PythonFunctionCodeGenerator extends Compiler[UserDefinedFunction] {
       funcCode)
     clazz.newInstance().asInstanceOf[ScalarFunction]
   }
+
+  def generateTableFunction(
+      name: String,
+      serializedScalarFunction: Array[Byte],
+      inputTypes: Array[TypeInformation[_]],
+      resultTypes: Array[TypeInformation[_]],
+      deterministic: Boolean,
+      pythonEnv: PythonEnv): TableFunction[_] = {
+    val funcName = newName(PYTHON_TABLE_FUNCTION_NAME)
+    val inputParamCode = inputTypes.zipWithIndex.map { case (inputType, index) =>
+      s"${primitiveTypeTermForTypeInfo(inputType)} in$index"
+    }.mkString(", ")
+
+    val encodingUtilsTypeTerm = classOf[EncodingUtils].getCanonicalName
+    val typeInfoTypeTerm = classOf[TypeInformation[_]].getCanonicalName
+    val rowTypeInfoTerm = classOf[RowTypeInfo].getCanonicalName
+    val rowTypeTerm = classOf[Row].getCanonicalName
+    val inputTypesCode = inputTypes.map(EncodingUtils.encodeObjectToString).map { inputType =>
+      s"""
+         |($typeInfoTypeTerm) $encodingUtilsTypeTerm.decodeStringToObject(
+         |  "$inputType", $typeInfoTypeTerm.class)
+         |""".stripMargin
+    }.mkString(", ")
+    val resultTypesCode = resultTypes.map(EncodingUtils.encodeObjectToString).map { resultType =>
+      s"""
+         |($typeInfoTypeTerm) $encodingUtilsTypeTerm.decodeStringToObject(
+         |  "$resultType", $typeInfoTypeTerm.class)
+         |""".stripMargin
+    }.mkString(", ")
+
+    val encodedScalarFunction = EncodingUtils.encodeBytesToBase64(serializedScalarFunction)
+    val encodedPythonEnv = EncodingUtils.encodeObjectToString(pythonEnv)
+    val pythonEnvTypeTerm = classOf[PythonEnv].getCanonicalName
+
+    val funcCode = j"""
+      |public class $funcName extends ${classOf[TableFunction[_]].getCanonicalName}<$rowTypeTerm>
+      |  implements ${classOf[PythonFunction].getCanonicalName} {
+      |
+      |  private static final long serialVersionUID = 1L;
+      |
+      |  public void eval($inputParamCode) {
+      |
+      |  }
+      |
+      |  @Override
+      |  public $typeInfoTypeTerm[] getParameterTypes(Class<?>[] signature) {
+      |    return new $typeInfoTypeTerm[]{$inputTypesCode};
+      |  }
+      |
+      |  @Override
+      |  public $typeInfoTypeTerm<rowTypeTerm> getResultType(Class<?>[] signature) {
+      |    return new $rowTypeInfoTerm(new $typeInfoTypeTerm[]{$resultTypesCode})
+      |  }
+      |
+      |  @Override
+      |  public ${classOf[FunctionLanguage].getCanonicalName} getLanguage() {
+      |    return ${classOf[FunctionLanguage].getCanonicalName}.PYTHON;
+      |  }
+      |
+      |  @Override
+      |  public byte[] getSerializedPythonFunction() {
+      |    return $encodingUtilsTypeTerm.decodeBase64ToBytes("$encodedScalarFunction");
+      |  }
+      |
+      |  @Override
+      |  public $pythonEnvTypeTerm getPythonEnv() {
+      |    return ($pythonEnvTypeTerm) $encodingUtilsTypeTerm.decodeStringToObject(
+      |      "$encodedPythonEnv", $pythonEnvTypeTerm.class);
+      |  }
+      |
+      |  @Override
+      |  public boolean isDeterministic() {
+      |    return $deterministic;
+      |  }
+      |
+      |  @Override
+      |  public String toString() {
+      |    return "$name";
+      |  }
+      |}
+      |""".stripMargin
+
+    val clazz = compile(
+      Thread.currentThread().getContextClassLoader,
+      funcName,
+      funcCode)
+    clazz.newInstance().asInstanceOf[TableFunction[_]]
+  }
+
 }
