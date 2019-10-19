@@ -74,19 +74,19 @@ function checkpoint_stage() {
 
 # Restore the stage:step
 function restore_stage() {
-    if [ -f "$STAGE_FILE" ]; then
-        local lines=$(awk '{print NR}' $STAGE_FILE)
-        if [ $lines -eq 1 ]; then
-            local first_field=$(cat $STAGE_FILE | cut -d ":" -f 1)
-            local second_field=$(cat $STAGE_FILE | cut -d ":" -f 2)
-            check_valid_stage $first_field $second_field
-            if [ $? -eq 0 ]; then
-                STAGE=$first_field
-                STEP=$second_field
-                return
-            fi
-        fi
-    fi
+#    if [ -f "$STAGE_FILE" ]; then
+#        local lines=$(awk '{print NR}' $STAGE_FILE)
+#        if [ $lines -eq 1 ]; then
+#            local first_field=$(cat $STAGE_FILE | cut -d ":" -f 1)
+#            local second_field=$(cat $STAGE_FILE | cut -d ":" -f 2)
+#            check_valid_stage $first_field $second_field
+#            if [ $? -eq 0 ]; then
+#                STAGE=$first_field
+#                STEP=$second_field
+#                return
+#            fi
+#        fi
+#    fi
     STAGE="install"
     STEP=0
 }
@@ -167,7 +167,7 @@ function install_miniconda() {
 
     print_function "STEP" "installing conda..."
     if [ ! -d "$CURRENT_DIR/.conda" ]; then
-        $CONDA_INSTALL_SH -b -p $CURRENT_DIR/.conda 2>&1 >/dev/null
+        $CONDA_INSTALL_SH -b -p $CURRENT_DIR/.conda 2>&1
         if [ $? -ne 0 ]; then
             echo "install miniconda failed"
             exit $CONDA_INSTALL_STATUS
@@ -299,43 +299,6 @@ function install_environment() {
         checkpoint_stage $STAGE $STEP
     fi
     print_function "STEP" "install miniconda... [SUCCESS]"
-
-    # step-3 install python environment whcih includes
-    # 2.7 3.3 3.4 3.5 3.6 3.7
-    print_function "STEP" "installing python environment..."
-    if [ $STEP -lt 3 ]; then
-        install_py_env
-        STEP=3
-        checkpoint_stage $STAGE $STEP
-    fi
-    print_function "STEP" "install python environment... [SUCCESS]"
-
-    # step-4 install tox
-    print_function "STEP" "installing tox..."
-    if [ $STEP -lt 4 ]; then
-        install_tox
-        STEP=4
-        checkpoint_stage $STAGE $STEP
-    fi
-    print_function "STEP" "install tox... [SUCCESS]"
-
-    # step-5 install  flake8
-    print_function "STEP" "installing flake8..."
-    if [ $STEP -lt 5 ]; then
-        install_flake8
-        STEP=5
-        checkpoint_stage $STAGE $STEP
-    fi
-    print_function "STEP" "install flake8... [SUCCESS]"
-
-    # step-6 install sphinx
-    print_function "STEP" "installing sphinx..."
-    if [ $STEP -lt 6 ]; then
-        install_sphinx
-        STEP=6
-        checkpoint_stage $STAGE $STEP
-    fi
-    print_function "STEP" "install sphinx... [SUCCESS]"
 
     print_function "STAGE"  "install environment... [SUCCESS]"
 }
@@ -643,4 +606,4 @@ fi
 install_environment
 
 # exec all selected checks
-check_stage
+#check_stage
