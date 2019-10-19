@@ -22,7 +22,7 @@
 #
 # You can refer to the README.MD in ${flink-python} to learn how easy to run the script.
 #
-
+set -x
 # Download some software, such as miniconda.sh
 function download() {
     local DOWNLOAD_STATUS=
