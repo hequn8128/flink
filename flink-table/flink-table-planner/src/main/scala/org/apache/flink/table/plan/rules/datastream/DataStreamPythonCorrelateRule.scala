@@ -23,24 +23,26 @@ import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.convert.ConverterRule
 import org.apache.calcite.rex.RexNode
 import org.apache.flink.table.plan.nodes.FlinkConventions
-import org.apache.flink.table.plan.nodes.datastream.DataStreamCorrelate
+import org.apache.flink.table.plan.nodes.datastream.DataStreamPythonCorrelate
 import org.apache.flink.table.plan.nodes.logical.{FlinkLogicalCalc, FlinkLogicalCorrelate, FlinkLogicalTableFunctionScan}
 import org.apache.flink.table.plan.schema.RowSchema
 import org.apache.flink.table.plan.util.CorrelateUtil
 
-class DataStreamCorrelateRule
+class DataStreamPythonCorrelateRule
   extends ConverterRule(
     classOf[FlinkLogicalCorrelate],
     FlinkConventions.LOGICAL,
     FlinkConventions.DATASTREAM,
-    "DataStreamCorrelateRule") {
+    "DataStreamPythonCorrelateRule") {
 
   override def matches(call: RelOptRuleCall): Boolean = {
     val join: FlinkLogicalCorrelate = call.rel(0).asInstanceOf[FlinkLogicalCorrelate]
     val right = join.getRight.asInstanceOf[RelSubset].getOriginal
+
+    // extract table function scan
     CorrelateUtil.extractTableFunctionScan(right) match {
       case Some(scan: FlinkLogicalTableFunctionScan) =>
-        !CorrelateUtil.isPythonTableFunctionScan(scan)
+        CorrelateUtil.isPythonTableFunctionScan(scan)
       case _ => false
     }
   }
@@ -51,7 +53,9 @@ class DataStreamCorrelateRule
     val convInput: RelNode = RelOptRule.convert(join.getInput(0), FlinkConventions.DATASTREAM)
     val right: RelNode = join.getInput(1)
 
-    def convertToCorrelate(relNode: RelNode, condition: Option[RexNode]): DataStreamCorrelate = {
+    def convertToCorrelate(relNode: RelNode, condition: Option[RexNode])
+    : DataStreamPythonCorrelate = {
+
       relNode match {
         case rel: RelSubset =>
           convertToCorrelate(rel.getRelList.get(0), condition)
@@ -64,7 +68,7 @@ class DataStreamCorrelateRule
             Some(newCalc.getProgram.expandLocalRef(newCalc.getProgram.getCondition)))
 
         case scan: FlinkLogicalTableFunctionScan =>
-          new DataStreamCorrelate(
+          new DataStreamPythonCorrelate(
             rel.getCluster,
             traitSet,
             new RowSchema(convInput.getRowType),
@@ -74,14 +78,15 @@ class DataStreamCorrelateRule
             new RowSchema(rel.getRowType),
             new RowSchema(join.getRowType),
             join.getJoinType,
-            "DataStreamCorrelateRule")
+            "DataStreamPythonCorrelateRule")
       }
     }
     convertToCorrelate(right, None)
   }
-
 }
 
-object DataStreamCorrelateRule {
-  val INSTANCE: RelOptRule = new DataStreamCorrelateRule
+object DataStreamPythonCorrelateRule {
+  val INSTANCE: RelOptRule = new DataStreamPythonCorrelateRule
 }
+
+

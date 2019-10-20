@@ -18,7 +18,10 @@
 package org.apache.flink.table.plan.util
 
 import org.apache.calcite.plan.volcano.RelSubset
-import org.apache.calcite.rex.{RexProgram, RexProgramBuilder}
+import org.apache.calcite.rel.RelNode
+import org.apache.calcite.rex.{RexCall, RexProgram, RexProgramBuilder}
+import org.apache.flink.table.functions.python.PythonFunction
+import org.apache.flink.table.functions.utils.TableSqlFunction
 import org.apache.flink.table.plan.nodes.logical.{FlinkLogicalCalc, FlinkLogicalTableFunctionScan}
 
 /**
@@ -37,6 +40,19 @@ object CorrelateUtil {
       case calc: FlinkLogicalCalc => getTableFunctionScan(calc)
       case _ => None
     }
+  }
+
+  def extractTableFunctionScan(relNode: RelNode): Option[FlinkLogicalTableFunctionScan] = {
+    relNode match {
+      case scan: FlinkLogicalTableFunctionScan => Some(scan)
+      case calc: FlinkLogicalCalc => CorrelateUtil.getTableFunctionScan(calc)
+      case _ => None
+    }
+  }
+
+  def isPythonTableFunctionScan(scan: FlinkLogicalTableFunctionScan): Boolean = {
+    scan.getCall.asInstanceOf[RexCall].getOperator.asInstanceOf[TableSqlFunction]
+      .getTableFunction.isInstanceOf[PythonFunction]
   }
 
   /**

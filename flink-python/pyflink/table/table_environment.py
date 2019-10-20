@@ -585,8 +585,7 @@ class TableEnvironment(object):
             self._j_tenv.registerFunction(name, function._judf(self._is_blink_planner,
                                                            self.get_config()._j_table_config))
         else:
-            self._j_tenv.registerFunction(name, function._judtf(self._is_blink_planner,
-                                                               self.get_config()._j_table_config))
+            self._j_tenv.registerFunction(name, function._judtf(self._is_blink_planner))
 
     def execute(self, job_name):
         """

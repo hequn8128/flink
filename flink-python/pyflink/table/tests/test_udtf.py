@@ -32,9 +32,8 @@ class UserDefinedTableFunctionTests(PyFlinkStreamTableTestCase):
                                [DataTypes.BIGINT(), DataTypes.BIGINT()]))
 
         table_sink = source_sink_utils.TestAppendSink(
-            ['a', 'b', 'c', 'd', 'e'],
-            [DataTypes.BIGINT(), DataTypes.BIGINT(), DataTypes.BIGINT(), DataTypes.BIGINT(),
-             DataTypes.BIGINT()])
+            ['a', 'b', 'c', 'd'],
+            [DataTypes.BIGINT(), DataTypes.BIGINT(), DataTypes.BIGINT(), DataTypes.BIGINT()])
         self.t_env.register_table_sink("Results", table_sink)
 
         t = self.t_env.from_elements([(1, 1, 3), (2, 1, 6), (3, 3, 9)], ['a', 'b', 'c'])

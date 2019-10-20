@@ -312,12 +312,12 @@ class UserDefinedTableFunctionWrapper(object):
         self._deterministic = deterministic if deterministic is not None else (
             func.is_deterministic() if isinstance(func, UserDefinedFunction) else True)
 
-    def _judtf(self, t_env):
+    def _judtf(self, is_blink_planner):
         if self._judtf_placeholder is None:
-            self._judtf_placeholder = self._create_judtf(t_env)
+            self._judtf_placeholder = self._create_judtf(is_blink_planner)
         return self._judtf_placeholder
 
-    def _create_judtf(self, t_env):
+    def _create_judtf(self, is_blink_planner):
         func = self._func
         if not isinstance(self._func, UserDefinedFunction):
             func = DelegatingTableFunction(self._func)
@@ -330,7 +330,7 @@ class UserDefinedTableFunctionWrapper(object):
                                         [_to_java_type(i) for i in self._input_types])
         j_result_types = utils.to_jarray(gateway.jvm.TypeInformation,
                                          [_to_java_type(i) for i in self._result_types])
-        if t_env.is_blink_planner:
+        if is_blink_planner:
             raise RuntimeError("TableFunction has not been supported in blink planner!")
         else:
             j_table_function = gateway.jvm.PythonTableUtils \
