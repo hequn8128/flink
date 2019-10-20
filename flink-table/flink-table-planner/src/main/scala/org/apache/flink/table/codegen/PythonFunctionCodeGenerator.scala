@@ -178,8 +178,8 @@ object PythonFunctionCodeGenerator extends Compiler[UserDefinedFunction] {
       |  }
       |
       |  @Override
-      |  public $typeInfoTypeTerm<rowTypeTerm> getResultType(Class<?>[] signature) {
-      |    return new $rowTypeInfoTerm(new $typeInfoTypeTerm[]{$resultTypesCode})
+      |  public $typeInfoTypeTerm<$rowTypeTerm> getResultType() {
+      |    return new $rowTypeInfoTerm(new $typeInfoTypeTerm[]{$resultTypesCode});
       |  }
       |
       |  @Override
