@@ -20,18 +20,22 @@ package org.apache.flink.table.plan.nodes.datastream
 import org.apache.calcite.plan.{RelOptCluster, RelTraitSet}
 import org.apache.calcite.rel.core.JoinRelType
 import org.apache.calcite.rel.{RelNode, RelWriter, SingleRel}
-import org.apache.calcite.rex.{RexCall, RexNode}
-import org.apache.flink.api.common.typeinfo.TypeInformation
+import org.apache.calcite.rex.{RexCall, RexInputRef, RexNode}
 import org.apache.flink.streaming.api.datastream.DataStream
-import org.apache.flink.streaming.api.functions.ProcessFunction
-import org.apache.flink.table.api.{StreamQueryConfig, TableException}
+import org.apache.flink.streaming.api.operators.OneInputStreamOperator
+import org.apache.flink.table.api.{StreamQueryConfig}
+import org.apache.flink.table.functions.python.{PythonFunction, PythonFunctionInfo, SimplePythonFunction}
 import org.apache.flink.table.functions.utils.TableSqlFunction
 import org.apache.flink.table.plan.nodes.CommonCorrelate
+import org.apache.flink.table.plan.nodes.datastream.DataStreamPythonCorrelate.PYTHON_TABLE_FUNCTION_OPERATOR_NAME
 import org.apache.flink.table.plan.nodes.logical.FlinkLogicalTableFunctionScan
 import org.apache.flink.table.plan.schema.RowSchema
 import org.apache.flink.table.planner.StreamPlanner
-import org.apache.flink.table.runtime.CRowCorrelateProcessRunner
 import org.apache.flink.table.runtime.types.{CRow, CRowTypeInfo}
+import org.apache.flink.table.types.logical.RowType
+import org.apache.flink.table.types.utils.TypeConversions
+
+import scala.collection.JavaConversions._
 
 /**
   * Flink RelNode which matches along with join a user defined table function.
@@ -67,6 +71,13 @@ class DataStreamPythonCorrelate(
       ruleDescription)
   }
 
+  private lazy val pythonRexCall = scan.getCall.asInstanceOf[RexCall]
+
+  private lazy val pythonUdtfInputOffsets = pythonRexCall
+    .getOperands
+    .collect { case rexInputRef: RexInputRef => rexInputRef.getIndex.asInstanceOf[Object] }
+    .toArray
+
   override def toString: String = {
     val rexCall = scan.getCall.asInstanceOf[RexCall]
     val sqlFunction = rexCall.getOperator.asInstanceOf[TableSqlFunction]
@@ -91,6 +102,63 @@ class DataStreamPythonCorrelate(
   override def translateToPlan(
       planner: StreamPlanner,
       queryConfig: StreamQueryConfig): DataStream[CRow] = {
-    throw new TableException("Will implement it in the next commit!")
+
+    val inputDataStream =
+      getInput.asInstanceOf[DataStreamRel].translateToPlan(planner, queryConfig)
+    val inputParallelism = inputDataStream.getParallelism
+
+    // Constructs the Python operator
+    val correlateInputType = TypeConversions.fromLegacyInfoToDataType(
+      inputSchema.typeInfo).getLogicalType.asInstanceOf[RowType]
+    val correlateOutputType = TypeConversions.fromLegacyInfoToDataType(
+      schema.typeInfo).getLogicalType.asInstanceOf[RowType]
+
+    val pythonFunctionInfo = pythonRexCall.getOperator match {
+      case tfc: TableSqlFunction =>
+        val pythonFunction = new SimplePythonFunction(
+          tfc.getTableFunction.asInstanceOf[PythonFunction].getSerializedPythonFunction,
+          tfc.getTableFunction.asInstanceOf[PythonFunction].getPythonEnv)
+        new PythonFunctionInfo(pythonFunction, pythonUdtfInputOffsets)
+    }
+
+    val udtfOperator = getPythonTableFunctionOperator(
+      correlateInputType,
+      correlateOutputType,
+      pythonFunctionInfo)
+
+    val sqlFunction = pythonRexCall.getOperator.asInstanceOf[TableSqlFunction]
+    inputDataStream.transform(
+      correlateOpName(
+        inputSchema.relDataType,
+        pythonRexCall,
+        sqlFunction,
+        schema.relDataType,
+        getExpressionString),
+      CRowTypeInfo(schema.typeInfo),
+      udtfOperator
+    ).setParallelism(inputParallelism)
   }
+
+  private[flink] def getPythonTableFunctionOperator(
+    inputRowType: RowType,
+    outputRowType: RowType,
+    pythonFunctionInfo: PythonFunctionInfo) = {
+    val clazz = Class.forName(PYTHON_TABLE_FUNCTION_OPERATOR_NAME)
+    val ctor = clazz.getConstructor(
+      classOf[Array[PythonFunctionInfo]],
+      classOf[RowType],
+      classOf[RowType],
+      classOf[Array[Int]],
+      classOf[Array[Int]])
+    ctor.newInstance(
+      inputRowType,
+      outputRowType,
+      pythonFunctionInfo)
+      .asInstanceOf[OneInputStreamOperator[CRow, CRow]]
+  }
+}
+
+object DataStreamPythonCorrelate {
+  val PYTHON_TABLE_FUNCTION_OPERATOR_NAME =
+    "org.apache.flink.table.runtime.operators.python.PythonTableFunctionOperator"
 }
