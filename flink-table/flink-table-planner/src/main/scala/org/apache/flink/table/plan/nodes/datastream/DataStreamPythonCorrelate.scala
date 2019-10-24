@@ -75,7 +75,7 @@ class DataStreamPythonCorrelate(
 
   private lazy val pythonUdtfInputOffsets = pythonRexCall
     .getOperands
-    .collect { case rexInputRef: RexInputRef => rexInputRef.getIndex.asInstanceOf[Object] }
+    .collect { case rexInputRef: RexInputRef => rexInputRef.getIndex }
     .toArray
 
   override def toString: String = {
@@ -118,13 +118,16 @@ class DataStreamPythonCorrelate(
         val pythonFunction = new SimplePythonFunction(
           tfc.getTableFunction.asInstanceOf[PythonFunction].getSerializedPythonFunction,
           tfc.getTableFunction.asInstanceOf[PythonFunction].getPythonEnv)
-        new PythonFunctionInfo(pythonFunction, pythonUdtfInputOffsets)
+        new PythonFunctionInfo(
+          pythonFunction,
+          Array.range(0, pythonUdtfInputOffsets.size).map(e => e.asInstanceOf[AnyRef]))
     }
 
     val udtfOperator = getPythonTableFunctionOperator(
       correlateInputType,
       correlateOutputType,
-      pythonFunctionInfo)
+      pythonFunctionInfo,
+      pythonUdtfInputOffsets)
 
     val sqlFunction = pythonRexCall.getOperator.asInstanceOf[TableSqlFunction]
     inputDataStream.transform(
@@ -140,21 +143,23 @@ class DataStreamPythonCorrelate(
   }
 
   private[flink] def getPythonTableFunctionOperator(
-    inputRowType: RowType,
-    outputRowType: RowType,
-    pythonFunctionInfo: PythonFunctionInfo) = {
+      inputRowType: RowType,
+      outputRowType: RowType,
+      pythonFunctionInfo: PythonFunctionInfo,
+      udfInputOffsets: Array[Int]
+  ) = {
     val clazz = Class.forName(PYTHON_TABLE_FUNCTION_OPERATOR_NAME)
     val ctor = clazz.getConstructor(
-      classOf[Array[PythonFunctionInfo]],
+      classOf[PythonFunctionInfo],
       classOf[RowType],
       classOf[RowType],
-      classOf[Array[Int]],
-      classOf[Array[Int]])
+      classOf[Array[Int]]
+    )
     ctor.newInstance(
+      pythonFunctionInfo,
       inputRowType,
       outputRowType,
-      pythonFunctionInfo)
-      .asInstanceOf[OneInputStreamOperator[CRow, CRow]]
+      udfInputOffsets).asInstanceOf[OneInputStreamOperator[CRow, CRow]]
   }
 }
 

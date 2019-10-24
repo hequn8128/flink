@@ -42,7 +42,7 @@ class UserDefinedTableFunctionTests(PyFlinkStreamTableTestCase):
             .insert_into("Results")
         self.t_env.execute("test")
         actual = source_sink_utils.results()
-        self.assert_equals(actual, ["1,1,1,1", "2,1,2,1", "3,3,3,1", "3,3,3,2", "3,3,3,3"])
+        self.assert_equals(actual, ["1,1,1,0", "2,1,2,0", "3,3,3,0", "3,3,3,1", "3,3,3,2"])
 
 
 class MultiEmit(TableFunction):
