@@ -384,22 +384,16 @@ class TableFunctionOutputProcessor(_OutputProcessor):
             tagged_receivers,
             per_element_output_counter)
         self.windowed_value = None
+        self.first_row = False
 
-    def set_windowed_value(self, windowed_value):
-        self.windowed_value = windowed_value
-
-    def process_outputs(self, results):
+    def process_outputs(self, result):
         from pyflink.table import Row
-        a = False
-        for ele in results:
-            if not a:
-                new_ele = ele + (1,)
-                a = True
-            else:
-                new_ele = ele + (0,)
-            result = Row(*new_ele)
-            # send the execution results back
-            super().process_outputs(self.windowed_value, [result])
+        if self.first_row:
+            new_result = result + (1,)
+            self.first_row = False
+        else:
+            new_result = result + (0,)
+        super().process_outputs(self.windowed_value, [Row(*new_result)])
 
 
 class TableFunctionRunner(object):
@@ -428,6 +422,7 @@ class TableFunctionRunner(object):
 
     def process(self, windowed_value):
         self.output_processor.windowed_value = windowed_value
+        self.output_processor.first_row = True
         self.table_function_invoker.invoke_eval(windowed_value.value, self.output_processor)
 
 
