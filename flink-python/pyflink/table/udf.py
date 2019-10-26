@@ -88,6 +88,10 @@ class ScalarFunction(UserDefinedFunction):
 
 # todo: maybe add collector in TableFunction is more efficient, in such case, we don't need to buffer the data.
 class TableFunction(UserDefinedFunction):
+
+    def set_output_processor(self, output_processor):
+        self.output_processor = output_processor
+
     """
     Base interface for user-defined scalar function. A user-defined scalar functions maps zero, one,
     or multiple scalar values to a new scalar value.

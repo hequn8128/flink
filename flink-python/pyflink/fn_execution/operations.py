@@ -22,6 +22,7 @@ from abc import abstractmethod, ABCMeta
 from apache_beam.runners.worker import operation_specs
 from apache_beam.runners.worker import bundle_processor
 from apache_beam.runners.worker.operations import Operation
+from apache_beam.runners.common import _OutputProcessor
 
 from pyflink.fn_execution import flink_fn_execution_pb2
 from pyflink.serializers import PickleSerializer
@@ -346,13 +347,14 @@ class TableFunctionInvoker(object):
             input_getter.close()
         self.table_function.close()
 
-    def invoke_eval(self, value):
+    def invoke_eval(self, value, output_processor):
         """
         Invokes the ScalarFunction.eval() function.
 
         :param value: the input element for which eval() method should be invoked
         """
         args = [input_getter.get(value) for input_getter in self.input_getters]
+        self.table_function.set_output_processor(output_processor)
         return self.table_function.eval(*args)
 
 
@@ -369,6 +371,37 @@ def create_table_function_invoker(table_function_proto):
     return TableFunctionInvoker(table_function, table_function_proto.inputs)
 
 
+class TableFunctionOutputProcessor(_OutputProcessor):
+
+    def __init__(self,
+                 window_fn,
+                 main_receivers,
+                 tagged_receivers,
+                 per_element_output_counter):
+        super(TableFunctionOutputProcessor, self).__init__(
+            window_fn,
+            main_receivers,
+            tagged_receivers,
+            per_element_output_counter)
+        self.windowed_value = None
+
+    def set_windowed_value(self, windowed_value):
+        self.windowed_value = windowed_value
+
+    def process_outputs(self, results):
+        from pyflink.table import Row
+        a = False
+        for ele in results:
+            if not a:
+                new_ele = ele + (1,)
+                a = True
+            else:
+                new_ele = ele + (0,)
+            result = Row(*new_ele)
+            # send the execution results back
+            super().process_outputs(self.windowed_value, [result])
+
+
 class TableFunctionRunner(object):
     """
     The runner which is responsible for executing the scalar functions and send the
@@ -381,14 +414,7 @@ class TableFunctionRunner(object):
         self.table_function_invoker = create_table_function_invoker(udtf_proto[0])
 
     def setup(self, main_receivers):
-        """
-        Set up the ScalarFunctionRunner.
-
-        :param main_receivers: Receiver objects which is responsible for sending the execution
-                               results back the the remote Java operator
-        """
-        from apache_beam.runners.common import _OutputProcessor
-        self.output_processor = _OutputProcessor(
+        self.output_processor = TableFunctionOutputProcessor(
             window_fn=None,
             main_receivers=main_receivers,
             tagged_receivers=None,
@@ -401,18 +427,8 @@ class TableFunctionRunner(object):
         self.table_function_invoker.invoke_close()
 
     def process(self, windowed_value):
-        results = self.table_function_invoker.invoke_eval(windowed_value.value)
-        from pyflink.table import Row
-        a = False
-        for ele in results:
-            if not a:
-                new_ele = ele + (1,)
-                a = True
-            else:
-                new_ele = ele + (0,)
-            result = Row(*new_ele)
-            # send the execution results back
-            self.output_processor.process_outputs(windowed_value, [result])
+        self.output_processor.windowed_value = windowed_value
+        self.table_function_invoker.invoke_eval(windowed_value.value, self.output_processor)
 
 
 class TableFunctionOperation(Operation):

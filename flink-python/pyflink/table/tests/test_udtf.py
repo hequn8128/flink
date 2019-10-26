@@ -48,7 +48,7 @@ class UserDefinedTableFunctionTests(PyFlinkStreamTableTestCase):
 class MultiEmit(TableFunction):
  def eval(self, x, y):
    for i in range(y):
-     yield x, i
+     self.output_processor.process_outputs((x, i))
 
 
 if __name__ == '__main__':
