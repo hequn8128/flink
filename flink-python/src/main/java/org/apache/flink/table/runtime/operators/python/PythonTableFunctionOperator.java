@@ -46,11 +46,6 @@ public class PythonTableFunctionOperator extends AbstractPythonTableFunctionOper
 	 */
 	private transient StreamRecordCRowWrappingCollector cRowWrapper;
 
-	/**
-	 * The type serializer for the forwarded fields.
-	 */
-	private transient TypeSerializer<CRow> forwardedInputSerializer;
-
 	public PythonTableFunctionOperator(
 		PythonFunctionInfo tableFunction,
 		RowType inputType,
