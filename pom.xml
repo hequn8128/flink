@@ -49,6 +49,19 @@ under the License.
 		<developerConnection>scm:git:https://gitbox.apache.org/repos/asf/flink.git</developerConnection>
 	</scm>
 
+	<repositories>
+		<repository>
+			<id>flink-shaded-staging</id>
+			<url>https://repository.apache.org/content/repositories/orgapacheflink-1275</url>
+			<releases>
+				<enabled>true</enabled>
+			</releases>
+			<snapshots>
+				<enabled>false</enabled>
+			</snapshots>
+		</repository>
+	</repositories>
+
 	<modules>
 		<!-- Dummy module to force execution of the Maven Shade plugin (see Shade plugin below) -->
 		<module>tools/force-shading</module>
@@ -120,7 +133,7 @@ under the License.
 		<chill.version>0.7.6</chill.version>
 		<zookeeper.version>3.4.10</zookeeper.version>
 		<curator.version>2.12.0</curator.version>
-		<jackson.version>2.9.8</jackson.version>
+		<jackson.version>2.10.1</jackson.version>
 		<metrics.version>3.1.5</metrics.version>
 		<prometheus.version>0.3.0</prometheus.version>
 		<avro.version>1.8.2</avro.version>
@@ -264,13 +277,13 @@ under the License.
 			<dependency>
 				<groupId>org.apache.flink</groupId>
 				<artifactId>flink-shaded-jackson</artifactId>
-				<version>${jackson.version}-${flink.shaded.version}</version>
+				<version>${jackson.version}-9.0</version>
 			</dependency>
 
 			<dependency>
 				<groupId>org.apache.flink</groupId>
 				<artifactId>flink-shaded-jackson-module-jsonSchema</artifactId>
-				<version>${jackson.version}-${flink.shaded.version}</version>
+				<version>${jackson.version}-9.0</version>
 			</dependency>
 
 			<dependency>
@@ -632,6 +645,25 @@ under the License.
 				<version>${project.version}</version>
 				<scope>test</scope>
 			</dependency>
+
+			<dependency>
+				<groupId>com.fasterxml.jackson.core</groupId>
+				<artifactId>jackson-annotations</artifactId>
+				<version>2.10.1</version>
+			</dependency>
+
+			<dependency>
+				<groupId>com.fasterxml.jackson.core</groupId>
+				<artifactId>jackson-databind</artifactId>
+				<version>2.10.1</version>
+			</dependency>
+
+			<dependency>
+				<groupId>com.fasterxml.jackson.core</groupId>
+				<artifactId>jackson-core</artifactId>
+				<version>2.10.1</version>
+			</dependency>
+
 		</dependencies>
 	</dependencyManagement>
 
@@ -746,31 +778,6 @@ under the License.
 					</plugin>
 				</plugins>
 			</build>
-		</profile>
-
-		<profile>
-			<id>use-jackson-2.10.1</id>
-			<dependencyManagement>
-				<dependencies>
-					<dependency>
-						<groupId>com.fasterxml.jackson.core</groupId>
-						<artifactId>jackson-annotations</artifactId>
-						<version>2.10.1</version>
-					</dependency>
-
-					<dependency>
-						<groupId>com.fasterxml.jackson.core</groupId>
-						<artifactId>jackson-databind</artifactId>
-						<version>2.10.1</version>
-					</dependency>
-
-					<dependency>
-						<groupId>com.fasterxml.jackson.core</groupId>
-						<artifactId>jackson-core</artifactId>
-						<version>2.10.1</version>
-					</dependency>
-				</dependencies>
-			</dependencyManagement>
 		</profile>
 
 		<profile>

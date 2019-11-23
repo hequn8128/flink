@@ -39,7 +39,7 @@ under the License.
 		<dependency>
 			<groupId>org.apache.flink</groupId>
 			<artifactId>flink-shaded-jackson</artifactId>
-			<version>${jackson.version}-${flink.shaded.version}</version>
+			<version>${jackson.version}-9.0</version>
 		</dependency>
 	</dependencies>
 </project>
