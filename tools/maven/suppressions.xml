@@ -28,13 +28,6 @@ under the License.
 		<!-- Sometimes we have to temporarily fix very long, different formatted Calcite files. -->
 		<suppress files="org[\\/]apache[\\/]calcite.*" checks="[a-zA-Z0-9]*"/>
 
-		<!-- Python streaming API follows python naming conventions -->
-		<suppress
-			files="org[\\/]apache[\\/]flink[\\/]streaming[\\/]python[\\/]api[\\/].*.java"
-			checks="MethodNameCheck|ParameterName"/>
-		<suppress
-			files="org[\\/]apache[\\/]flink[\\/]streaming[\\/]python[\\/]connectors[\\/].*.java"
-		checks="MethodNameCheck|ParameterName"/>
 	    <!-- Have to use guava directly -->
 	    <suppress
 			files="OverConvertRule.java|CustomizedConvertRule.java"
