@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.flink.ml.api.misc.param;
+package org.apache.flink.ml.api.param;
 
 /**
  * Parameters are widely used in machine learning realm. This class defines a common interface to

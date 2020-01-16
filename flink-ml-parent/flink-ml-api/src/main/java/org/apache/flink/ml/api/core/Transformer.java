@@ -19,6 +19,7 @@
 package org.apache.flink.ml.api.core;
 
 import org.apache.flink.annotation.PublicEvolving;
+import org.apache.flink.ml.api.param.WithParams;
 import org.apache.flink.table.api.Table;
 import org.apache.flink.table.api.TableEnvironment;
 
@@ -27,7 +28,7 @@ import org.apache.flink.table.api.TableEnvironment;
  * {@link Table}.
  *
  * @param <T> The class type of the Transformer implementation itself, used by {@link
- *            org.apache.flink.ml.api.misc.param.WithParams}
+ *            WithParams}
  */
 @PublicEvolving
 public interface Transformer<T extends Transformer<T>> extends PipelineStage<T> {

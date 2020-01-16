@@ -16,8 +16,23 @@
 # limitations under the License.
 #################################################################################
 import sys
+from functools import wraps
 
 if sys.version_info < (3, 5):
     raise RuntimeError(
         'Python versions prior to 3.5 are not supported for PyFlink [' +
         str(sys.version_info) + '].')
+
+
+def keyword(func):
+    """
+    A decorator that forces keyword arguments in the wrapped method
+    and saves actual input keyword arguments in `_input_kwargs`.
+
+    .. note:: Should only be used to wrap a method where first arg is `self`
+    """
+    @wraps(func)
+    def wrapper(self, **kwargs):
+        self._input_kwargs = kwargs
+        return func(self, **kwargs)
+    return wrapper

@@ -133,6 +133,13 @@ public class BLAS {
 	/**
 	 * x = x * a .
 	 */
+	public static void scal(double a, double[] x, int xOffset, int length) {
+		F2J_BLAS.dscal(length, a, x, xOffset, 1);
+	}
+
+	/**
+	 * x = x * a .
+	 */
 	public static void scal(double a, DenseVector x) {
 		F2J_BLAS.dscal(x.data.length, a, x.data, 1);
 	}
@@ -192,6 +199,18 @@ public class BLAS {
 		} else {
 			Preconditions.checkArgument(matA.numRows() == y.size() && matA.numCols() == x.size(),
 				"Matrix and vector size mismatched.");
+		}
+	}
+
+	/**
+	 * y := alpha * A * x + beta * y .
+	 */
+	public static void gemv(double alpha, DenseMatrix matA, boolean transA,
+							Vector x, double beta, DenseVector y) {
+		if (x instanceof SparseVector){
+			gemv(alpha, matA, transA, (SparseVector)x, beta, y);
+		} else {
+			gemv(alpha, matA, transA, (DenseVector)x, beta, y);
 		}
 	}
 

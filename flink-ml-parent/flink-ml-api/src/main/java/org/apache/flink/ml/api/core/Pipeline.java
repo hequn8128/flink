@@ -19,7 +19,7 @@
 package org.apache.flink.ml.api.core;
 
 import org.apache.flink.annotation.PublicEvolving;
-import org.apache.flink.ml.api.misc.param.Params;
+import org.apache.flink.ml.api.param.Params;
 import org.apache.flink.table.api.Table;
 import org.apache.flink.table.api.TableEnvironment;
 import org.apache.flink.util.InstantiationUtil;

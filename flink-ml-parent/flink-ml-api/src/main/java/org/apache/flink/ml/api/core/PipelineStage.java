@@ -18,7 +18,7 @@
 
 package org.apache.flink.ml.api.core;
 
-import org.apache.flink.ml.api.misc.param.WithParams;
+import org.apache.flink.ml.api.param.WithParams;
 
 import java.io.Serializable;
 
@@ -31,7 +31,7 @@ import java.io.Serializable;
  * restoration in Pipeline.
  *
  * @param <T> The class type of the PipelineStage implementation itself, used by {@link
- *            org.apache.flink.ml.api.misc.param.WithParams}
+ *            WithParams}
  * @see WithParams
  */
 interface PipelineStage<T extends PipelineStage<T>> extends WithParams<T>, Serializable {

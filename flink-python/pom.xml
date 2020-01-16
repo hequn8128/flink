@@ -160,6 +160,18 @@ under the License.
 			<artifactId>flink-test-utils-junit</artifactId>
 		</dependency>
 
+		<!--<dependency>-->
+			<!--<groupId>org.apache.flink</groupId>-->
+			<!--<artifactId>flink-ml-api</artifactId>-->
+			<!--<version>${project.version}</version>-->
+		<!--</dependency>-->
+
+		<!--<dependency>-->
+			<!--<groupId>org.apache.flink</groupId>-->
+			<!--<artifactId>flink-ml-lib_2.11</artifactId>-->
+			<!--<version>${project.version}</version>-->
+		<!--</dependency>-->
+
 	</dependencies>
 
 	<dependencyManagement>
@@ -281,6 +293,9 @@ under the License.
 									<include>com.fasterxml.jackson.core:*</include>
 									<include>joda-time:*</include>
 									<inculde>com.google.protobuf:*</inculde>
+									<!--<inculde>org.apache.flink:flink-ml-api</inculde>-->
+									<!--<inculde>org.apache.flink:flink-ml-lib_2.11</inculde>-->
+									<!--<inculde>com.github.fommil.netlib:core</inculde>-->
 								</includes>
 							</artifactSet>
 							<filters>

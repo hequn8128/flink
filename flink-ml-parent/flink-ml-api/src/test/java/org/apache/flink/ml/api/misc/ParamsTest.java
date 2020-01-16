@@ -18,9 +18,9 @@
 
 package org.apache.flink.ml.api.misc;
 
-import org.apache.flink.ml.api.misc.param.ParamInfo;
-import org.apache.flink.ml.api.misc.param.ParamInfoFactory;
-import org.apache.flink.ml.api.misc.param.Params;
+import org.apache.flink.ml.api.param.ParamInfo;
+import org.apache.flink.ml.api.param.ParamInfoFactory;
+import org.apache.flink.ml.api.param.Params;
 
 import org.junit.Assert;
 import org.junit.Rule;

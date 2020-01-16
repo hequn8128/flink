@@ -19,6 +19,7 @@
 package org.apache.flink.ml.api.core;
 
 import org.apache.flink.annotation.PublicEvolving;
+import org.apache.flink.ml.api.param.WithParams;
 import org.apache.flink.table.api.Table;
 import org.apache.flink.table.api.TableEnvironment;
 
@@ -30,7 +31,7 @@ import org.apache.flink.table.api.TableEnvironment;
  * {@link Model} which fits these samples.
  *
  * @param <E> class type of the Estimator implementation itself, used by {@link
- *            org.apache.flink.ml.api.misc.param.WithParams}.
+ *            WithParams}.
  * @param <M> class type of the {@link Model} this Estimator produces.
  */
 @PublicEvolving

@@ -18,8 +18,8 @@
 
 package org.apache.flink.ml.util.param;
 
-import org.apache.flink.ml.api.misc.param.ParamInfo;
-import org.apache.flink.ml.api.misc.param.WithParams;
+import org.apache.flink.ml.api.param.ParamInfo;
+import org.apache.flink.ml.api.param.WithParams;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

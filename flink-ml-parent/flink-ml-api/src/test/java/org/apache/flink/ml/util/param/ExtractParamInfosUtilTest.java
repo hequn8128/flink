@@ -18,10 +18,10 @@
 
 package org.apache.flink.ml.util.param;
 
-import org.apache.flink.ml.api.misc.param.ParamInfo;
-import org.apache.flink.ml.api.misc.param.ParamInfoFactory;
-import org.apache.flink.ml.api.misc.param.Params;
-import org.apache.flink.ml.api.misc.param.WithParams;
+import org.apache.flink.ml.api.param.ParamInfo;
+import org.apache.flink.ml.api.param.ParamInfoFactory;
+import org.apache.flink.ml.api.param.Params;
+import org.apache.flink.ml.api.param.WithParams;
 
 import org.junit.Test;
 

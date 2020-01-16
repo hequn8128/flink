@@ -19,6 +19,8 @@
 
 package org.apache.flink.ml.common.linalg;
 
+import org.apache.flink.util.Preconditions;
+
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
@@ -317,5 +319,48 @@ public class MatVecOp {
 			s += func.apply(x1data[i], x2data[i]);
 		}
 		return s;
+	}
+
+	public static void appendVectorToMatrix(DenseMatrix matrix, boolean trans, int index, Vector vector) {
+		if (vector instanceof DenseVector) {
+			double[] vectorData = ((DenseVector) vector).getData();
+			double[] matrixData = matrix.getData();
+			int vectorSize = vectorData.length;
+			if (trans) {
+				Preconditions.checkArgument(matrix.numCols() == vectorSize,
+					"Matrix and vector size mismatched, matrix column number %s, vectorSize %s",
+					matrix.numCols(), vectorSize);
+				for (double aVectorData : vectorData) {
+					matrixData[index] = aVectorData;
+					index += vectorSize;
+				}
+			} else {
+				Preconditions.checkArgument(matrix.numRows() == vectorSize,
+					"Matrix and vector size mismatched, matrix column number %s, vectorSize %s",
+					matrix.numRows(), vectorSize);
+				System.arraycopy(vectorData, 0, matrixData, index * vectorSize, vectorSize);
+			}
+		} else {
+			SparseVector sparseVector = (SparseVector)vector;
+			int[] indices = sparseVector.getIndices();
+			double[] values = sparseVector.getValues();
+			double[] matrixData = matrix.getData();
+			if (trans) {
+				int vectorSize = matrix.numCols();
+				for (int j = 0; j < indices.length; j++) {
+					Preconditions.checkArgument(indices[j] <= matrix.numCols(), "Index %s out of matrix size %s!",
+						indices[j], matrix.numCols());
+					matrixData[index + indices[j]] = values[j];
+					index += vectorSize;
+				}
+			} else {
+				int startIndex = matrix.numRows() * index;
+				sparseVector.forEach((k, v) -> {
+					Preconditions.checkArgument(k <= matrix.numRows(), "Index %s out of matrix size %s!", k,
+						matrix.numRows());
+					matrixData[startIndex + k] = v;
+				});
+			}
+		}
 	}
 }

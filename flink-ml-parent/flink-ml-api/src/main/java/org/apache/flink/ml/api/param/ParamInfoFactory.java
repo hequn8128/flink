@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.flink.ml.api.misc.param;
+package org.apache.flink.ml.api.param;
 
 /**
  * Factory to create ParamInfo, all ParamInfos should be created via this class.

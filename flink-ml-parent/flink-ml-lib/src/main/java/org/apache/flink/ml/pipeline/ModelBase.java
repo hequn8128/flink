@@ -20,7 +20,7 @@
 package org.apache.flink.ml.pipeline;
 
 import org.apache.flink.ml.api.core.Model;
-import org.apache.flink.ml.api.misc.param.Params;
+import org.apache.flink.ml.api.param.Params;
 import org.apache.flink.table.api.Table;
 
 /**

@@ -19,7 +19,7 @@
 
 package org.apache.flink.ml.common.mapper;
 
-import org.apache.flink.ml.api.misc.param.Params;
+import org.apache.flink.ml.api.param.Params;
 import org.apache.flink.table.api.TableSchema;
 import org.apache.flink.table.types.DataType;
 import org.apache.flink.types.Row;

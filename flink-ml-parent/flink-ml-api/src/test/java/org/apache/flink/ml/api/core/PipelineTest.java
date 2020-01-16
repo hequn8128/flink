@@ -18,9 +18,9 @@
 
 package org.apache.flink.ml.api.core;
 
-import org.apache.flink.ml.api.misc.param.ParamInfo;
-import org.apache.flink.ml.api.misc.param.ParamInfoFactory;
-import org.apache.flink.ml.api.misc.param.Params;
+import org.apache.flink.ml.api.param.ParamInfo;
+import org.apache.flink.ml.api.param.ParamInfoFactory;
+import org.apache.flink.ml.api.param.Params;
 import org.apache.flink.table.api.Table;
 import org.apache.flink.table.api.TableEnvironment;
 

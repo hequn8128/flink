@@ -133,3 +133,6 @@ def import_flink_view(gateway):
     java_import(gateway.jvm,
                 "org.apache.flink.streaming.api.environment.StreamExecutionEnvironment")
     java_import(gateway.jvm, "org.apache.flink.api.common.restartstrategy.RestartStrategies")
+    # ML APIs
+    java_import(gateway.jvm, "org.apache.flink.ml.common.MLEnvironmentFactory")
+    java_import(gateway.jvm, "org.apache.flink.ml.api.core.Pipeline")

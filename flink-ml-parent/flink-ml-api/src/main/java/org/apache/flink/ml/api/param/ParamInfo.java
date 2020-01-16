@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.flink.ml.api.misc.param;
+package org.apache.flink.ml.api.param;
 
 import org.apache.flink.annotation.PublicEvolving;
 import org.apache.flink.util.Preconditions;

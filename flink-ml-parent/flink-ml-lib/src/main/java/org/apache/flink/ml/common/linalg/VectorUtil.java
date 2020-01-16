@@ -246,4 +246,30 @@ public class VectorUtil {
 		return sbd.toString();
 	}
 
+	/**
+	 * Get the vector from {@link Vector}, String or Number.
+	 *
+	 * <ul>
+	 * <li>when the obj is Vector, it will return itself</li>
+	 * <li>when the obj is String, it will be parsed to Vector using {@link #parse(String)}</li>
+	 * <li>when the obj is Number, it will construct a new {@link DenseVector} which contains the obj.</li>
+	 * </ul>
+	 *
+	 * @param obj the object casted to vector.
+	 * @return The casted vector
+	 */
+	public static Vector getVector(Object obj) {
+		if (null == obj) {
+			return null;
+		}
+		if (obj instanceof Vector) {
+			return (Vector) obj;
+		} else if (obj instanceof String) {
+			return parse((String) obj);
+		} else if (obj instanceof Number) {
+			return new DenseVector(new double[] {((Number) obj).doubleValue()});
+		} else {
+			throw new IllegalArgumentException("Can not get the vector from " + obj.toString());
+		}
+	}
 }

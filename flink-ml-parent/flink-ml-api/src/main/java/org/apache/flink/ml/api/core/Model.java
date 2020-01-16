@@ -19,6 +19,7 @@
 package org.apache.flink.ml.api.core;
 
 import org.apache.flink.annotation.PublicEvolving;
+import org.apache.flink.ml.api.param.WithParams;
 import org.apache.flink.table.api.Table;
 
 /**
@@ -32,7 +33,7 @@ import org.apache.flink.table.api.Table;
  * generated.
  *
  * @param <M> The class type of the Model implementation itself, used by {@link
- *            org.apache.flink.ml.api.misc.param.WithParams}
+ *            WithParams}
  */
 @PublicEvolving
 public interface Model<M extends Model<M>> extends Transformer<M> {
