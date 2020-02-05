@@ -36,6 +36,9 @@ def singleton(cls):
 
 @singleton
 class MLEnvironmentFactory:
+    """
+    Factory to get the MLEnvironment using a MLEnvironmentId.
+    """
 
     def __init__(self):
         self.gateway = get_gateway()
@@ -55,5 +58,5 @@ class MLEnvironmentFactory:
     def get_new_ml_environment_id(self):
         return self.j_ml_env.getNewMLEnvironmentId()
 
-    # def register_ml_environment(self, ml_environment):
-    #     return self.j_ml_env.registerMLEnvironment(ml_environment.j_ml_environment)
+    def register_ml_environment(self, ml_environment):
+        return self.j_ml_env.registerMLEnvironment(ml_environment.j_ml_environment)

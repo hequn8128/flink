@@ -205,6 +205,14 @@ class Pipeline(Estimator, Model):
         return self
 
     def fit(self, t_env, input):
+        """
+        Train the pipeline to fit on the records in the given Table.
+
+        :param t_env: the table environment to which the input table is bound.
+        :param input: the table with records to train the Pipeline.
+        :returns: a pipeline with same stages as this Pipeline except all Estimators
+        replaced with their corresponding Models.
+        """
         transform_stages = []
         for i in range(0, len(self.stages)):
             s = self.stages[i]
@@ -221,6 +229,13 @@ class Pipeline(Estimator, Model):
         return Pipeline(transform_stages)
 
     def transform(self, t_env, input):
+        """
+        Generate a result table by applying all the stages in this pipeline to the input table in order.
+
+        :param t_env: the table environment to which the input table is bound.
+        :param input: the table to be transformed.
+        :returns: a result table with all the stages applied to the input tables in order.
+        """
         if self._need_fit():
             raise RuntimeError("Pipeline contains Estimator, need to fit first.")
         for s in self.stages:
