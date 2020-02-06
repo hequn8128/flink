@@ -18,13 +18,38 @@
 
 import unittest
 
-from pyflink.ml.ml_environment_factory import MLEnvironmentFactory
+from pyflink.ml.ml_environment_factory import MLEnvironmentFactory, MLEnvironment
+from pyflink.dataset import ExecutionEnvironment
+from pyflink.datastream import StreamExecutionEnvironment
+from pyflink.table import BatchTableEnvironment, StreamTableEnvironment
 
 
 class MLEnvironmentFactoryTest(unittest.TestCase):
+
+    def test_default_constructor(self):
+        ml_environment = MLEnvironment()
+        self.assertIsNotNone(ml_environment.get_execution_environment())
+        self.assertIsNotNone(ml_environment.get_stream_execution_environment())
+        self.assertIsNotNone(ml_environment.get_batch_table_environment())
+        self.assertIsNotNone(ml_environment.get_stream_table_environment())
+
+    def test_construct_with_batch_env(self):
+        execution_environment = ExecutionEnvironment.get_execution_environment()
+        batch_table_environment = BatchTableEnvironment.create(execution_environment)
+
+        ml_environment = MLEnvironment(exe_env=execution_environment, batch_tab_env=batch_table_environment)
+        self.assertEqual(ml_environment.get_execution_environment(), execution_environment)
+        self.assertEqual(ml_environment.get_batch_table_environment(), batch_table_environment)
+
+    def test_construct_with_stream_env(self):
+        stream_execution_environment = StreamExecutionEnvironment.get_execution_environment()
+        stream_table_environment = StreamTableEnvironment.create(stream_execution_environment)
+
+        ml_environment = MLEnvironment(stream_exe_env=stream_execution_environment, stream_tab_env=stream_table_environment)
+        self.assertEqual(ml_environment.get_stream_execution_environment(), stream_execution_environment)
+        self.assertEqual(ml_environment.get_stream_table_environment(), stream_table_environment)
 
     def test_get_default(self):
         ml_env1 = MLEnvironmentFactory().get_default()
         ml_env2 = MLEnvironmentFactory().get_default()
         self.assertEqual(ml_env1, ml_env2)
-
