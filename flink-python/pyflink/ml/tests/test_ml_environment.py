@@ -24,7 +24,7 @@ from pyflink.datastream import StreamExecutionEnvironment
 from pyflink.table import BatchTableEnvironment, StreamTableEnvironment
 
 
-class MLEnvironmentFactoryTest(unittest.TestCase):
+class MLEnvironmentTest(unittest.TestCase):
 
     def test_default_constructor(self):
         ml_environment = MLEnvironment()
@@ -48,8 +48,3 @@ class MLEnvironmentFactoryTest(unittest.TestCase):
         ml_environment = MLEnvironment(stream_exe_env=stream_execution_environment, stream_tab_env=stream_table_environment)
         self.assertEqual(ml_environment.get_stream_execution_environment(), stream_execution_environment)
         self.assertEqual(ml_environment.get_stream_table_environment(), stream_table_environment)
-
-    def test_get_default(self):
-        ml_env1 = MLEnvironmentFactory().get_default()
-        ml_env2 = MLEnvironmentFactory().get_default()
-        self.assertEqual(ml_env1, ml_env2)

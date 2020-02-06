@@ -28,8 +28,8 @@ from pyflink.testing.test_case_utils import PyFlinkTestCase
 class KmeansTest(PyFlinkTestCase):
 
     def test_kmeans(self):
-        t_env = MLEnvironmentFactory().get_default().get_batch_table_environment()
-        MLEnvironmentFactory().get_default().get_execution_environment().set_parallelism(1)
+        t_env = MLEnvironmentFactory.get_default().get_batch_table_environment()
+        MLEnvironmentFactory.get_default().get_execution_environment().set_parallelism(1)
         t_env.connect(FileSystem().path('/Users/hequn.chq/Downloads/a'))\
             .with_format(OldCsv().field_delimiter(',')
                          .field('a', DataTypes.DOUBLE())
