@@ -20,7 +20,7 @@ from pyflink.ml.param import WithParams, ParamInfo, TypeConverters
 
 
 class HasSelectedCols(WithParams):
-    selected_cols = ParamInfo("selectedCols", "Names of the columns used for processing", type_converter=TypeConverters.toListString)
+    selected_cols = ParamInfo("selectedCols", "Names of the columns used for processing", type_converter=TypeConverters.to_list_string)
 
     def set_selected_cols(self, v):
         return super().set(self.selected_cols, v)
@@ -30,7 +30,7 @@ class HasSelectedCols(WithParams):
 
 
 class HasOutputCol(WithParams):
-    output_col = ParamInfo("outputCol", "Name of the output column", type_converter=TypeConverters.toString)
+    output_col = ParamInfo("outputCol", "Name of the output column", type_converter=TypeConverters.to_string)
 
     def set_output_col(self, v):
         return super().set(self.output_col, v)
@@ -40,7 +40,7 @@ class HasOutputCol(WithParams):
 
 
 class HasVectorCol(WithParams):
-    vector_col = ParamInfo("vectorCol", "Name of a vector column", type_converter=TypeConverters.toString)
+    vector_col = ParamInfo("vectorCol", "Name of a vector column", type_converter=TypeConverters.to_string)
 
     def set_vector_col(self, v):
         return super().set(self.vector_col, v)
@@ -50,7 +50,7 @@ class HasVectorCol(WithParams):
 
 
 class HasKDefaultAs2(WithParams):
-    k = ParamInfo("k", "Number of clusters.", type_converter=TypeConverters.toInt)
+    k = ParamInfo("k", "Number of clusters.", type_converter=TypeConverters.to_int)
 
     def set_k(self, v):
         return super().set(self.k, v)
@@ -60,7 +60,7 @@ class HasKDefaultAs2(WithParams):
 
 
 class HasPredictionCol(WithParams):
-    prediction_col = ParamInfo("predictionCol", "Column name of prediction.", type_converter=TypeConverters.toString)
+    prediction_col = ParamInfo("predictionCol", "Column name of prediction.", type_converter=TypeConverters.to_string)
 
     def set_prediction_col(self, v):
         return super().set(self.prediction_col, v)
@@ -70,7 +70,7 @@ class HasPredictionCol(WithParams):
 
 
 class HasReservedCols(WithParams):
-    reserved_cols = ParamInfo("reservedCols", "Names of the columns to be retained in the output table", type_converter=TypeConverters.toListString)
+    reserved_cols = ParamInfo("reservedCols", "Names of the columns to be retained in the output table", type_converter=TypeConverters.to_list_string)
 
     def set_reserved_cols(self, v):
         return super().set(self.reserved_cols, v)

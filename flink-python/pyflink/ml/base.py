@@ -21,11 +21,17 @@ from abc import ABCMeta, abstractmethod
 from pyflink.table.table import Table
 from pyflink.ml.param import WithParams, Params
 from py4j.java_gateway import get_field
+import jsonpickle
 
 
 class PipelineStage(WithParams):
     """
-    Base class for a stage in a pipeline.
+    Base class for a stage in a pipeline. The interface is only a concept, and does not have any
+    actual functionality. Its subclasses must be either Estimator or Transformer. No other classes
+    should inherit this interface directly.
+    
+    Each pipeline stage is with parameters, and requires a public empty constructor for
+    restoration in Pipeline.
     """
     def __init__(self, params=None):
         if params is None:
@@ -53,6 +59,12 @@ class PipelineStage(WithParams):
         if isinstance(obj, list):
             obj = [self._make_java_value(x) for x in obj]
         return obj
+
+    def to_json(self):
+        return self.get_params().to_json()
+
+    def load_json(self, j):
+        return self.get_params().load_json(j)
 
 
 class Transformer(PipelineStage):
@@ -113,9 +125,6 @@ class JavaModel(JavaTransformer, Model):
     Base class for :py:class:`JavaTransformer`s that wrap Java implementations.
     Subclasses should ensure they have the model Java object available as j_obj.
     """
-
-    def __init__(self, j_obj):
-        super().__init__(j_obj)
 
 
 class Estimator(PipelineStage):
@@ -196,6 +205,10 @@ class Pipeline(Estimator, Model):
         return (isinstance(stage, Pipeline) and stage._need_fit()) or \
                ((not isinstance(stage, Pipeline)) and isinstance(stage, Estimator))
 
+    def get_stages(self):
+        # make it immutable by changing to tuple
+        return tuple(self.stages)
+
     def append_stage(self, stage):
         if self._is_stage_need_fit(stage):
             self.last_estimator_index = len(self.stages)
@@ -241,3 +254,10 @@ class Pipeline(Estimator, Model):
         for s in self.stages:
             input = s.transform(t_env, input)
         return input
+
+    def to_json(self):
+        return jsonpickle.encode(self, keys=True)
+
+    def load_json(self, j):
+        return jsonpickle.decode(j, keys=True)
+

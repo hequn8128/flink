@@ -15,6 +15,9 @@
 #  See the License for the specific language governing permissions and
 # limitations under the License.
 ################################################################################
+import jsonpickle
+
+__all__ = ['WithParams', 'Params', 'ParamInfo', 'TypeConverters']
 
 
 class WithParams(object):
@@ -56,30 +59,96 @@ class Params(object):
     def __init__(self):
         self._paramMap = {}
 
-    def set(self, k, v):
-        self._paramMap[k] = v
+    def set(self, info, value):
+        """
+         Return the number of params.
 
-    def get(self, k):
-        return self._paramMap[k]
+        :param info: the info of the specific parameter to set.
+        :param value: the value to be set to the specific parameter.
+        :return: return the current Params.
+        """
+        self._paramMap[info] = value
+        return self
+
+    def get(self, info):
+        if info not in self._paramMap:
+            if not info.is_optional:
+                raise ValueError("Missing non-optional parameter %s" % info.name)
+            elif not info.has_default_value:
+                raise ValueError("Cannot find default value for optional parameter %s" % info.name)
+            else:
+                return info.default_value
+        else:
+            return self._paramMap[info]
+
+    def remove(self, info):
+        self._paramMap.pop(info)
+
+    def contains(self, info):
+        return info in self._paramMap
+
+    def size(self):
+        return len(self._paramMap)
+
+    def clear(self):
+        self._paramMap.clear()
+
+    def is_empty(self):
+        return len(self._paramMap) == 0
+
+    def to_json(self):
+        return jsonpickle.encode(self._paramMap, keys=True)
+
+    def load_json(self, j):
+        self._paramMap.update(jsonpickle.decode(j, keys=True))
+        return self
+
+    @staticmethod
+    def from_json(j):
+        return Params().load_json(j)
+
+    def merge(self, other_params):
+        if other_params is not None:
+            self._paramMap.update(other_params._paramMap)
+        return self
+
+    def clone(self):
+        new_params = Params()
+        new_params._paramMap.update(self._paramMap)
+        return new_params
 
 
 class ParamInfo(object):
     """
     Definition of a parameter, including name, description, type_converter and so on.
     """
-    def __init__(self, name, description, type_converter=None):
+    def __init__(self, name, description, is_optional=True, has_default_value=False, default_value=None, type_converter=None):
         self.name = str(name)
         self.description = str(description)
+        self.is_optional = is_optional
+        self.has_default_value = has_default_value
+        self.default_value = default_value
         self.type_converter = TypeConverters.identity if type_converter is None else type_converter
+
+    def __str__(self):
+        return self.name
+
+    def __repr__(self):
+        return "Param(name=%r, description=%r)" % (self.name, self.description)
+
+    def __hash__(self):
+        return hash(str(self.name))
+
+    def __eq__(self, other):
+        if isinstance(other, ParamInfo):
+            return self.name == other.name
+        else:
+            return False
 
 
 class TypeConverters(object):
     """
-    .. note:: DeveloperApi
-
     Factory methods for common type conversion functions for `Param.typeConverter`.
-
-    .. versionadded:: 2.0.0
     """
 
     @staticmethod
@@ -108,7 +177,7 @@ class TypeConverters(object):
         return value
 
     @staticmethod
-    def toList(value):
+    def to_list(value):
         """
         Convert a value to a list, if possible.
         """
@@ -118,7 +187,7 @@ class TypeConverters(object):
             raise TypeError("Could not convert %s to list" % value)
 
     @staticmethod
-    def toListFloat(value):
+    def to_list_float(value):
         """
         Convert a value to list of floats, if possible.
         """
@@ -129,7 +198,7 @@ class TypeConverters(object):
         raise TypeError("Could not convert %s to list of floats" % value)
 
     @staticmethod
-    def toListListFloat(value):
+    def to_list_list_float(value):
         """
         Convert a value to list of list of floats, if possible.
         """
@@ -139,7 +208,7 @@ class TypeConverters(object):
         raise TypeError("Could not convert %s to list of list of floats" % value)
 
     @staticmethod
-    def toListInt(value):
+    def to_list_int(value):
         """
         Convert a value to list of ints, if possible.
         """
@@ -150,7 +219,7 @@ class TypeConverters(object):
         raise TypeError("Could not convert %s to list of ints" % value)
 
     @staticmethod
-    def toListString(value):
+    def to_list_string(value):
         """
         Convert a value to list of strings, if possible.
         """
@@ -161,7 +230,7 @@ class TypeConverters(object):
         raise TypeError("Could not convert %s to list of strings" % value)
 
     @staticmethod
-    def toFloat(value):
+    def to_float(value):
         """
         Convert a value to a float, if possible.
         """
@@ -171,7 +240,7 @@ class TypeConverters(object):
             raise TypeError("Could not convert %s to float" % value)
 
     @staticmethod
-    def toInt(value):
+    def to_int(value):
         """
         Convert a value to an int, if possible.
         """
@@ -181,7 +250,7 @@ class TypeConverters(object):
             raise TypeError("Could not convert %s to int" % value)
 
     @staticmethod
-    def toString(value):
+    def to_string(value):
         """
         Convert a value to a string, if possible.
         """
@@ -191,7 +260,7 @@ class TypeConverters(object):
             raise TypeError("Could not convert %s to string type" % type(value))
 
     @staticmethod
-    def toBoolean(value):
+    def to_boolean(value):
         """
         Convert a value to a boolean, if possible.
         """
