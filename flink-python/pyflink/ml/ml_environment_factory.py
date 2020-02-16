@@ -16,11 +16,11 @@
 # limitations under the License.
 ################################################################################
 
-from pyflink.java_gateway import get_gateway
 from pyflink.ml.ml_environment import MLEnvironment
 from pyflink.dataset import ExecutionEnvironment
 from pyflink.datastream import StreamExecutionEnvironment
 from pyflink.table import BatchTableEnvironment, StreamTableEnvironment
+from pyflink.java_gateway import get_gateway
 import threading
 
 
@@ -31,15 +31,7 @@ class MLEnvironmentFactory:
     _lock = threading.RLock()
     _default_ml_environment_id = 0
     _next_id = 1
-    _map = {}
-    gateway = get_gateway()
-    j_ml_env = gateway.jvm.MLEnvironmentFactory.getDefault()
-    _default_ml_env = MLEnvironment(
-        ExecutionEnvironment(j_ml_env.getExecutionEnvironment()),
-        StreamExecutionEnvironment(j_ml_env.getStreamExecutionEnvironment()),
-        BatchTableEnvironment(j_ml_env.getBatchTableEnvironment()),
-        StreamTableEnvironment(j_ml_env.getStreamTableEnvironment()))
-    _map[_default_ml_environment_id] = _default_ml_env
+    _map = {_default_ml_environment_id: None}
 
     @staticmethod
     def get(ml_env_id):
@@ -50,7 +42,9 @@ class MLEnvironmentFactory:
         :return: the MLEnvironment
         """
         with MLEnvironmentFactory._lock:
-            if ml_env_id not in MLEnvironmentFactory._map:
+            if ml_env_id == 0:
+                return MLEnvironmentFactory.get_default();
+            elif ml_env_id not in MLEnvironmentFactory._map:
                 raise ValueError(
                     "Cannot find MLEnvironment for MLEnvironmentId %s. "
                     "Did you get the MLEnvironmentId by calling "
@@ -65,6 +59,15 @@ class MLEnvironmentFactory:
         :return: the default MLEnvironment.
         """
         with MLEnvironmentFactory._lock:
+            if MLEnvironmentFactory._map[MLEnvironmentFactory._default_ml_environment_id] is None:
+                j_ml_env = get_gateway().jvm.MLEnvironmentFactory.getDefault()
+                ml_env = MLEnvironment(
+                    ExecutionEnvironment(j_ml_env.getExecutionEnvironment()),
+                    StreamExecutionEnvironment(j_ml_env.getStreamExecutionEnvironment()),
+                    BatchTableEnvironment(j_ml_env.getBatchTableEnvironment()),
+                    StreamTableEnvironment(j_ml_env.getStreamTableEnvironment()))
+                MLEnvironmentFactory._map[MLEnvironmentFactory._default_ml_environment_id] = ml_env
+
             return MLEnvironmentFactory._map[MLEnvironmentFactory._default_ml_environment_id]
 
     @staticmethod

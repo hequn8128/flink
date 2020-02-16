@@ -192,7 +192,7 @@ class TypeConverters(object):
         Convert a value to list of floats, if possible.
         """
         if TypeConverters._can_convert_to_list(value):
-            value = TypeConverters.toList(value)
+            value = TypeConverters.to_list(value)
             if all(map(lambda v: TypeConverters._is_numeric(v), value)):
                 return [float(v) for v in value]
         raise TypeError("Could not convert %s to list of floats" % value)
@@ -203,8 +203,8 @@ class TypeConverters(object):
         Convert a value to list of list of floats, if possible.
         """
         if TypeConverters._can_convert_to_list(value):
-            value = TypeConverters.toList(value)
-            return [TypeConverters.toListFloat(v) for v in value]
+            value = TypeConverters.to_list(value)
+            return [TypeConverters.to_list_float(v) for v in value]
         raise TypeError("Could not convert %s to list of list of floats" % value)
 
     @staticmethod
@@ -213,7 +213,7 @@ class TypeConverters(object):
         Convert a value to list of ints, if possible.
         """
         if TypeConverters._can_convert_to_list(value):
-            value = TypeConverters.toList(value)
+            value = TypeConverters.to_list(value)
             if all(map(lambda v: TypeConverters._is_integer(v), value)):
                 return [int(v) for v in value]
         raise TypeError("Could not convert %s to list of ints" % value)
@@ -224,9 +224,9 @@ class TypeConverters(object):
         Convert a value to list of strings, if possible.
         """
         if TypeConverters._can_convert_to_list(value):
-            value = TypeConverters.toList(value)
+            value = TypeConverters.to_list(value)
             if all(map(lambda v: TypeConverters._can_convert_to_string(v), value)):
-                return [TypeConverters.toString(v) for v in value]
+                return [TypeConverters.to_string(v) for v in value]
         raise TypeError("Could not convert %s to list of strings" % value)
 
     @staticmethod

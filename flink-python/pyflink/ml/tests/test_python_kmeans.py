@@ -28,6 +28,9 @@ from pyflink.testing import source_sink_utils
 
 
 class PythonTransformer(Transformer, HasSelectedCols, HasOutputCol):
+    """
+    A Transformer which is implemented with Python.
+    """
     @keyword
     def __init__(self, *, selected_cols=None, output_col=None):
         super().__init__()

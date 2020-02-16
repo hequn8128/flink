@@ -48,7 +48,8 @@ class PipelineStage(WithParams):
             java_value = self._make_java_value(self._params._paramMap[param])
             j_pipeline_stage.set(java_param, java_value)
 
-    def _make_java_param(self, j_pipeline_stage, param):
+    @staticmethod
+    def _make_java_param(j_pipeline_stage, param):
         # camel case to snake case
         import re
         name = re.sub(r'(?<!^)(?=[A-Z])', '_', param.name).upper()
