@@ -16,6 +16,7 @@
 # limitations under the License.
 ################################################################################
 import abc
+from apache_beam.metrics.metric import Metrics
 from pyflink.fn_execution.flink_fn_execution_pb2 import MetricGroupInfo
 
 
@@ -34,6 +35,33 @@ class MetricGroup(abc.ABC):
             names.append(str(time))
         # use MetricGroupInfo to pass names and types info from Python to Java
         return MetricGroupInfo(scope_components=names).SerializeToString().decode("utf-8")
+
+    def counter(self, name: str) -> 'Counter':
+        """
+        Registers a new `Counter` with Flink.
+        """
+        return Counter(Metrics.counter(self._get_namespace(), name))
+
+    def gauge(self, name: str) -> 'Gauge':
+        """
+        Registers a new `Gauge` with Flink.
+        """
+        return Gauge(Metrics.gauge(self._get_namespace(), name))
+
+    def meter(self, name: str, time_span_in_seconds: int = 60) -> 'Meter':
+        """
+        Registers a new `Meter` with Flink.
+        """
+        # There is no meter type in Beam, use counter to implement meter
+        return Meter(
+            Metrics.counter(self._get_namespace(time_span_in_seconds), name),
+            time_span_in_seconds)
+
+    def distribution(self, name: str) -> 'Distribution':
+        """
+        Registers a new `Distribution` with Flink.
+        """
+        return Distribution(Metrics.distribution(self._get_namespace(), name))
 
     def add_group(self, name: str, extra: str = None) -> 'MetricGroup':
         """
@@ -148,3 +176,64 @@ class KeyValueMetricGroup(MetricGroup):
         variables = self._parent.get_all_variables()
         variables[self._key_name] = self._value_name
         return variables
+
+
+class Metric(object):
+    """Base interface of a metric object."""
+    pass
+
+
+class Counter(Metric):
+    """Counter metric interface. Allows a count to be incremented/decremented
+    during pipeline execution."""
+
+    def __init__(self, inner_counter):
+        self._inner_counter = inner_counter
+
+    def inc(self, n=1):
+        self._inner_counter.inc(n)
+
+    def dec(self, n=1):
+        self.inc(-n)
+
+
+class Gauge(Metric):
+    """Gauge Metric interface.
+
+    Allows tracking of the latest value of a variable during pipeline
+    execution."""
+
+    def __init__(self, inner_gauge):
+        self._inner_gauge = inner_gauge
+
+    def set(self, value):
+        self._inner_gauge.set(value)
+
+
+class Distribution(Metric):
+    """Distribution Metric interface.
+
+    Allows statistics about the distribution of a variable to be collected during
+    pipeline execution."""
+
+    def __init__(self, inner_distribution):
+        self._inner_distribution = inner_distribution
+
+    def update(self, value):
+        self._inner_distribution.update(value)
+
+
+class Meter(Metric):
+    """Meter Metric interface.
+
+    Metric for measuring throughput."""
+
+    def __init__(self, inner_counter, time_span_in_seconds=60):
+        self._inner_counter = inner_counter
+        self._time_span_in_seconds = time_span_in_seconds
+
+    def make_event(self, value=1):
+        self._inner_counter.inc(value)
+
+    def get_time_span_in_seconds(self):
+        return self._time_span_in_seconds

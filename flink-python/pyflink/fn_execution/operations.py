@@ -62,7 +62,8 @@ class StatelessFunctionOperation(Operation):
             super(StatelessFunctionOperation, self).start()
 
     def finish(self):
-        super(StatelessFunctionOperation, self).finish()
+        with self.scoped_process_state:
+            super(StatelessFunctionOperation, self).finish()
 
     def needs_finalization(self):
         return False
@@ -71,8 +72,9 @@ class StatelessFunctionOperation(Operation):
         super(StatelessFunctionOperation, self).reset()
 
     def teardown(self):
-        for user_defined_func in self.user_defined_funcs:
-            user_defined_func.close(None)
+        with self.scoped_process_state:
+            for user_defined_func in self.user_defined_funcs:
+                user_defined_func.close(None)
 
     def progress_metrics(self):
         metrics = super(StatelessFunctionOperation, self).progress_metrics()
@@ -84,9 +86,14 @@ class StatelessFunctionOperation(Operation):
         return metrics
 
     def process(self, o: WindowedValue):
-        output_stream = self.consumer.output_stream
-        self._value_coder_impl.encode_to_stream(self.func(o.value), output_stream, True)
-        output_stream.maybe_flush()
+        with self.scoped_process_state:
+            output_stream = self.consumer.output_stream
+            self._value_coder_impl.encode_to_stream(self.func(o.value), output_stream, True)
+            output_stream.maybe_flush()
+
+    def monitoring_infos(self, transform_id):
+        # only pass user metric to Java
+        return super().user_monitoring_infos(transform_id)
 
     def generate_func(self, udfs):
         pass
