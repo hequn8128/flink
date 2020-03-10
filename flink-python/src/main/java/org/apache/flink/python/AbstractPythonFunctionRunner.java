@@ -23,6 +23,7 @@ import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.core.memory.ByteArrayOutputStreamWithPos;
 import org.apache.flink.core.memory.DataOutputViewStreamWrapper;
 import org.apache.flink.python.env.PythonEnvironmentManager;
+import org.apache.flink.python.metric.FlinkMetricContainer;
 import org.apache.flink.util.Preconditions;
 
 import org.apache.beam.model.pipeline.v1.RunnerApi;
@@ -42,6 +43,8 @@ import org.apache.beam.sdk.options.PortablePipelineOptions;
 import org.apache.beam.sdk.util.WindowedValue;
 import org.apache.beam.vendor.grpc.v1p21p0.com.google.protobuf.Struct;
 
+import javax.annotation.Nullable;
+
 import java.io.File;
 import java.util.List;
 
@@ -55,7 +58,7 @@ public abstract class AbstractPythonFunctionRunner<IN> implements PythonFunction
 
 	private static final String MAIN_INPUT_ID = "input";
 
-	private final String taskName;
+	protected final String taskName;
 
 	/**
 	 * The Python function execution result receiver.
@@ -117,15 +120,22 @@ public abstract class AbstractPythonFunctionRunner<IN> implements PythonFunction
 	 */
 	private transient List<File> pythonInternalLibs;
 
+	/**
+	 * The flinkMetricContainer will be set to null if metric is configured to be turned off.
+	 */
+	@Nullable protected FlinkMetricContainer flinkMetricContainer;
+
 	public AbstractPythonFunctionRunner(
 		String taskName,
 		FnDataReceiver<byte[]> resultReceiver,
 		PythonEnvironmentManager environmentManager,
-		StateRequestHandler stateRequestHandler) {
+		StateRequestHandler stateRequestHandler,
+		FlinkMetricContainer flinkMetricContainer) {
 		this.taskName = Preconditions.checkNotNull(taskName);
 		this.resultReceiver = Preconditions.checkNotNull(resultReceiver);
 		this.environmentManager = Preconditions.checkNotNull(environmentManager);
 		this.stateRequestHandler = Preconditions.checkNotNull(stateRequestHandler);
+		this.flinkMetricContainer = flinkMetricContainer;
 	}
 
 	@Override

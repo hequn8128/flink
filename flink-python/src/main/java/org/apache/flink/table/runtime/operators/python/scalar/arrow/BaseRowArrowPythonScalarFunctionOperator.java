@@ -100,7 +100,8 @@ public class BaseRowArrowPythonScalarFunctionOperator extends AbstractBaseRowPyt
 			pythonEnvironmentManager,
 			userDefinedFunctionInputType,
 			userDefinedFunctionOutputType,
-			getPythonConfig().getMaxArrowBatchSize());
+			getPythonConfig().getMaxArrowBatchSize(),
+			getFlinkMetricContainer());
 	}
 
 	@Override

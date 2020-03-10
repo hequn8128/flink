@@ -38,6 +38,7 @@ import org.apache.flink.table.runtime.operators.python.scalar.PythonScalarFuncti
 import org.apache.flink.table.runtime.typeutils.BaseRowSerializer;
 import org.apache.flink.table.runtime.util.BaseRowHarnessAssertor;
 import org.apache.flink.table.runtime.utils.PassThroughArrowPythonScalarFunctionRunner;
+import org.apache.flink.table.runtime.utils.PythonTestUtils;
 import org.apache.flink.table.types.logical.RowType;
 
 import org.apache.beam.sdk.fn.data.FnDataReceiver;
@@ -119,7 +120,8 @@ public class BaseRowArrowPythonScalarFunctionOperatorTest
 				pythonEnvironmentManager,
 				userDefinedFunctionInputType,
 				userDefinedFunctionOutputType,
-				getPythonConfig().getMaxArrowBatchSize()) {
+				getPythonConfig().getMaxArrowBatchSize(),
+				PythonTestUtils.createMockFlinkMetricContainer()) {
 				@Override
 				public ArrowWriter<BaseRow> createArrowWriter() {
 					return ArrowUtils.createBaseRowArrowWriter(root);

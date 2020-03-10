@@ -25,6 +25,8 @@ from apache_beam.runners.worker.operations import Operation
 
 from pyflink.fn_execution import flink_fn_execution_pb2
 from pyflink.serializers import PickleSerializer
+from pyflink.table import FunctionContext
+from pyflink.metrics.metricbase import BaseMetricGroup
 
 SCALAR_FUNCTION_URN = "flink:transform:scalar_function:v1"
 TABLE_FUNCTION_URN = "flink:transform:table_function:v1"
@@ -43,9 +45,13 @@ class StatelessFunctionOperation(Operation):
 
         self.variable_dict = {}
         self.user_defined_funcs = []
-        self.func = self.generate_func(self.spec.serialized_fn)
+        self.func = self.generate_func(self.spec.serialized_fn.udfs)
+        (variables, scope_components, delimiter) = self._parse_metric_group_info(
+            self.spec.serialized_fn.base_metric_group_info)
         for user_defined_func in self.user_defined_funcs:
-            user_defined_func.open(None)
+            user_defined_func.open(
+                FunctionContext(
+                    BaseMetricGroup(variables, scope_components, delimiter)))
 
     def setup(self):
         super(StatelessFunctionOperation, self).setup()
@@ -153,6 +159,12 @@ class StatelessFunctionOperation(Operation):
         self.variable_dict[constant_value_name] = parsed_constant_value
         return constant_value_name
 
+    @staticmethod
+    def _parse_metric_group_info(base_metric_group_info):
+        return (base_metric_group_info.variables,
+                base_metric_group_info.scope_components,
+                base_metric_group_info.delimiter)
+
 
 class ScalarFunctionOperation(StatelessFunctionOperation):
     def __init__(self, name, spec, counter_factory, sampler, consumers):
@@ -205,7 +217,7 @@ class TableFunctionOperation(StatelessFunctionOperation):
     SCALAR_FUNCTION_URN, flink_fn_execution_pb2.UserDefinedFunctions)
 def create_scalar_function(factory, transform_id, transform_proto, parameter, consumers):
     return _create_user_defined_function_operation(
-        factory, transform_proto, consumers, parameter.udfs, ScalarFunctionOperation)
+        factory, transform_proto, consumers, parameter, ScalarFunctionOperation)
 
 
 @bundle_processor.BeamTransformFactory.register_urn(

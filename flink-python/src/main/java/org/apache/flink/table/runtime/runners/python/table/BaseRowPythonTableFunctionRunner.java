@@ -21,6 +21,7 @@ package org.apache.flink.table.runtime.runners.python.table;
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.python.PythonFunctionRunner;
 import org.apache.flink.python.env.PythonEnvironmentManager;
+import org.apache.flink.python.metric.FlinkMetricContainer;
 import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.functions.TableFunction;
 import org.apache.flink.table.functions.python.PythonFunctionInfo;
@@ -42,8 +43,9 @@ public class BaseRowPythonTableFunctionRunner extends AbstractPythonTableFunctio
 		PythonFunctionInfo tableFunction,
 		PythonEnvironmentManager environmentManager,
 		RowType inputType,
-		RowType outputType) {
-		super(taskName, resultReceiver, tableFunction, environmentManager, inputType, outputType);
+		RowType outputType,
+		FlinkMetricContainer flinkMetricContainer) {
+		super(taskName, resultReceiver, tableFunction, environmentManager, inputType, outputType, flinkMetricContainer);
 	}
 
 	@Override

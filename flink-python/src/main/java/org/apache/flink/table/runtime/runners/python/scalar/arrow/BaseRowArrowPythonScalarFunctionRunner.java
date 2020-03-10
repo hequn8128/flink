@@ -21,6 +21,7 @@ package org.apache.flink.table.runtime.runners.python.scalar.arrow;
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.python.PythonFunctionRunner;
 import org.apache.flink.python.env.PythonEnvironmentManager;
+import org.apache.flink.python.metric.FlinkMetricContainer;
 import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.functions.ScalarFunction;
 import org.apache.flink.table.functions.python.PythonFunctionInfo;
@@ -44,8 +45,9 @@ public class BaseRowArrowPythonScalarFunctionRunner extends AbstractArrowPythonS
 		PythonEnvironmentManager environmentManager,
 		RowType inputType,
 		RowType outputType,
-		int maxBatchSize) {
-		super(taskName, resultReceiver, scalarFunctions, environmentManager, inputType, outputType, maxBatchSize);
+		int maxBatchSize,
+		FlinkMetricContainer flinkMetricContainer) {
+		super(taskName, resultReceiver, scalarFunctions, environmentManager, inputType, outputType, maxBatchSize, flinkMetricContainer);
 	}
 
 	@Override

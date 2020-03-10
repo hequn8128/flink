@@ -88,6 +88,7 @@ public class PythonScalarFunctionOperator extends AbstractRowPythonScalarFunctio
 			scalarFunctions,
 			pythonEnvironmentManager,
 			userDefinedFunctionInputType,
-			userDefinedFunctionOutputType);
+			userDefinedFunctionOutputType,
+			getFlinkMetricContainer());
 	}
 }
