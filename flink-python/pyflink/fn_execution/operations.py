@@ -25,6 +25,8 @@ from apache_beam.runners.worker.operations import Operation
 
 from pyflink.fn_execution import flink_fn_execution_pb2
 from pyflink.serializers import PickleSerializer
+from pyflink.table import FunctionContext
+from pyflink.metrics.metricbase import BaseMetricGroup
 
 SCALAR_FUNCTION_URN = "flink:transform:scalar_function:v1"
 TABLE_FUNCTION_URN = "flink:transform:table_function:v1"
@@ -43,9 +45,13 @@ class StatelessFunctionOperation(Operation):
 
         self.variable_dict = {}
         self.user_defined_funcs = []
-        self.func = self.generate_func(self.spec.serialized_fn)
+        self.func = self.generate_func(self.spec.serialized_fn.udfs)
+        (variables, scope_components, delimiter) = self._parse_metric_group_info(
+            self.spec.serialized_fn.base_metric_group_info)
         for user_defined_func in self.user_defined_funcs:
-            user_defined_func.open(None)
+            user_defined_func.open(
+                FunctionContext(
+                    BaseMetricGroup(variables, scope_components, delimiter)))
 
     def setup(self):
         super(StatelessFunctionOperation, self).setup()
@@ -55,7 +61,8 @@ class StatelessFunctionOperation(Operation):
             super(StatelessFunctionOperation, self).start()
 
     def finish(self):
-        super(StatelessFunctionOperation, self).finish()
+        with self.scoped_process_state:
+            super(StatelessFunctionOperation, self).finish()
 
     def needs_finalization(self):
         return False
@@ -64,8 +71,9 @@ class StatelessFunctionOperation(Operation):
         super(StatelessFunctionOperation, self).reset()
 
     def teardown(self):
-        for user_defined_func in self.user_defined_funcs:
-            user_defined_func.close(None)
+        with self.scoped_process_state:
+            for user_defined_func in self.user_defined_funcs:
+                user_defined_func.close(None)
 
     def progress_metrics(self):
         metrics = super(StatelessFunctionOperation, self).progress_metrics()
@@ -75,6 +83,10 @@ class StatelessFunctionOperation(Operation):
         metrics.processed_elements.measured.output_element_counts[
             str(tag)] = receiver.opcounter.element_counter.value()
         return metrics
+
+    def monitoring_infos(self, transform_id):
+        # only pass user metric to Java
+        return super().user_monitoring_infos(transform_id)
 
     def generate_func(self, udfs):
         pass
@@ -153,6 +165,12 @@ class StatelessFunctionOperation(Operation):
         self.variable_dict[constant_value_name] = parsed_constant_value
         return constant_value_name
 
+    @staticmethod
+    def _parse_metric_group_info(base_metric_group_info):
+        return (base_metric_group_info.variables,
+                base_metric_group_info.scope_components,
+                base_metric_group_info.delimiter)
+
 
 class ScalarFunctionOperation(StatelessFunctionOperation):
     def __init__(self, name, spec, counter_factory, sampler, consumers):
@@ -169,9 +187,10 @@ class ScalarFunctionOperation(StatelessFunctionOperation):
         return eval('lambda value: [%s]' % ','.join(scalar_functions), self.variable_dict)
 
     def process(self, o):
-        output_stream = self.consumer.output_stream
-        self._value_coder_impl.encode_to_stream(self.func(o.value), output_stream, True)
-        output_stream.maybe_flush()
+        with self.scoped_process_state:
+            output_stream = self.consumer.output_stream
+            self._value_coder_impl.encode_to_stream(self.func(o.value), output_stream, True)
+            output_stream.maybe_flush()
 
 
 class TableFunctionOperation(StatelessFunctionOperation):
@@ -189,10 +208,11 @@ class TableFunctionOperation(StatelessFunctionOperation):
         return eval('lambda value: %s' % table_function, self.variable_dict)
 
     def process(self, o):
-        output_stream = self.consumer.output_stream
-        for result in self._create_result(o.value):
-            self._value_coder_impl.encode_to_stream(result, output_stream, True)
-        output_stream.maybe_flush()
+        with self.scoped_process_state:
+            output_stream = self.consumer.output_stream
+            for result in self._create_result(o.value):
+                self._value_coder_impl.encode_to_stream(result, output_stream, True)
+            output_stream.maybe_flush()
 
     def _create_result(self, value):
         result = self.func(value)
@@ -205,7 +225,7 @@ class TableFunctionOperation(StatelessFunctionOperation):
     SCALAR_FUNCTION_URN, flink_fn_execution_pb2.UserDefinedFunctions)
 def create_scalar_function(factory, transform_id, transform_proto, parameter, consumers):
     return _create_user_defined_function_operation(
-        factory, transform_proto, consumers, parameter.udfs, ScalarFunctionOperation)
+        factory, transform_proto, consumers, parameter, ScalarFunctionOperation)
 
 
 @bundle_processor.BeamTransformFactory.register_urn(

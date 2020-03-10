@@ -30,6 +30,7 @@ import org.apache.flink.table.functions.python.PythonFunctionInfo;
 import org.apache.flink.table.runtime.types.CRow;
 import org.apache.flink.table.runtime.typeutils.PythonTypeUtils;
 import org.apache.flink.table.runtime.utils.PassThroughPythonScalarFunctionRunner;
+import org.apache.flink.table.runtime.utils.PythonTestUtils;
 import org.apache.flink.table.types.logical.RowType;
 import org.apache.flink.types.Row;
 
@@ -98,7 +99,8 @@ public class PythonScalarFunctionOperatorTest extends PythonScalarFunctionOperat
 				scalarFunctions,
 				pythonEnvironmentManager,
 				userDefinedFunctionInputType,
-				userDefinedFunctionOutputType) {
+				userDefinedFunctionOutputType,
+				PythonTestUtils.createMockFlinkMetricContainer()) {
 				@Override
 				public TypeSerializer<Row> getInputTypeSerializer() {
 					return (RowSerializer) PythonTypeUtils.toFlinkTypeSerializer(getInputType());

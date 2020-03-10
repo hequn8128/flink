@@ -73,6 +73,7 @@ public class BaseRowPythonTableFunctionRunnerTest extends AbstractPythonTableFun
 			pythonFunctionInfo,
 			environmentManager,
 			inputType,
-			outputType);
+			outputType,
+			null);
 	}
 }

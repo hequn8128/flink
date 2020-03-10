@@ -28,6 +28,7 @@ import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.api.Table;
 import org.apache.flink.table.api.java.StreamTableEnvironment;
 import org.apache.flink.table.runtime.utils.JavaStreamTestData;
+import org.apache.flink.table.runtime.utils.JavaUserDefinedScalarFunctions;
 import org.apache.flink.table.runtime.utils.StreamITCase;
 import org.apache.flink.test.util.AbstractTestBase;
 import org.apache.flink.types.Row;
@@ -63,10 +64,12 @@ public class JavaSqlITCase extends AbstractTestBase {
 
 		DataStream<Row> ds = env.fromCollection(data).returns(typeInfo);
 
+		tableEnv.registerFunction("fun", new JavaUserDefinedScalarFunctions.JavaFunc0());
+
 		Table in = tableEnv.fromDataStream(ds, "a,b,c");
 		tableEnv.registerTable("MyTableRow", in);
 
-		String sqlQuery = "SELECT a,c FROM MyTableRow";
+		String sqlQuery = "SELECT a,fun(b), c FROM MyTableRow";
 		Table result = tableEnv.sqlQuery(sqlQuery);
 
 		DataStream<Row> resultSet = tableEnv.toAppendStream(result, Row.class);

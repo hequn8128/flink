@@ -35,6 +35,7 @@ import org.apache.flink.table.runtime.typeutils.BaseRowSerializer;
 import org.apache.flink.table.runtime.typeutils.PythonTypeUtils;
 import org.apache.flink.table.runtime.util.BaseRowHarnessAssertor;
 import org.apache.flink.table.runtime.utils.PassThroughPythonScalarFunctionRunner;
+import org.apache.flink.table.runtime.utils.PythonTestUtils;
 import org.apache.flink.table.types.logical.RowType;
 
 import org.apache.beam.sdk.fn.data.FnDataReceiver;
@@ -122,7 +123,8 @@ public class BaseRowPythonScalarFunctionOperatorTest
 				scalarFunctions,
 				pythonEnvironmentManager,
 				userDefinedFunctionInputType,
-				userDefinedFunctionOutputType) {
+				userDefinedFunctionOutputType,
+				PythonTestUtils.createMockFlinkMetricContainer()) {
 				@Override
 				public TypeSerializer<BaseRow> getInputTypeSerializer() {
 					return (BaseRowSerializer) PythonTypeUtils.toBlinkTypeSerializer(getInputType());

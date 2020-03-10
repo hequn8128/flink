@@ -20,6 +20,8 @@ package org.apache.flink.table.runtime.utils;
 
 import org.apache.flink.api.common.typeinfo.BasicTypeInfo;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
+import org.apache.flink.metrics.MetricGroup;
+import org.apache.flink.table.functions.FunctionContext;
 import org.apache.flink.table.functions.ScalarFunction;
 import org.apache.flink.table.functions.python.PythonEnv;
 import org.apache.flink.table.functions.python.PythonFunction;
@@ -35,7 +37,21 @@ public class JavaUserDefinedScalarFunctions {
 	 * Increment input.
 	 */
 	public static class JavaFunc0 extends ScalarFunction {
+
+		private MetricGroup mg;
+		private FunctionContext globalContext;
+
+		@Override
+		public void open(FunctionContext context) throws Exception {
+			super.open(context);
+			globalContext = context;
+		}
+
 		public long eval(Long l) {
+			mg = globalContext.getMetricGroup().addGroup("key", "value");
+			mg.counter("mycounter");
+			String a = mg.getMetricIdentifier("mycounter");
+			mg.getAllVariables();
 			return l + 1;
 		}
 	}

@@ -21,10 +21,125 @@ import functools
 import inspect
 
 from pyflink.java_gateway import get_gateway
+from pyflink.metrics import MetricGroup
 from pyflink.table.types import DataType, _to_java_type
 from pyflink.util import utils
 
 __all__ = ['FunctionContext', 'ScalarFunction', 'TableFunction', 'udf', 'udtf']
+
+
+#
+# class Metric(object):
+#   """Base interface of a metric object."""
+#   pass
+#
+#
+# class Counter(Metric):
+#   """Counter metric interface. Allows a count to be incremented/decremented
+#   during pipeline execution."""
+#   def inc(self, n=1):
+#     raise NotImplementedError
+#
+#   def dec(self, n=1):
+#     self.inc(-n)
+#
+#
+# class Distribution(Metric):
+#   """Distribution Metric interface.
+#
+#   Allows statistics about the distribution of a variable to be collected during
+#   pipeline execution."""
+#   def update(self, value):
+#     raise NotImplementedError
+#
+#
+# class Gauge(Metric):
+#   """Gauge Metric interface.
+#
+#   Allows tracking of the latest value of a variable during pipeline
+#   execution."""
+#   def set(self, value):
+#     raise NotImplementedError
+#
+#
+# class Meter(Metric):
+#   """Meter Metric interface.
+#
+#    Metric for measuring throughput."""
+#   def make_event(self, value=1):
+#     raise NotImplementedError
+#
+#
+# class XMetricGroup(abc.ABC):
+#
+#     @staticmethod
+#     def counter(name):
+#         return Metrics.counter('__DEFAULT_NAMESPACE__', name)
+#
+#     @staticmethod
+#     def counter(name: str) -> Counter:
+#         """
+#         Registers a new `Counter` with Flink.
+#         """
+#         pass
+#
+#     @staticmethod
+#     def gauge(name: str) -> Gauge:
+#         """
+#         Registers a new `Gauge` with Flink.
+#         """
+#         pass
+#
+#     @staticmethod
+#     def distribution(name: str) -> Distribution:
+#         """
+#         Registers a new `Distribution` with Flink.
+#         """
+#         pass
+#
+#     @staticmethod
+#     def meter(name: str, time_span_in_seconds=60) -> Meter:
+#         """
+#         Registers a new `Meter` with Flink.
+#         """
+#         pass
+#
+#     @staticmethod
+#     def add_group(name: str, extra=None) -> MetricGroup:
+#         """
+#         if extra is not none, creates a new key-value MetricGroup pair. The key group
+#         is added to this groups sub-groups, while the value group is added to the key
+#         group's sub-groups. This method returns the value group.
+#
+#         The only difference between calling this method and
+#         `group.add_group(key).add_group(value)` is that get_all_variables()
+#         of the value group return an additional `"<key>"="value"` pair.
+#         """
+#         pass
+#
+#     @staticmethod
+#     def get_scope_components() -> list:
+#         """
+#         Gets the scope as an array of the scope components, for example
+#         `["host-7", "taskmanager-2", "window_word_count", "my-mapper"]`
+#         """
+#         pass
+#
+#     @staticmethod
+#     def get_all_variable() -> map:
+#         """
+#         Returns a map of all variables and their associated value, for example
+#         `{"<host>"="host-7", "<tm_id>"="taskmanager-2"}`
+#         """
+#         pass
+#
+#     @staticmethod
+#     def get_metric_identifier(metric_name: str) -> str:
+#         """
+#         Returns the fully qualified metric name, for example
+#         `host-7.taskmanager-2.window_word_count.my-mapper.metricName`
+#         """
+#         pass
 
 
 class FunctionContext(object):
@@ -33,7 +148,12 @@ class FunctionContext(object):
     user-defined function is executed. The information includes the metric group,
     and global job parameters, etc.
     """
-    pass
+
+    def __init__(self, base_metric_group):
+        self._base_metric_group = base_metric_group
+
+    def get_metric_group(self) -> MetricGroup:
+        return self._base_metric_group
 
 
 class UserDefinedFunction(abc.ABC):

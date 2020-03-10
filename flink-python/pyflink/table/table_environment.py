@@ -839,7 +839,7 @@ class TableEnvironment(object):
                                                          requirements_cache_dir)
 
     @since("1.10.0")
-    def add_python_archive(self, archive_path, target_dir=None):
+    def add_python_archive(self, archive_path: str, target_dir: str = None):
         """
         Adds a python archive file. The file will be extracted to the working directory of
         python UDF worker.

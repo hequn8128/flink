@@ -138,6 +138,7 @@ public class PythonTableFunctionOperator extends AbstractPythonTableFunctionOper
 			tableFunction,
 			pythonEnvironmentManager,
 			userDefinedFunctionInputType,
-			userDefinedFunctionOutputType);
+			userDefinedFunctionOutputType,
+			getFlinkMetricContainer());
 	}
 }

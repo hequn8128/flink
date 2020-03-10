@@ -15,22 +15,3 @@
 #  See the License for the specific language governing permissions and
 # limitations under the License.
 ################################################################################
-
-import sys
-
-# force to register the operations to SDK Harness
-import pyflink.fn_execution.operations # noqa # pylint:  disable=unused-import
-
-# force to register the coders to SDK Harness
-import pyflink.fn_execution.coders # noqa # pylint: disable=unused-import
-
-import apache_beam.runners.worker.sdk_worker_main
-
-import sys
-sys.path.append("/Users/hequn.chq/Downloads/pydevd-pycharm.egg")
-
-import pydevd_pycharm
-pydevd_pycharm.settrace('localhost', port=57137, stdoutToServer=True, stderrToServer=True)
-
-if __name__ == '__main__':
-    apache_beam.runners.worker.sdk_worker_main.main(sys.argv)

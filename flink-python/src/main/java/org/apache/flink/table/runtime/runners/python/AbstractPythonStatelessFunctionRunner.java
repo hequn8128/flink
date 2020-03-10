@@ -24,6 +24,7 @@ import org.apache.flink.fnexecution.v1.FlinkFnApi;
 import org.apache.flink.python.AbstractPythonFunctionRunner;
 import org.apache.flink.python.PythonFunctionRunner;
 import org.apache.flink.python.env.PythonEnvironmentManager;
+import org.apache.flink.python.metric.FlinkMetricContainer;
 import org.apache.flink.table.functions.python.PythonFunctionInfo;
 import org.apache.flink.table.runtime.typeutils.PythonTypeUtils;
 import org.apache.flink.table.types.logical.LogicalType;
@@ -86,8 +87,9 @@ public abstract class AbstractPythonStatelessFunctionRunner<IN> extends Abstract
 		PythonEnvironmentManager environmentManager,
 		RowType inputType,
 		RowType outputType,
-		String functionUrn) {
-		super(taskName, resultReceiver, environmentManager, StateRequestHandler.unsupported());
+		String functionUrn,
+		FlinkMetricContainer flinkMetricContainer) {
+		super(taskName, resultReceiver, environmentManager, StateRequestHandler.unsupported(), flinkMetricContainer);
 		this.functionUrn = functionUrn;
 		this.inputType = Preconditions.checkNotNull(inputType);
 		this.outputType = Preconditions.checkNotNull(outputType);
@@ -169,6 +171,7 @@ public abstract class AbstractPythonStatelessFunctionRunner<IN> extends Abstract
 			}
 			builder.addInputs(inputProto);
 		}
+
 		return builder.build();
 	}
 
@@ -248,4 +251,15 @@ public abstract class AbstractPythonStatelessFunctionRunner<IN> extends Abstract
 	 */
 	@VisibleForTesting
 	public abstract FlinkFnApi.UserDefinedFunctions getUserDefinedFunctionsProto();
+
+	/**
+	 * Gets the proto representation of the base MetricGroup used for all user-defined functions.
+	 */
+	protected FlinkFnApi.MetricGroupInfo getBaseMetricGroupInfo() {
+		if (flinkMetricContainer != null) {
+			return flinkMetricContainer.getBaseMetricGroupInfo();
+		} else {
+			return FlinkFnApi.MetricGroupInfo.newBuilder().build();
+		}
+	}
 }

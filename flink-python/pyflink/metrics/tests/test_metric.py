@@ -16,21 +16,14 @@
 # limitations under the License.
 ################################################################################
 
-import sys
+import unittest
+from pyflink.fn_execution.flink_fn_execution_pb2 import MetricGroupInfo
 
-# force to register the operations to SDK Harness
-import pyflink.fn_execution.operations # noqa # pylint:  disable=unused-import
 
-# force to register the coders to SDK Harness
-import pyflink.fn_execution.coders # noqa # pylint: disable=unused-import
+class MetricTests(unittest.TestCase):
 
-import apache_beam.runners.worker.sdk_worker_main
-
-import sys
-sys.path.append("/Users/hequn.chq/Downloads/pydevd-pycharm.egg")
-
-import pydevd_pycharm
-pydevd_pycharm.settrace('localhost', port=57137, stdoutToServer=True, stderrToServer=True)
-
-if __name__ == '__main__':
-    apache_beam.runners.worker.sdk_worker_main.main(sys.argv)
+    def test_add_group(self):
+        names = ["a", "b"]
+        metric_group_info = MetricGroupInfo(scope_components=names)
+        info_str = metric_group_info.SerializeToString().decode("utf-8")
+        self.assertEqual("\na\nb", info_str)

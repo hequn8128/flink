@@ -24,6 +24,7 @@ import org.apache.flink.fnexecution.v1.FlinkFnApi;
 import org.apache.flink.python.env.ProcessPythonEnvironmentManager;
 import org.apache.flink.python.env.PythonDependencyInfo;
 import org.apache.flink.python.env.PythonEnvironmentManager;
+import org.apache.flink.python.metric.FlinkMetricContainer;
 import org.apache.flink.table.functions.python.PythonFunctionInfo;
 import org.apache.flink.table.runtime.runners.python.scalar.AbstractPythonScalarFunctionRunnerTest;
 import org.apache.flink.table.types.logical.BigIntType;
@@ -96,7 +97,8 @@ public class PythonTableFunctionRunnerTest extends AbstractPythonTableFunctionRu
 			pythonFunctionInfo,
 			environmentManager,
 			inputType,
-			outputType);
+			outputType,
+			null);
 	}
 
 	private AbstractPythonTableFunctionRunner<Row> createUDTFRunner(
@@ -120,7 +122,8 @@ public class PythonTableFunctionRunnerTest extends AbstractPythonTableFunctionRu
 			environmentManager,
 			rowType,
 			rowType,
-			jobBundleFactory);
+			jobBundleFactory,
+			null);
 	}
 
 	private static class PythonTableFunctionRunnerTestHarness extends PythonTableFunctionRunner {
@@ -134,8 +137,9 @@ public class PythonTableFunctionRunnerTest extends AbstractPythonTableFunctionRu
 			PythonEnvironmentManager environmentManager,
 			RowType inputType,
 			RowType outputType,
-			JobBundleFactory jobBundleFactory) {
-			super(taskName, resultReceiver, tableFunction, environmentManager, inputType, outputType);
+			JobBundleFactory jobBundleFactory,
+			FlinkMetricContainer flinkMetricContainer) {
+			super(taskName, resultReceiver, tableFunction, environmentManager, inputType, outputType, flinkMetricContainer);
 			this.jobBundleFactory = jobBundleFactory;
 		}
 

@@ -22,6 +22,7 @@ import org.apache.flink.annotation.Internal;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.python.PythonFunctionRunner;
 import org.apache.flink.python.env.PythonEnvironmentManager;
+import org.apache.flink.python.metric.FlinkMetricContainer;
 import org.apache.flink.table.functions.ScalarFunction;
 import org.apache.flink.table.functions.python.PythonFunctionInfo;
 import org.apache.flink.table.runtime.arrow.ArrowReader;
@@ -101,7 +102,8 @@ public class ArrowPythonScalarFunctionOperator extends AbstractRowPythonScalarFu
 			pythonEnvironmentManager,
 			userDefinedFunctionInputType,
 			userDefinedFunctionOutputType,
-			getPythonConfig().getMaxArrowBatchSize());
+			getPythonConfig().getMaxArrowBatchSize(),
+			new FlinkMetricContainer(getRuntimeContext().getMetricGroup()));
 	}
 
 	@Override
