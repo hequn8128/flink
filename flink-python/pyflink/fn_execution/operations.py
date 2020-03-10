@@ -61,7 +61,8 @@ class StatelessFunctionOperation(Operation):
             super(StatelessFunctionOperation, self).start()
 
     def finish(self):
-        super(StatelessFunctionOperation, self).finish()
+        with self.scoped_process_state:
+            super(StatelessFunctionOperation, self).finish()
 
     def needs_finalization(self):
         return False
@@ -70,8 +71,9 @@ class StatelessFunctionOperation(Operation):
         super(StatelessFunctionOperation, self).reset()
 
     def teardown(self):
-        for user_defined_func in self.user_defined_funcs:
-            user_defined_func.close(None)
+        with self.scoped_process_state:
+            for user_defined_func in self.user_defined_funcs:
+                user_defined_func.close(None)
 
     def progress_metrics(self):
         metrics = super(StatelessFunctionOperation, self).progress_metrics()
@@ -81,6 +83,10 @@ class StatelessFunctionOperation(Operation):
         metrics.processed_elements.measured.output_element_counts[
             str(tag)] = receiver.opcounter.element_counter.value()
         return metrics
+
+    def monitoring_infos(self, transform_id):
+        # only pass user metric to Java
+        return super().user_monitoring_infos(transform_id)
 
     def generate_func(self, udfs):
         pass
@@ -181,9 +187,10 @@ class ScalarFunctionOperation(StatelessFunctionOperation):
         return eval('lambda value: [%s]' % ','.join(scalar_functions), self.variable_dict)
 
     def process(self, o):
-        output_stream = self.consumer.output_stream
-        self._value_coder_impl.encode_to_stream(self.func(o.value), output_stream, True)
-        output_stream.maybe_flush()
+        with self.scoped_process_state:
+            output_stream = self.consumer.output_stream
+            self._value_coder_impl.encode_to_stream(self.func(o.value), output_stream, True)
+            output_stream.maybe_flush()
 
 
 class TableFunctionOperation(StatelessFunctionOperation):
@@ -201,10 +208,11 @@ class TableFunctionOperation(StatelessFunctionOperation):
         return eval('lambda value: %s' % table_function, self.variable_dict)
 
     def process(self, o):
-        output_stream = self.consumer.output_stream
-        for result in self._create_result(o.value):
-            self._value_coder_impl.encode_to_stream(result, output_stream, True)
-        output_stream.maybe_flush()
+        with self.scoped_process_state:
+            output_stream = self.consumer.output_stream
+            for result in self._create_result(o.value):
+                self._value_coder_impl.encode_to_stream(result, output_stream, True)
+            output_stream.maybe_flush()
 
     def _create_result(self, value):
         result = self.func(value)

@@ -26,6 +26,7 @@ import org.apache.flink.python.env.PythonEnvironmentManager;
 import org.apache.flink.python.metric.FlinkMetricContainer;
 import org.apache.flink.util.Preconditions;
 
+import org.apache.beam.model.fnexecution.v1.BeamFnApi;
 import org.apache.beam.model.pipeline.v1.RunnerApi;
 import org.apache.beam.runners.core.construction.PipelineOptionsTranslation;
 import org.apache.beam.runners.core.construction.graph.ExecutableStage;
@@ -154,7 +155,29 @@ public abstract class AbstractPythonFunctionRunner<IN> implements PythonFunction
 
 		jobBundleFactory = createJobBundleFactory(pipelineOptions);
 		stageBundleFactory = createStageBundleFactory();
-		progressHandler = BundleProgressHandler.ignored();
+		progressHandler = getProgressHandler(flinkMetricContainer);
+	}
+
+	/**
+	 * Ignore bundle progress if flinkMetricContainer is null. The flinkMetricContainer will be set
+	 * to null if metric is configured to be turned off.
+	 */
+	private BundleProgressHandler getProgressHandler(FlinkMetricContainer flinkMetricContainer) {
+		if (flinkMetricContainer == null) {
+			return BundleProgressHandler.ignored();
+		} else {
+			return new BundleProgressHandler() {
+				@Override
+				public void onProgress(BeamFnApi.ProcessBundleProgressResponse progress) {
+					flinkMetricContainer.updateMetrics(taskName, progress.getMonitoringInfosList());
+				}
+
+				@Override
+				public void onCompleted(BeamFnApi.ProcessBundleResponse response) {
+					flinkMetricContainer.updateMetrics(taskName, response.getMonitoringInfosList());
+				}
+			};
+		}
 	}
 
 	/**
