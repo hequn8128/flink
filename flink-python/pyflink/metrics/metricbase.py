@@ -232,7 +232,7 @@ class Meter(Metric):
         self._inner_counter = inner_counter
         self._time_span_in_seconds = time_span_in_seconds
 
-    def make_event(self, value=1):
+    def mark_event(self, value=1):
         self._inner_counter.inc(value)
 
     def get_time_span_in_seconds(self):
