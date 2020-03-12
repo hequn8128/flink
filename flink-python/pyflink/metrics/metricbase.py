@@ -17,6 +17,8 @@
 ################################################################################
 import abc
 from apache_beam.metrics.metric import Metrics
+from typing import Callable
+
 from pyflink.fn_execution.flink_fn_execution_pb2 import MetricGroupInfo
 
 
@@ -33,6 +35,7 @@ class MetricGroup(abc.ABC):
         names.extend(metric_group_type)
         if time is not None:
             names.append(str(time))
+        names.extend(str(60))
         # use MetricGroupInfo to pass names and types info from Python to Java
         return MetricGroupInfo(scope_components=names).SerializeToString().decode("utf-8")
 
@@ -47,6 +50,18 @@ class MetricGroup(abc.ABC):
         Registers a new `Gauge` with Flink.
         """
         return Gauge(Metrics.gauge(self._get_namespace(), name))
+
+    def new_gauge(self, name: str, obj: 'NewGauge') -> 'Gauge':
+        """
+        Registers a new `Gauge` with Flink.
+        """
+        pass
+
+    def new_gauge2(self, name: str, obj: Callable[[], int]) -> None:
+        """
+        Registers a new `Gauge` with Flink.
+        """
+        pass
 
     def meter(self, name: str, time_span_in_seconds: int = 60) -> 'Meter':
         """
@@ -109,6 +124,9 @@ class BaseMetricGroup(MetricGroup):
         self._variables = variables
         self._scope_components = scope_components
         self._delimiter = delimiter
+        self._flink_gauge = {}
+        self._flink_gauge2 = {}
+        self._beam_gauge = {}
 
     def _get_metric_group_names_and_types(self) -> ([], []):
         return [], []
@@ -126,12 +144,23 @@ class BaseMetricGroup(MetricGroup):
         ret.update(self._variables)
         return ret
 
+    def new_gauge(self, name: str, obj: 'NewGauge') -> None:
+        self._flink_gauge[name] = obj
+        self._beam_gauge[name] = Metrics.gauge(super(BaseMetricGroup, self)._get_namespace(), name)
+
+    def new_gauge2(self, name: str, obj) -> None:
+        self._flink_gauge2[name] = obj
+        self._beam_gauge[name] = Metrics.gauge(super(BaseMetricGroup, self)._get_namespace(), name)
+
 
 class NormalMetricGroup(MetricGroup):
 
     def __init__(self, parent, name):
         self._parent = parent
         self._name = name
+        self._flink_gauge = {}
+        self._flink_gauge2 = {}
+        self._beam_gauge = {}
 
     def _get_metric_group_names_and_types(self):
         names, types = self._parent._get_metric_group_names_and_types()
@@ -150,6 +179,14 @@ class NormalMetricGroup(MetricGroup):
     def _get_delimiter(self) -> str:
         return self._parent._get_delimiter()
 
+    def new_gauge(self, name: str, obj: 'NewGauge') -> None:
+        self._flink_gauge[name] = obj
+        self._beam_gauge[name] = Metrics.gauge(self._get_namespace(), name)
+
+    def new_gauge2(self, name: str, obj) -> None:
+        self._flink_gauge2[name] = obj
+        self._beam_gauge[name] = Metrics.gauge(super(BaseMetricGroup, self)._get_namespace(), name)
+
 
 class KeyValueMetricGroup(MetricGroup):
 
@@ -157,6 +194,9 @@ class KeyValueMetricGroup(MetricGroup):
         self._parent = parent
         self._key_name = key_name
         self._value_name = value_name
+        self._flink_gauge = {}
+        self._flink_gauge2 = {}
+        self._beam_gauge = {}
 
     def _get_metric_group_names_and_types(self):
         names, types = self._parent._get_metric_group_names_and_types()
@@ -176,6 +216,14 @@ class KeyValueMetricGroup(MetricGroup):
         variables = self._parent.get_all_variables()
         variables[self._key_name] = self._value_name
         return variables
+
+    def new_gauge(self, name: str, obj: 'NewGauge') -> None:
+        self._flink_gauge[name] = obj
+        self._beam_gauge[name] = Metrics.gauge(self._get_namespace(), name)
+
+    def new_gauge2(self, name: str, obj) -> None:
+        self._flink_gauge2[name] = obj
+        self._beam_gauge[name] = Metrics.gauge(super(BaseMetricGroup, self)._get_namespace(), name)
 
 
 class Metric(object):
@@ -208,6 +256,13 @@ class Gauge(Metric):
 
     def set(self, value):
         self._inner_gauge.set(value)
+
+
+class NewGauge(Metric):
+
+    def get_value(self):
+        pass
+
 
 
 class Distribution(Metric):

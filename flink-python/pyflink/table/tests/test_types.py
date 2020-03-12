@@ -125,6 +125,21 @@ class UTCOffsetTimezone(datetime.tzinfo):
 
 class TypesTests(unittest.TestCase):
 
+
+
+    def test_xx(self):
+        class MyClass(object):
+            def get_value(self):
+                pass
+
+        a = 1
+        op = type("MyOptionParser", (MyClass, object), {"get_value": lambda self: a})
+        b = op().get_value()
+        a = 2
+        b = op().get_value()
+        a = 3
+
+
     def test_infer_schema(self):
         from decimal import Decimal
 

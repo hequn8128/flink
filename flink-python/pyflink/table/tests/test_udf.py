@@ -17,6 +17,7 @@
 ################################################################################
 from pyflink.table import DataTypes
 from pyflink.table.udf import ScalarFunction, udf
+from pyflink.metrics.metricbase import NewGauge
 from pyflink.testing import source_sink_utils
 from pyflink.testing.test_case_utils import PyFlinkStreamTableTestCase, \
     PyFlinkBlinkStreamTableTestCase, PyFlinkBlinkBatchTableTestCase, \
@@ -157,15 +158,20 @@ class SubtractOne(ScalarFunction):
         self.counter1 = None
         self.counter2 = None
         self.meter = None
+        self.length1 = 0
+        self.length2 = 0
 
     def open(self, function_context):
         super().open(function_context)
-        print(function_context.get_metric_group().add_group("my_key_group", "my_value_group").get_metric_identifier("xxxxxxxxxx"))
-        self.counter1 = function_context.get_metric_group().add_group("my_group").counter("my_counter1")
-        self.counter2 = function_context.get_metric_group().add_group("my_key_group", "my_value_group").meter("my_counter2")
+
+        self.gauge = function_context.get_metric_group().gauge("xxx")
+
+        function_context.get_metric_group().new_gauge2("gauge_name3", lambda : self.length2)
 
     def eval(self, i):
-        self.counter1.inc(3)
+        self.length1 = i
+        self.length2 = i * 2
+        self.gauge.set(i)
         return i - 1
 
 

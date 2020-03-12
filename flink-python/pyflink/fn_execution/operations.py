@@ -48,10 +48,9 @@ class StatelessFunctionOperation(Operation):
         self.func = self.generate_func(self.spec.serialized_fn.udfs)
         (variables, scope_components, delimiter) = self._parse_metric_group_info(
             self.spec.serialized_fn.base_metric_group_info)
+        self.base_metric_group = BaseMetricGroup(variables, scope_components, delimiter)
         for user_defined_func in self.user_defined_funcs:
-            user_defined_func.open(
-                FunctionContext(
-                    BaseMetricGroup(variables, scope_components, delimiter)))
+            user_defined_func.open(FunctionContext(self.base_metric_group))
 
     def setup(self):
         super(StatelessFunctionOperation, self).setup()
@@ -62,6 +61,16 @@ class StatelessFunctionOperation(Operation):
 
     def finish(self):
         with self.scoped_process_state:
+            for name in self.base_metric_group._flink_gauge:
+                flink_gauge = self.base_metric_group._flink_gauge[name]
+                value = flink_gauge.get_value()
+                beam_gauge = self.base_metric_group._beam_gauge[name]
+                beam_gauge.set(value)
+            for name in self.base_metric_group._flink_gauge2:
+                flink_gauge = self.base_metric_group._flink_gauge2[name]
+                value = flink_gauge()
+                beam_gauge = self.base_metric_group._beam_gauge[name]
+                beam_gauge.set(value)
             super(StatelessFunctionOperation, self).finish()
 
     def needs_finalization(self):
