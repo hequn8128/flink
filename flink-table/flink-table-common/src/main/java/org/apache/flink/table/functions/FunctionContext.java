@@ -46,6 +46,10 @@ public class FunctionContext {
 		this.context = context;
 	}
 
+	public int getIndexOfThisSubtask() {
+		return this.context.getIndexOfThisSubtask();
+	}
+
 	/**
 	 * Returns the metric group for this parallel subtask.
 	 *

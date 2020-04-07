@@ -312,10 +312,10 @@ class CalcITCase extends AbstractTestBase {
 
     val t = env.fromCollection(testData).toTable(tEnv).as('a, 'b, 'c)
     val func0 = new Func13("default")
-    val func1 = new Func13("Sunny")
-    val func2 = new Func13("kevin2")
+//    val func1 = new Func13("Sunny")
+//    val func2 = new Func13("kevin2")
 
-    val result = t.select(func0('c), func1('c), func2('c))
+    val result = t.select(func0('c))
 
     result.addSink(new StreamITCase.StringSink[Row])
     env.execute()

@@ -233,7 +233,19 @@ class RichFunc3 extends ScalarFunction {
 }
 
 class Func13(prefix: String) extends ScalarFunction {
+
+  /**
+    * Setup method for user-defined function. It can be used for initialization work.
+    * By default, this method does nothing.
+    */
+  var index = -1
+  override def open(context: FunctionContext): Unit = {
+    super.open(context)
+    index = context.getIndexOfThisSubtask
+  }
+
   def eval(a: String): String = {
+    print("hequn: index: " + index + ", content: " + s"$prefix-$a \n")
     s"$prefix-$a"
   }
 }
