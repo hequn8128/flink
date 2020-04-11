@@ -42,8 +42,8 @@ class UserDefinedFunctionTests(object):
             [DataTypes.BIGINT()])
         self.t_env.register_table_sink("Results", table_sink)
 
-        t = self.t_env.from_elements([(1,), (2,)], ['a'])
-        t.select("add_one(a)") \
+        t = self.t_env.from_elements([(1, 1), (1, 1), (1, 1), (1, 1), (1, 1), (2, 2)], ['a', 'b'])
+        t.select("subtract_one(a)") \
             .insert_into("Results")
         self.t_env.execute("test")
         actual = source_sink_utils.results()
@@ -187,6 +187,11 @@ def add(i, j):
 class SubtractOne(ScalarFunction):
 
     def eval(self, i):
+        f = open("/tmp/hequn", "a")
+        import os
+        pid = os.getpid()
+        f.write(str('\n') + str(pid))
+        f.close()
         return i - 1
 
 

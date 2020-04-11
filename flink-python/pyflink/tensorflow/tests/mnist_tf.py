@@ -85,6 +85,12 @@ def main_fun(args, ctx):
 
     # exporter = tf.estimator.FinalExporter("serving", serving_input_receiver_fn=serving_input_receiver_fn)
 
+    f = open("/tmp/hequn", "a")
+    import os
+    pid = os.getpid()
+    f.write(str("\nbefore train_and_evaluate with pid: ") + str(pid) + ", job_name: " + str(ctx.job_name))
+    f.close()
+
     tf.estimator.train_and_evaluate(
         classifier,
         train_spec=tf.estimator.TrainSpec(input_fn=input_fn),
@@ -92,9 +98,21 @@ def main_fun(args, ctx):
         # eval_spec=tf.estimator.EvalSpec(input_fn=input_fn, exporters=exporter)
     )
 
+    f = open("/tmp/hequn", "a")
+    import os
+    pid = os.getpid()
+    f.write(str("\nafter train_and_evaluate with pid: ") + str(pid) + ", job_name: " + str(ctx.job_name))
+    f.close()
+
     if ctx.job_name == 'chief':
         print("========== exporting saved_model to {}".format(args.export_dir))
         classifier.export_saved_model(args.export_dir, serving_input_receiver_fn)
+
+    f = open("/tmp/hequn", "a")
+    import os
+    pid = os.getpid()
+    f.write(str("\ntensorflow function ends with pid: ") + str(pid) + ", job_name: " + str(ctx.job_name))
+    f.close()
 
 
 if __name__ == "__main__":
@@ -104,6 +122,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--batch_size", help="number of records per batch", type=int, default=64)
     parser.add_argument("--buffer_size", help="size of shuffle buffer", type=int, default=10000)
+    # todo: cluster size configurable
     parser.add_argument("--cluster_size", help="number of nodes in the cluster", type=int, default=2)
     parser.add_argument("--epochs", help="number of epochs", type=int, default=3)
     parser.add_argument("--learning_rate", help="learning rate", type=float, default=1e-4)
@@ -114,5 +133,5 @@ if __name__ == "__main__":
     args = parser.parse_args()
     print("args:", args)
 
-    cluster = TFCluster.run(main_fun, args, args.cluster_size, num_ps=0, tensorboard=args.tensorboard, input_mode=TFCluster.InputMode.TENSORFLOW, log_dir=args.model_dir, master_node='chief', eval_node=True)
-    cluster.shutdown(grace_secs=120)
+    cluster = TFCluster.run(main_fun, args, args.cluster_size, num_ps=0, tensorboard=args.tensorboard, input_mode=TFCluster.InputMode.TENSORFLOW, log_dir=args.model_dir, master_node='chief', eval_node=False)
+    # cluster.shutdown(grace_secs=120)

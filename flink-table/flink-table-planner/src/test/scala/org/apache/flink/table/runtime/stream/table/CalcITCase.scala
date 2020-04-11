@@ -300,6 +300,7 @@ class CalcITCase extends AbstractTestBase {
   @Test
   def testScalarFunctionConstructorWithParams(): Unit = {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
+    env.setParallelism(2)
     val tEnv = StreamTableEnvironment.create(env)
 
     StreamITCase.testResults = mutable.MutableList()
@@ -307,8 +308,6 @@ class CalcITCase extends AbstractTestBase {
     val testData = new mutable.MutableList[(Int, Long, String)]
     testData.+=((1, 1L, "Jack#22"))
     testData.+=((2, 2L, "John#19"))
-    testData.+=((3, 2L, "Anna#44"))
-    testData.+=((4, 3L, "nosharp"))
 
     val t = env.fromCollection(testData).toTable(tEnv).as('a, 'b, 'c)
     val func0 = new Func13("default")

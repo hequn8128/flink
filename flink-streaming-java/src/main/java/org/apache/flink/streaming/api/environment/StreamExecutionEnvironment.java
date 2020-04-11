@@ -28,6 +28,7 @@ import org.apache.flink.api.common.functions.InvalidTypesException;
 import org.apache.flink.api.common.io.FileInputFormat;
 import org.apache.flink.api.common.io.FilePathFilter;
 import org.apache.flink.api.common.io.InputFormat;
+import org.apache.flink.api.common.io.NonParallelInput;
 import org.apache.flink.api.common.restartstrategy.RestartStrategies;
 import org.apache.flink.api.common.time.Time;
 import org.apache.flink.api.common.typeinfo.BasicTypeInfo;
@@ -1603,6 +1604,10 @@ public class StreamExecutionEnvironment {
 		}
 
 		boolean isParallel = function instanceof ParallelSourceFunction;
+		if ((function instanceof InputFormatSourceFunction) &&
+			(((InputFormatSourceFunction) function).getFormat() instanceof NonParallelInput)) {
+			isParallel = false;
+		}
 
 		clean(function);
 

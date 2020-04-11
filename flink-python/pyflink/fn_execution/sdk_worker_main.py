@@ -37,5 +37,16 @@ if 'PIPELINE_OPTIONS' in os.environ:
 else:
     pipeline_options = PipelineOptions.from_dictionary({})
 
+# import sys
+# sys.path.append("/Users/hequn.chq/Downloads/pydevd-pycharm.egg")
+#
+# import pydevd_pycharm
+# pydevd_pycharm.settrace('localhost', port=57137, stdoutToServer=True, stderrToServer=True)
+
 if __name__ == '__main__':
+    f = open("/tmp/hequn", "a")
+    import os
+    pid = os.getpid()
+    f.write(str("\nsdk worker main start with pid: ") + str(pid))
+    f.close()
     apache_beam.runners.worker.sdk_worker_main.main(sys.argv)

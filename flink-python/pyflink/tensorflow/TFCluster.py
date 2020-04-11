@@ -293,33 +293,31 @@ def run(map_fun, tf_args, num_executors, num_ps, tensorboard=False, input_mode=I
         'server_addr': server_addr
     }
 
-    def collect(self, table):
-        from pyflink.java_gateway import get_gateway
-        j_table = table._j_table
-        gateway = get_gateway()
-        row_result = self.t_env._j_tenv\
-            .toDataSet(j_table, gateway.jvm.Class.forName("org.apache.flink.types.Row")).collect()
-        string_result = [java_row.toString() for java_row in row_result]
-        return string_result
-
-    from pyflink.dataset.execution_environment import ExecutionEnvironment
-    from pyflink.table.table_environment import BatchTableEnvironment
-    env = ExecutionEnvironment.get_execution_environment()
-    env.set_parallelism(num_executors)
-    t_env = BatchTableEnvironment.create(env)
-    t = t_env.from_elements([(1,), (2,)], ['a'])
-
     # start TF on a background thread (on Spark driver) to allow for feeding job
     def _start(status):
         try:
+
+            from pyflink.datastream.stream_execution_environment import StreamExecutionEnvironment
+            from pyflink.table.table_environment import StreamTableEnvironment
+            env = StreamExecutionEnvironment.get_execution_environment()
+            env.set_parallelism(num_executors)
+            t_env = StreamTableEnvironment.create(env)
+
             t_env.register_function("tensorflow_wrapper", TFFlinkNode.run(map_fun,
                                                      tf_args,
                                                      cluster_meta,
                                                      tensorboard,
                                                      log_dir,
                                                      queues,
-                                                     background=(input_mode == InputMode.SPARK)))
-            collect(t.select("tensorflow_wrapper()"))
+                                                     background=(input_mode == InputMode.FLINK)))
+
+            from pyflink.java_gateway import get_gateway
+            result_t = t_env.from_elements([(0, 0), (1, 1)], ['a', 'b']).select("tensorflow_wrapper(a)")
+            j_table = result_t._j_table
+            gateway = get_gateway()
+            t_env._j_tenv \
+                .toAppendStream(j_table, gateway.jvm.Class.forName("org.apache.flink.types.Row")).print()
+            env.execute("tensorflow")
             # t.select(TFFlinkNode.run(map_fun,
             #                                          tf_args,
             #                                          cluster_meta,
@@ -328,6 +326,7 @@ def run(map_fun, tf_args, num_executors, num_ps, tensorboard=False, input_mode=I
             #                                          queues,
             #                                          background=(input_mode == InputMode.SPARK)))
         except Exception as e:
+            raise RuntimeError(e)
             logger.error("Exception in TF background thread")
             status['error'] = str(e)
 
@@ -381,5 +380,8 @@ Please ensure that:
     cluster.input_mode = input_mode
     cluster.queues = queues
     cluster.server = server
+
+    # wait for job to finish
+    t.join()
 
     return cluster

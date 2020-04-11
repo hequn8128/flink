@@ -125,6 +125,11 @@ def pip_install_requirements():
 
 
 if __name__ == "__main__":
+    f = open("/tmp/hequn", "a")
+    import os
+    pid = os.getpid()
+    f.write(str("\nboot start with pid: ") + str(pid))
+    f.close()
     # print INFO and higher level messages
     logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 
