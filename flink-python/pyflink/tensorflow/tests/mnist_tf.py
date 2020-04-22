@@ -85,12 +85,6 @@ def main_fun(args, ctx):
 
     # exporter = tf.estimator.FinalExporter("serving", serving_input_receiver_fn=serving_input_receiver_fn)
 
-    f = open("/tmp/hequn", "a")
-    import os
-    pid = os.getpid()
-    f.write(str("\nbefore train_and_evaluate with pid: ") + str(pid) + ", job_name: " + str(ctx.job_name))
-    f.close()
-
     tf.estimator.train_and_evaluate(
         classifier,
         train_spec=tf.estimator.TrainSpec(input_fn=input_fn),
@@ -98,21 +92,9 @@ def main_fun(args, ctx):
         # eval_spec=tf.estimator.EvalSpec(input_fn=input_fn, exporters=exporter)
     )
 
-    f = open("/tmp/hequn", "a")
-    import os
-    pid = os.getpid()
-    f.write(str("\nafter train_and_evaluate with pid: ") + str(pid) + ", job_name: " + str(ctx.job_name))
-    f.close()
-
     if ctx.job_name == 'chief':
         print("========== exporting saved_model to {}".format(args.export_dir))
         classifier.export_saved_model(args.export_dir, serving_input_receiver_fn)
-
-    f = open("/tmp/hequn", "a")
-    import os
-    pid = os.getpid()
-    f.write(str("\ntensorflow function ends with pid: ") + str(pid) + ", job_name: " + str(ctx.job_name))
-    f.close()
 
 
 if __name__ == "__main__":
