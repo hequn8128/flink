@@ -35,6 +35,7 @@ import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
 import org.apache.flink.streaming.api.datastream.SplitStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.co.CoMapFunction;
+import org.apache.flink.streaming.api.functions.co.CoProcessFunction;
 import org.apache.flink.streaming.api.functions.co.RichCoFlatMapFunction;
 import org.apache.flink.streaming.api.functions.sink.SinkFunction;
 import org.apache.flink.streaming.api.graph.StreamEdge;
@@ -86,6 +87,31 @@ public class IterateITCase extends AbstractTestBase {
 		IterativeStream<Integer> iter1 = source.iterate();
 		SingleOutputStreamOperator<Integer> map1 = iter1.map(noOpIntMap);
 		iter1.closeWith(map1).print();
+	}
+
+	@Test
+	public void testBoradcast() throws Exception {
+		StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+
+		DataStream ds1 = env.fromElements(0, 1).setParallelism(1);
+		DataStream ds3 = env.fromElements(2, 3).setParallelism(1);
+
+		DataStream ds2 = env.fromElements("localhost").setParallelism(1).broadcast();
+
+		ds1.connect(ds2).process(new CoProcessFunction<Integer, String, String>() {
+			@Override
+			public void processElement1(Integer value, Context ctx, Collector<String> out) throws Exception {
+				out.collect(String.valueOf(value));
+			}
+
+			@Override
+			public void processElement2(String value, Context ctx, Collector<String> out) throws Exception {
+				out.collect(value);
+			}
+		}).setParallelism(2).print().setParallelism(2);
+
+
+		env.execute();
 	}
 
 	@Test
