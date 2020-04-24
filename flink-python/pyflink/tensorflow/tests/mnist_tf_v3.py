@@ -39,18 +39,18 @@ def main_fun(args, ctx):
             image /= 255
             return image, label
 
-        f = open("/tmp/hequn", "a")
-        import os
-        pid = os.getpid()
-        f.write(str("\ncheck input_context: ") + str(pid) + ", job_name: " + str(ctx.job_name) + ", isnull: " + str(input_context is not None))
-        f.close()
+        # f = open("/tmp/hequn", "a")
+        # import os
+        # pid = os.getpid()
+        # f.write(str("\ncheck input_context: ") + str(pid) + ", job_name: " + str(ctx.job_name) + ", isnull: " + str(input_context is not None))
+        # f.close()
 
         if input_context:
-            f = open("/tmp/hequn", "a")
-            import os
-            pid = os.getpid()
-            f.write(str("\ninput_context with pid: ") + str(pid) + ", job_name: " + str(ctx.job_name) + ", num_input_pipelines: " + str(input_context.num_input_pipelines) + ", input_pipeline_id: " + str(input_context.input_pipeline_id))
-            f.close()
+            # f = open("/tmp/hequn", "a")
+            # import os
+            # pid = os.getpid()
+            # f.write(str("\ninput_context with pid: ") + str(pid) + ", job_name: " + str(ctx.job_name) + ", num_input_pipelines: " + str(input_context.num_input_pipelines) + ", input_pipeline_id: " + str(input_context.input_pipeline_id))
+            # f.close()
 
             mnist_dataset = mnist_dataset.shard(input_context.num_input_pipelines,
                                                 input_context.input_pipeline_id)
@@ -108,9 +108,14 @@ def main_fun(args, ctx):
         print("========== exporting saved_model to {}".format(args.export_dir))
         classifier.export_saved_model(args.export_dir, serving_input_receiver_fn)
 
+    f = open("/tmp/hequn", "a")
+    import os
+    pid = os.getpid()
+    f.write(str("\nexist: ") + str(pid) + ", job_name: " + str(ctx.job_name))
+    f.close()
+
 
 if __name__ == "__main__":
-    from pyflink.tensorflow import TFCluster
     import argparse
 
     parser = argparse.ArgumentParser()
@@ -122,11 +127,35 @@ if __name__ == "__main__":
     parser.add_argument("--learning_rate", help="learning rate", type=float, default=1e-4)
     parser.add_argument("--model_dir", help="path to save checkpoint", default="mnist_model")
     parser.add_argument("--export_dir", help="path to export saved_model", default="mnist_export")
+    parser.add_argument("--images_labels", help="path to MNIST images and labels in parallelized format", default="/Users/hequn.chq/Documents/work/code/TensorFlowOnSpark/data/mnist/csv/train")
     parser.add_argument("--tensorboard", help="launch tensorboard process", action="store_true")
 
     args = parser.parse_args()
     print("args:", args)
 
-    # todo: set eval_node to false to make job exist
-    cluster = TFCluster.run(main_fun, args, args.cluster_size, num_ps=0, tensorboard=args.tensorboard, input_mode=TFCluster.InputMode.TENSORFLOW, log_dir=args.model_dir, master_node='chief', eval_node=True)
-    # cluster.shutdown(grace_secs=120)
+    # pyflink table api job
+    from pyflink.datastream.stream_execution_environment import StreamExecutionEnvironment
+    from pyflink.table.table_environment import StreamTableEnvironment
+    s_exe_env = StreamExecutionEnvironment.get_execution_environment()
+    s_t_env = StreamTableEnvironment.create(s_exe_env)
+
+    ddl = """
+    CREATE TABLE MyUserTable (input_line varchar) WITH (
+        'format.type' = 'csv', 
+        'format.field-delimiter' = ';',
+    )
+    """
+
+    s_t_env.sql_update(ddl)
+    t = s_t_env.from_path("MyUserTable")
+
+    from pyflink.tensorflow import TFClusterV2
+    cluster = TFClusterV2.run(
+        s_t_env,
+        t,
+        main_fun,
+        args.cluster_size,
+        num_ps=0,
+        tf_args=args,
+        master_node='chief',
+        eval_node=False)

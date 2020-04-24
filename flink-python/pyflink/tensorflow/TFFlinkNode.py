@@ -162,11 +162,11 @@ def run(fn, tf_args, cluster_meta, tensorboard, log_dir, queues, background):
     @udf(input_types=[DataTypes.BIGINT()], result_type=DataTypes.BIGINT())
     def _mapfn(iter):
 
-        f = open("/tmp/hequn", "a")
-        import os
-        pid = os.getpid()
-        f.write(str("\n_mapfn start with pid: ") + str(pid))
-        f.close()
+        # f = open("/tmp/hequn", "a")
+        # import os
+        # pid = os.getpid()
+        # f.write(str("\n_mapfn start with pid: ") + str(pid))
+        # f.close()
 
         # Note: consuming the input iterator helps Pyspark re-use this worker,
         executor_id = iter

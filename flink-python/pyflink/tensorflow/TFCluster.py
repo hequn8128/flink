@@ -312,6 +312,7 @@ def run(map_fun, tf_args, num_executors, num_ps, tensorboard=False, input_mode=I
                                                      background=(input_mode == InputMode.FLINK)))
 
             from pyflink.java_gateway import get_gateway
+            # todo: need to genereate data according to the number of workers
             result_t = t_env.from_elements([(0, 0), (1, 1)], ['a', 'b']).select("tensorflow_wrapper(a)")
             j_table = result_t._j_table
             gateway = get_gateway()

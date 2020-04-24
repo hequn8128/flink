@@ -39,18 +39,18 @@ def main_fun(args, ctx):
             image /= 255
             return image, label
 
-        f = open("/tmp/hequn", "a")
-        import os
-        pid = os.getpid()
-        f.write(str("\ncheck input_context: ") + str(pid) + ", job_name: " + str(ctx.job_name) + ", isnull: " + str(input_context is not None))
-        f.close()
+        # f = open("/tmp/hequn", "a")
+        # import os
+        # pid = os.getpid()
+        # f.write(str("\ncheck input_context: ") + str(pid) + ", job_name: " + str(ctx.job_name) + ", isnull: " + str(input_context is not None))
+        # f.close()
 
         if input_context:
-            f = open("/tmp/hequn", "a")
-            import os
-            pid = os.getpid()
-            f.write(str("\ninput_context with pid: ") + str(pid) + ", job_name: " + str(ctx.job_name) + ", num_input_pipelines: " + str(input_context.num_input_pipelines) + ", input_pipeline_id: " + str(input_context.input_pipeline_id))
-            f.close()
+            # f = open("/tmp/hequn", "a")
+            # import os
+            # pid = os.getpid()
+            # f.write(str("\ninput_context with pid: ") + str(pid) + ", job_name: " + str(ctx.job_name) + ", num_input_pipelines: " + str(input_context.num_input_pipelines) + ", input_pipeline_id: " + str(input_context.input_pipeline_id))
+            # f.close()
 
             mnist_dataset = mnist_dataset.shard(input_context.num_input_pipelines,
                                                 input_context.input_pipeline_id)
@@ -108,9 +108,14 @@ def main_fun(args, ctx):
         print("========== exporting saved_model to {}".format(args.export_dir))
         classifier.export_saved_model(args.export_dir, serving_input_receiver_fn)
 
+    f = open("/tmp/hequn", "a")
+    import os
+    pid = os.getpid()
+    f.write(str("\nexist: ") + str(pid) + ", job_name: " + str(ctx.job_name))
+    f.close()
+
 
 if __name__ == "__main__":
-    from pyflink.tensorflow import TFCluster
     import argparse
 
     parser = argparse.ArgumentParser()
@@ -127,6 +132,5 @@ if __name__ == "__main__":
     args = parser.parse_args()
     print("args:", args)
 
-    # todo: set eval_node to false to make job exist
-    cluster = TFCluster.run(main_fun, args, args.cluster_size, num_ps=0, tensorboard=args.tensorboard, input_mode=TFCluster.InputMode.TENSORFLOW, log_dir=args.model_dir, master_node='chief', eval_node=True)
-    # cluster.shutdown(grace_secs=120)
+    from pyflink.tensorflow import TFClusterV2
+    cluster = TFClusterV2.run(main_fun, args.cluster_size, num_ps=0, tf_args=args, master_node='chief', eval_node=False)
