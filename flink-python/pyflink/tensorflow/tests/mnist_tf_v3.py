@@ -20,41 +20,71 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 
 def main_fun(args, ctx):
+    import numpy as np
     import tensorflow_datasets as tfds
     import tensorflow as tf
+    from queue import Empty
 
     BUFFER_SIZE = args.buffer_size
     BATCH_SIZE = args.batch_size
     LEARNING_RATE = args.learning_rate
 
+    def parse(ln):
+        vec = [int(x) for x in ln.split(',')]
+        return (vec[1:], vec[0])
+
+    def record_generator():
+        a = 0
+        while True:
+            try:
+                a += 1
+                # if a % 1000 == 0:
+                # f = open("/tmp/hequn", "a")
+                # import os
+                # pid = os.getpid()
+                # f.write(str("\nrecord_generator: ") + str(pid) + ", job_name: " + str(ctx.job_name) + ", process data cnt: " + str(a))
+                # f.close()
+
+                batch = ctx.q.get(timeout=5)
+                f = open("/tmp/hequn", "a")
+                import os
+                pid = os.getpid()
+                f.write(str("\nrecord_generator: ") + str(pid) + ", job_name: " + str(ctx.job_name) + ", process data cnt: " + str(a))
+                f.close()
+
+                if len(batch) > 0:
+                    example = parse(batch)
+                    image = np.array(example[0]).astype(np.float32) / 255.0
+                    image = np.reshape(image, (28, 28, 1))
+                    label = np.array(example[1]).astype(np.float32)
+                    label = np.reshape(label, (1,))
+                    yield (image, label)
+                else:
+                    return
+            except Empty:
+                f = open("/tmp/hequn", "a")
+                import os
+                pid = os.getpid()
+                f.write(str("\nrecord_generator: ") + str(pid) + ", job_name: " + str(ctx.job_name) + ", no data.")
+                f.close()
+                return
+
     def input_fn(mode, input_context=None):
-        datasets, info = tfds.load(name='mnist',
-                                   with_info=True,
-                                   as_supervised=True)
-        mnist_dataset = (datasets['train'] if mode == tf.estimator.ModeKeys.TRAIN else
-                         datasets['test'])
+        if mode == tf.estimator.ModeKeys.TRAIN:
+            ds = tf.data.Dataset.from_generator(record_generator, (tf.float32, tf.float32), (tf.TensorShape([28, 28, 1]), tf.TensorShape([1])))
+            return ds.batch(BATCH_SIZE)
+        else:
+            raise Exception("I'm evaluating: mode={}, input_context={}".format(mode, input_context))
 
-        def scale(image, label):
-            image = tf.cast(image, tf.float32)
-            image /= 255
-            return image, label
+            def scale(image, label):
+                image = tf.cast(image, tf.float32) / 255.0
+                return image, label
 
-        # f = open("/tmp/hequn", "a")
-        # import os
-        # pid = os.getpid()
-        # f.write(str("\ncheck input_context: ") + str(pid) + ", job_name: " + str(ctx.job_name) + ", isnull: " + str(input_context is not None))
-        # f.close()
-
-        if input_context:
-            # f = open("/tmp/hequn", "a")
-            # import os
-            # pid = os.getpid()
-            # f.write(str("\ninput_context with pid: ") + str(pid) + ", job_name: " + str(ctx.job_name) + ", num_input_pipelines: " + str(input_context.num_input_pipelines) + ", input_pipeline_id: " + str(input_context.input_pipeline_id))
-            # f.close()
-
-            mnist_dataset = mnist_dataset.shard(input_context.num_input_pipelines,
-                                                input_context.input_pipeline_id)
-        return mnist_dataset.repeat(args.epochs).map(scale).shuffle(BUFFER_SIZE).batch(BATCH_SIZE)
+            mnist = tfds.load(name='mnist', with_info=True, as_supervised=True)
+            ds = mnist['test']
+            if input_context:
+                ds = ds.shard(input_context.num_input_pipelines, input_context.input_pipeline_id)
+            return ds.map(scale).batch(BATCH_SIZE)
 
     def serving_input_receiver_fn():
         features = tf.compat.v1.placeholder(dtype=tf.float32, shape=[None, 28, 28, 1], name='features')
@@ -141,8 +171,10 @@ if __name__ == "__main__":
 
     ddl = """
     CREATE TABLE MyUserTable (input_line varchar) WITH (
+        'connector.type' = 'filesystem',
+        'connector.path' = '/tmp/input', 
         'format.type' = 'csv', 
-        'format.field-delimiter' = ';',
+        'format.field-delimiter' = ';'
     )
     """
 

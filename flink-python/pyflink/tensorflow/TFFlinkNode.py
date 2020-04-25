@@ -78,6 +78,7 @@ class TFNodeContext:
         self.defaultFS = defaultFS
         self.working_dir = working_dir
         self.mgr = mgr
+        self.q = multiprocessing.Queue()
 
     def absolute_path(self, path):
         """Convenience function to access ``TFNode.hdfs_path`` directly from this object instance."""

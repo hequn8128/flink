@@ -19,6 +19,9 @@
 package org.apache.flink.ai.tensorflow;
 
 import org.apache.flink.annotation.Internal;
+import org.apache.flink.api.common.state.ListState;
+import org.apache.flink.api.common.state.ListStateDescriptor;
+import org.apache.flink.api.common.typeinfo.TypeHint;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.java.typeutils.RowTypeInfo;
@@ -36,6 +39,7 @@ import org.apache.flink.python.env.PythonEnvironmentManager;
 import org.apache.flink.python.metric.FlinkMetricContainer;
 import org.apache.flink.runtime.memory.MemoryManager;
 import org.apache.flink.runtime.memory.MemoryReservationException;
+import org.apache.flink.runtime.state.StateInitializationContext;
 import org.apache.flink.streaming.api.operators.AbstractStreamOperator;
 import org.apache.flink.streaming.api.operators.BoundedOneInput;
 import org.apache.flink.streaming.api.operators.ChainingStrategy;
@@ -194,6 +198,11 @@ public final class PythonFunctionTwoInputStreamOperator
 	private Integer index;
 	private String serverPort;
 
+	private boolean rightHasArrived;
+
+	private ListStateDescriptor<String> descriptor;
+	private ListState<String> bufferdInputState;
+
 	public PythonFunctionTwoInputStreamOperator(
 		Configuration config,
 		PythonFunctionInfo[] scalarFunctions,
@@ -219,6 +228,7 @@ public final class PythonFunctionTwoInputStreamOperator
 		try {
 			index = null;
 			serverPort = null;
+			rightHasArrived = false;
 			this.bundleStarted = new AtomicBoolean(false);
 
 			// todo
@@ -258,7 +268,7 @@ public final class PythonFunctionTwoInputStreamOperator
 			forwardedInputQueue = new LinkedBlockingQueue<>();
 			userDefinedFunctionResultQueue = new LinkedBlockingQueue<>();
 			// todo: configurable
-			userDefinedFunctionInputType = RowType.of(new IntType(), new VarCharType());
+			userDefinedFunctionInputType = RowType.of(new VarCharType());
 			bais = new ByteArrayInputStreamWithPos();
 			baisWrapper = new DataInputViewStreamWrapper(bais);
 
@@ -281,6 +291,15 @@ public final class PythonFunctionTwoInputStreamOperator
 		} finally {
 			super.open();
 		}
+	}
+
+	@Override
+	public void initializeState(StateInitializationContext context) throws Exception {
+		super.initializeState(context);
+		descriptor = new ListStateDescriptor<>(
+			"buffered-elements",
+			TypeInformation.of(new TypeHint<String>() {}));
+		bufferdInputState = context.getOperatorStateStore().getListState(descriptor);
 	}
 
 	@Override
@@ -319,32 +338,40 @@ public final class PythonFunctionTwoInputStreamOperator
 	}
 
 	public void baseProcessElement(Row row) throws Exception {
+		bufferInput(new Row(0));
 		checkInvokeStartBundle();
 		pythonFunctionRunner.processElement(row);
 		checkInvokeFinishBundleByCount();
+		emitResults();
 	}
 
 	public void processElement1(StreamRecord<Row> element) throws Exception {
-		index = (Integer) element.getValue().getField(0);
-		if (index != null && serverPort != null) {
-			Row row = new Row(2);
-			row.setField(0, index);
-			row.setField(1, serverPort);
-			baseProcessElement(row);
+		if (rightHasArrived) {
+			// process data
+			for (String str: bufferdInputState.get()) {
+				baseProcessElement(Row.of(str));
+			}
+			bufferdInputState.clear();
+			baseProcessElement(element.getValue());
+		} else {
+			// put data into state
+			bufferdInputState.add((String) element.getValue().getField(0));
 		}
+
 //		bufferInput(element.getValue());
 //		baseProcessElement(element);
 //		emitResults();
 	}
 
 	public void processElement2(StreamRecord<Row> element) throws Exception {
+		index = getRuntimeContext().getIndexOfThisSubtask();
 		serverPort = (String) element.getValue().getField(0);
-		if (index != null && serverPort != null) {
-			Row row = new Row(2);
-			row.setField(0, index);
-			row.setField(1, serverPort);
-			baseProcessElement(row);
-		}
+
+		Row row = new Row(1);
+		row.setField(0, index + "," + serverPort);
+		baseProcessElement(row);
+		rightHasArrived = true;
+
 //		bufferInput(element.getValue());
 //		baseProcessElement(element);
 //		emitResults();
@@ -522,6 +549,15 @@ public final class PythonFunctionTwoInputStreamOperator
 	private void checkInvokeFinishBundleByTime() throws Exception {
 		long now = getProcessingTimeService().getCurrentProcessingTime();
 		if (now - lastFinishBundleTime >= maxBundleTimeMills) {
+
+			// todo: check
+			if (rightHasArrived) {
+				for (String str: bufferdInputState.get()) {
+					baseProcessElement(Row.of(str));
+				}
+				bufferdInputState.clear();
+			}
+
 			invokeFinishBundle();
 		}
 	}

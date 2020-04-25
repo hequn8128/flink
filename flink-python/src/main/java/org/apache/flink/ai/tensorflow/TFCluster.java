@@ -17,6 +17,7 @@
 
 package org.apache.flink.ai.tensorflow;
 
+import org.apache.flink.api.common.functions.FilterFunction;
 import org.apache.flink.api.common.functions.MapFunction;
 import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.api.java.typeutils.RowTypeInfo;
@@ -49,31 +50,42 @@ public class TFCluster {
 		PythonScalarFunction serverFunc) throws Exception {
 
 		// init left ds
-		DataStream ds1 = env.addSource(getSourceFunction(2)).setParallelism(1)
-			.map(new MapFunction<Integer, Row>() {
-				@Override
-				public Row map(Integer value) throws Exception {
-					Row row = new Row(1);
-					row.setField(0, value);
-					return row;
-				}
-			});
+		DataStream ds1;
+		if (t == null) {
+			ds1 = env.addSource(getSourceFunction(2)).setParallelism(1)
+				.map(new MapFunction<Integer, Row>() {
+					@Override
+					public Row map(Integer value) throws Exception {
+						Row row = new Row(1);
+						row.setField(0, value);
+						return row;
+					}
+				});
+		} else {
+			ds1 = tableEnv.toAppendStream(t, Row.class);
+		}
 
 		// connect
 		ds1.connect(getBroadcastStream(env, serverFunc))
 			.transform("connect", new RowTypeInfo(Types.INT), getConnectOperator(mapFunc)).setParallelism(2)
-//			.process(getCoProcessFunction(mapFunc)).setParallelism(2)
+			.filter(new FilterFunction<Row>() {
+				@Override
+				public boolean filter(Row value) throws Exception {
+					// never output
+					return false;
+				}
+			})
 			.print().setParallelism(2);
 
 		env.execute();
 	}
 
 	public static PythonFunctionTwoInputStreamOperator getConnectOperator(PythonScalarFunction mapFunc) {
-		PythonFunctionInfo pythonFunctionInfo1 = new PythonFunctionInfo(mapFunc, new Integer[] {0, 1});
+		PythonFunctionInfo pythonFunctionInfo1 = new PythonFunctionInfo(mapFunc, new Integer[] {0});
 		return new PythonFunctionTwoInputStreamOperator(
 				new Configuration(),
 				new PythonFunctionInfo[] {pythonFunctionInfo1},
-				RowType.of(new IntType()),
+				RowType.of(new VarCharType()),
 				RowType.of(new IntType())
 			);
 	}
