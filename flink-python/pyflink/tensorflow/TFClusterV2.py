@@ -321,21 +321,45 @@ def wrap_map_fn(
     return MapFunClass()
 
 
-def run(s_t_env, t, map_fun, num_executors, num_ps, tf_args, master_node=None, eval_node=False):
+def run(
+    s_t_env,
+    t,
+    map_fun,
+    num_executors,
+    num_ps,
+    tf_args,
+    master_node=None,
+    eval_node=False):
+    """
+    Starts the TensorFlowOnFlink cluster and Runs the TensorFlow "main" function
+
+    :param s_t_env: the table environment to which the job is bound.
+    :param t: the input table.
+    :param map_fun: user-supplied TensorFlow "main" function
+    :param num_executors: number of all TensorFlow nodes.
+    :param num_ps: number of TensorFlow PS nodes.
+    :param tf_args: ``argparse`` args, or command-line ``ARGV``.  These will be passed to the ``map_fun``.
+    :param master_node: name of the "master" or "chief" node in the cluster_template, used for `tf.estimator` applications.
+    :param eval_node: run evaluator node for distributed Tensorflow
+    :return: The result of the job execution
+    """
+
     from pyflink.java_gateway import get_gateway
 
     _map_fn = wrap_map_fn(
-            map_fun,
-            num_executors,
-            num_ps,
-            tf_args,
-            master_node=master_node,
-            eval_node=eval_node,
-            background=(t is not None))
-    w_map_fn = UserDefinedScalarFunctionWrapper(_map_fn, [DataTypes.STRING()], DataTypes.INT(), "general", None, None)
+        map_fun,
+        num_executors,
+        num_ps,
+        tf_args,
+        master_node=master_node,
+        eval_node=eval_node,
+        background=(t is not None))
+    w_map_fn = UserDefinedScalarFunctionWrapper(
+        _map_fn, [DataTypes.STRING()], DataTypes.INT(), "general", None, None)
 
     _server_fn = get_server_fn(num_executors)
-    w_server_fn = UserDefinedScalarFunctionWrapper(_server_fn, [DataTypes.INT()], DataTypes.STRING(), "general", None, None)
+    w_server_fn = UserDefinedScalarFunctionWrapper(
+        _server_fn, [DataTypes.INT()], DataTypes.STRING(), "general", None, None)
 
     get_gateway().jvm.TFCluster.run(
         s_t_env._get_j_env(),
