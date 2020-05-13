@@ -42,25 +42,6 @@ class PipelineStage(WithParams):
     def get_params(self):
         return self._params
 
-    def _convert_params_to_java(self, j_pipeline_stage):
-        for param in self._params._paramMap:
-            java_param = self._make_java_param(j_pipeline_stage, param)
-            java_value = self._make_java_value(self._params._paramMap[param])
-            j_pipeline_stage.set(java_param, java_value)
-
-    @staticmethod
-    def _make_java_param(j_pipeline_stage, param):
-        # camel case to snake case
-        import re
-        name = re.sub(r'(?<!^)(?=[A-Z])', '_', param.name).upper()
-        return get_field(j_pipeline_stage, name)
-
-    def _make_java_value(self, obj):
-        """ Convert Python object into Java """
-        if isinstance(obj, list):
-            obj = [self._make_java_value(x) for x in obj]
-        return obj
-
     def to_json(self):
         return self.get_params().to_json()
 
@@ -107,6 +88,25 @@ class JavaTransformer(Transformer):
         """
         self._convert_params_to_java(self._j_obj)
         return Table(self._j_obj.transform(table_env._j_tenv, table._j_table))
+
+    def _convert_params_to_java(self, j_pipeline_stage):
+        for param in self._params._paramMap:
+            java_param = self._make_java_param(j_pipeline_stage, param)
+            java_value = self._make_java_value(self._params._paramMap[param])
+            j_pipeline_stage.set(java_param, java_value)
+
+    @staticmethod
+    def _make_java_param(j_pipeline_stage, param):
+        # camel case to snake case
+        import re
+        name = re.sub(r'(?<!^)(?=[A-Z])', '_', param.name).upper()
+        return get_field(j_pipeline_stage, name)
+
+    def _make_java_value(self, obj):
+        """ Convert Python object into Java """
+        if isinstance(obj, list):
+            obj = [self._make_java_value(x) for x in obj]
+        return obj
 
 
 class Model(Transformer):
