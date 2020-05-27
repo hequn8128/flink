@@ -323,7 +323,7 @@ public class CollectSinkFunction<IN> extends RichSinkFunction<IN> implements Che
 	/**
 	 * The thread that runs the socket server.
 	 */
-	private class ServerThread extends Thread {
+	public class ServerThread extends Thread {
 
 		private final TypeSerializer<IN> serializer;
 		private final ServerSocket serverSocket;

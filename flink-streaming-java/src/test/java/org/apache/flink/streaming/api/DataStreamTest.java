@@ -30,6 +30,7 @@ import org.apache.flink.api.common.typeinfo.BasicArrayTypeInfo;
 import org.apache.flink.api.common.typeinfo.BasicTypeInfo;
 import org.apache.flink.api.common.typeinfo.PrimitiveArrayTypeInfo;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
+import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.api.java.functions.KeySelector;
 import org.apache.flink.api.java.tuple.Tuple1;
 import org.apache.flink.api.java.tuple.Tuple2;
@@ -38,6 +39,14 @@ import org.apache.flink.api.java.typeutils.GenericTypeInfo;
 import org.apache.flink.api.java.typeutils.ObjectArrayTypeInfo;
 import org.apache.flink.api.java.typeutils.TupleTypeInfo;
 import org.apache.flink.api.java.typeutils.TypeExtractor;
+import org.apache.flink.runtime.jobgraph.OperatorID;
+import org.apache.flink.runtime.operators.coordination.CoordinationRequest;
+import org.apache.flink.runtime.operators.coordination.CoordinationRequestHandler;
+import org.apache.flink.runtime.operators.coordination.CoordinationResponse;
+import org.apache.flink.runtime.operators.coordination.OperatorCoordinator;
+import org.apache.flink.runtime.operators.coordination.OperatorEvent;
+import org.apache.flink.runtime.operators.coordination.OperatorEventDispatcher;
+import org.apache.flink.runtime.operators.coordination.OperatorEventGateway;
 import org.apache.flink.streaming.api.collector.selector.OutputSelector;
 import org.apache.flink.streaming.api.datastream.BroadcastConnectedStream;
 import org.apache.flink.streaming.api.datastream.BroadcastStream;
@@ -61,11 +70,20 @@ import org.apache.flink.streaming.api.functions.sink.SinkFunction;
 import org.apache.flink.streaming.api.functions.windowing.AllWindowFunction;
 import org.apache.flink.streaming.api.graph.StreamEdge;
 import org.apache.flink.streaming.api.graph.StreamGraph;
+import org.apache.flink.streaming.api.operators.AbstractStreamOperator;
+import org.apache.flink.streaming.api.operators.AbstractStreamOperatorFactory;
 import org.apache.flink.streaming.api.operators.AbstractUdfStreamOperator;
+import org.apache.flink.streaming.api.operators.ChainingStrategy;
+import org.apache.flink.streaming.api.operators.CoordinatedOperatorFactory;
 import org.apache.flink.streaming.api.operators.KeyedProcessOperator;
 import org.apache.flink.streaming.api.operators.LegacyKeyedProcessOperator;
+import org.apache.flink.streaming.api.operators.OneInputStreamOperator;
+import org.apache.flink.streaming.api.operators.OneInputStreamOperatorFactory;
 import org.apache.flink.streaming.api.operators.ProcessOperator;
 import org.apache.flink.streaming.api.operators.StreamOperator;
+import org.apache.flink.streaming.api.operators.StreamOperatorParameters;
+import org.apache.flink.streaming.api.operators.collect.CollectSinkAddressEvent;
+import org.apache.flink.streaming.api.operators.collect.CollectSinkFunction;
 import org.apache.flink.streaming.api.watermark.Watermark;
 import org.apache.flink.streaming.api.windowing.assigners.GlobalWindows;
 import org.apache.flink.streaming.api.windowing.triggers.CountTrigger;
@@ -79,8 +97,10 @@ import org.apache.flink.streaming.runtime.partitioner.KeyGroupStreamPartitioner;
 import org.apache.flink.streaming.runtime.partitioner.RebalancePartitioner;
 import org.apache.flink.streaming.runtime.partitioner.ShufflePartitioner;
 import org.apache.flink.streaming.runtime.partitioner.StreamPartitioner;
+import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
 import org.apache.flink.util.Collector;
 import org.apache.flink.util.OutputTag;
+import org.apache.flink.util.Preconditions;
 import org.apache.flink.util.TestLogger;
 
 import org.hamcrest.core.StringStartsWith;
@@ -92,13 +112,147 @@ import org.junit.rules.ExpectedException;
 import javax.annotation.Nullable;
 
 import java.lang.reflect.Method;
+import java.net.InetSocketAddress;
 import java.util.List;
+import java.util.Random;
+import java.util.concurrent.CompletableFuture;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+
+class MyOperator extends AbstractStreamOperator<Integer>
+	implements OneInputStreamOperator<Integer, Integer> {
+
+	private transient OperatorEventGateway eventGateway;
+
+	@Override
+	public void open() throws Exception {
+		super.open();
+
+
+		// sending socket server address to coordinator
+		Preconditions.checkNotNull(eventGateway, "Operator event gateway hasn't been set");
+		InetSocketAddress address = new InetSocketAddress("192.168.1.1", new Random().nextInt());
+		LOG.info("Collect sink server established, address = " + address);
+
+		CollectSinkAddressEvent addressEvent = new CollectSinkAddressEvent(address);
+		eventGateway.sendEventToCoordinator(addressEvent);
+	}
+
+	@Override
+	public void processElement(StreamRecord<Integer> element) throws Exception {
+		output.collect(element);
+	}
+
+	public void setOperatorEventGateway(OperatorEventGateway eventGateway) {
+		this.eventGateway = eventGateway;
+	}
+}
+
+class MyOperatorCoordinator implements OperatorCoordinator, CoordinationRequestHandler {
+	@Override
+	public CompletableFuture<CoordinationResponse> handleCoordinationRequest(CoordinationRequest request) {
+
+		return null;
+	}
+
+	@Override
+	public void start() throws Exception {
+
+	}
+
+	@Override
+	public void close() throws Exception {
+
+	}
+
+	@Override
+	public void handleEventFromOperator(int subtask, OperatorEvent event) throws Exception {
+		Preconditions.checkArgument(
+			event instanceof CollectSinkAddressEvent, "Operator event must be a CollectSinkAddressEvent");
+		InetSocketAddress address = ((CollectSinkAddressEvent) event).getAddress();
+		System.out.println(address.toString());
+	}
+
+	@Override
+	public void subtaskFailed(int subtask, @Nullable Throwable reason) {
+
+	}
+
+	@Override
+	public CompletableFuture<byte[]> checkpointCoordinator(long checkpointId) throws Exception {
+		return null;
+	}
+
+	@Override
+	public void checkpointComplete(long checkpointId) {
+
+	}
+
+	@Override
+	public void resetToCheckpoint(byte[] checkpointData) throws Exception {
+
+	}
+
+	public static class Provider implements OperatorCoordinator.Provider {
+
+		private final OperatorID operatorId;
+
+		public Provider(OperatorID operatorId) {
+			this.operatorId = operatorId;
+		}
+
+		@Override
+		public OperatorID getOperatorId() {
+			return operatorId;
+		}
+
+		@Override
+		public OperatorCoordinator create(Context context) {
+			return new MyOperatorCoordinator();
+		}
+	}
+}
+
+class MyOperatorFactory implements OneInputStreamOperatorFactory<Integer, Integer>, CoordinatedOperatorFactory<Integer> {
+
+	MyOperator myOperator;
+
+	public MyOperatorFactory(MyOperator myOperator) {
+		this.myOperator = myOperator;
+	}
+
+	@Override
+	public OperatorCoordinator.Provider getCoordinatorProvider(String operatorName, OperatorID operatorID) {
+		return new MyOperatorCoordinator.Provider(operatorID);
+	}
+
+	@Override
+	public <T extends StreamOperator<Integer>> T createStreamOperator(StreamOperatorParameters<Integer> parameters) {
+		final OperatorEventDispatcher eventDispatcher = parameters.getOperatorEventDispatcher();
+		final OperatorID operatorId = parameters.getStreamConfig().getOperatorID();
+		myOperator.setOperatorEventGateway(eventDispatcher.getOperatorEventGateway(operatorId));
+		return (T) myOperator;
+	}
+
+	@Override
+	public void setChainingStrategy(ChainingStrategy strategy) {
+
+	}
+
+	@Override
+	public ChainingStrategy getChainingStrategy() {
+		return ChainingStrategy.ALWAYS;
+	}
+
+	@Override
+	public Class<? extends StreamOperator> getStreamOperatorClass(ClassLoader classLoader) {
+		return MyOperator.class;
+	}
+}
 
 /**
  * Tests for {@link DataStream}.
@@ -108,6 +262,18 @@ public class DataStreamTest extends TestLogger {
 
 	@Rule
 	public ExpectedException expectedException = ExpectedException.none();
+
+	@Test
+	public void testCoordinate() throws Exception {
+		StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+		env.setParallelism(4);
+
+		env.fromElements(1, 2, 3, 4)
+			.transform("coordinateTestOperator", Types.INT, new MyOperatorFactory(new MyOperator()))
+			.print();
+
+		env.execute();
+	}
 
 	/**
 	 * Tests union functionality. This ensures that self-unions and unions of streams
