@@ -141,6 +141,20 @@ class FlatMapFunctionWrapper(FunctionWrappper):
         return self._func(value)
 
 
+class SinkFunction(object):
+    """
+    The base class for SinkFunctions.
+    """
+
+    def __init__(self, j_sink_func):
+        """
+        Constructor of SinkFunction.
+
+        :param j_sink_func: The java SinkFunction object.
+        """
+        self._j_sink_func = j_sink_func
+
+
 def _get_python_env():
     """
     An util function to get a python user defined function execution environment.

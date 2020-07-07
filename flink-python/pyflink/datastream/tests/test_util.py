@@ -18,10 +18,11 @@
 
 import pickle
 
+from pyflink.datastream.udfs import SinkFunction
 from pyflink.java_gateway import get_gateway
 
 
-class DataStreamTestCollectSink(object):
+class DataStreamTestCollectSink(SinkFunction):
     """
     A util class to collect test DataStream transformation results.
     """
@@ -31,6 +32,8 @@ class DataStreamTestCollectSink(object):
         gateway = get_gateway()
         self._j_data_stream_test_collect_sink = gateway.jvm\
             .org.apache.flink.python.util.DataStreamTestCollectSink(self._is_python_objects)
+        super(DataStreamTestCollectSink, self).\
+            __init__(j_sink_func=self._j_data_stream_test_collect_sink)
 
     def collect(self):
         j_results = self._j_data_stream_test_collect_sink.collectAndClear()

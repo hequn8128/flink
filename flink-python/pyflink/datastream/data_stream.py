@@ -230,6 +230,16 @@ class DataStream(object):
             j_python_data_stream_scalar_function_operator
         ))
 
+    def add_sink(self, sink_func):
+        """
+        Adds the given sink to this DataStream. Only streams with sinks added will be executed once
+        the StreamExecutionEnvironment.execute() method is called.
+
+        :param sink_func: The SinkFunction object.
+        :return: The closed DataStream.
+        """
+        return DataStreamSink(self._j_data_stream.addSink(sink_func._j_sink_func))
+
     def _get_java_python_function_operator(self, func, type_info, func_name, func_type):
         """
         Create a flink operator according to user provided function object, data types,
@@ -284,3 +294,17 @@ class DataStream(object):
             output_type_info.get_java_type_info(),
             j_python_data_stream_function_info)
         return j_python_data_stream_scalar_function_operator, output_type_info
+
+
+class DataStreamSink(object):
+    """
+    A Stream Sink. This is used for emitting elements from a streaming topology.
+    """
+
+    def __init__(self, j_data_stream_sink):
+        """
+        The constructor of DataStreamSink.
+
+        :param j_data_stream_sink: A DataStreamSink java object.
+        """
+        self._j_data_stream_sink = j_data_stream_sink
