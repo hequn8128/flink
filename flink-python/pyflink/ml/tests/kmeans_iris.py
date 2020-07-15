@@ -8,37 +8,38 @@ from pyflink.mllib.clustering import KMeans
 t_env = MLEnvironmentFactory().get_default().get_batch_table_environment()
 MLEnvironmentFactory().get_default().get_execution_environment().set_parallelism(1)
 
-t_env.connect(FileSystem().path('/Users/hequn.chq/Downloads/iris.csv')) \
-    .with_format(OldCsv().field_delimiter(',')
-                 .field('sepal_length', DataTypes.DOUBLE())
-                 .field('sepal_width', DataTypes.DOUBLE())
-                 .field('petal_length', DataTypes.DOUBLE())
-                 .field('petal_width', DataTypes.DOUBLE())
-                 .field('category', DataTypes.STRING())) \
-    .with_schema(Schema()
-                 .field('sepal_length', DataTypes.DOUBLE())
-                 .field('sepal_width', DataTypes.DOUBLE())
-                 .field('petal_length', DataTypes.DOUBLE())
-                 .field('petal_width', DataTypes.DOUBLE())
-                 .field('category', DataTypes.STRING())) \
-    .create_temporary_table('sourceTable')
+t_env.sql_update(
+    """
+    CREATE TABLE sourceTable(
+        sepal_length DOUBLE,
+        sepal_width DOUBLE,
+        petal_length DOUBLE,
+        petal_width DOUBLE,
+        category VARCHAR
+	) WITH (
+	  'connector.type' = 'filesystem',
+	  'connector.path' = '/Users/hequn.chq/Downloads/iris.csv',
+	  'format.type' = 'csv'
+	)
+    """
+)
 
-t_env.connect(FileSystem().path('/Users/hequn.chq/Downloads/kmeans_results.csv')) \
-    .with_format(OldCsv().field_delimiter(',')
-                 .field('sepal_length', DataTypes.DOUBLE())
-                 .field('sepal_width', DataTypes.DOUBLE())
-                 .field('petal_length', DataTypes.DOUBLE())
-                 .field('petal_width', DataTypes.DOUBLE())
-                 .field('category', DataTypes.STRING())
-                 .field('prediction_result', DataTypes.BIGINT())) \
-    .with_schema(Schema()
-                 .field('sepal_length', DataTypes.DOUBLE())
-                 .field('sepal_width', DataTypes.DOUBLE())
-                 .field('petal_length', DataTypes.DOUBLE())
-                 .field('petal_width', DataTypes.DOUBLE())
-                 .field('category', DataTypes.STRING())
-                 .field('prediction_result', DataTypes.BIGINT())) \
-    .create_temporary_table('kmeansResults')
+t_env.sql_update(
+    """
+    CREATE TABLE kmeansResults(
+        sepal_length DOUBLE,
+        sepal_width DOUBLE,
+        petal_length DOUBLE,
+        petal_width DOUBLE,
+        category VARCHAR,
+        prediction_result BIGINT 
+	) WITH (
+	  'connector.type' = 'filesystem',
+	  'connector.path' = '/Users/hequn.chq/Downloads/kmeans_results_1.csv',
+	  'format.type' = 'csv'
+	)
+    """
+)
 
 sourceTable = t_env.from_path('sourceTable')
 
