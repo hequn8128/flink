@@ -21,6 +21,7 @@ package org.apache.flink.ml.pipeline;
 
 import org.apache.flink.ml.api.core.Transformer;
 import org.apache.flink.ml.api.misc.param.Params;
+import org.apache.flink.ml.api.param.WithParams;
 import org.apache.flink.ml.operator.batch.BatchOperator;
 import org.apache.flink.ml.operator.batch.source.TableSourceBatchOp;
 import org.apache.flink.ml.operator.stream.StreamOperator;
@@ -34,7 +35,7 @@ import org.apache.flink.util.Preconditions;
  * The base class for transformer implementations.
  *
  * @param <T> A subclass of {@link TransformerBase}, used by {@link
- *            org.apache.flink.ml.api.misc.param.WithParams}
+ *            WithParams}
  */
 public abstract class TransformerBase<T extends TransformerBase<T>>
 	extends PipelineStageBase<T> implements Transformer<T> {

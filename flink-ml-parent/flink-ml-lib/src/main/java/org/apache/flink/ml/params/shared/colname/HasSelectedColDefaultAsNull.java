@@ -19,9 +19,9 @@
 
 package org.apache.flink.ml.params.shared.colname;
 
-import org.apache.flink.ml.api.misc.param.ParamInfo;
-import org.apache.flink.ml.api.misc.param.ParamInfoFactory;
-import org.apache.flink.ml.api.misc.param.WithParams;
+import org.apache.flink.ml.api.param.ParamInfo;
+import org.apache.flink.ml.api.param.ParamInfoFactory;
+import org.apache.flink.ml.api.param.WithParams;
 
 /**
  * An interface for classes with a parameter specifying the name of the table column with null default value.

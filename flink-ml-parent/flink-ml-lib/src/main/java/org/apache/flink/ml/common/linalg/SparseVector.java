@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.TreeMap;
+import java.util.function.BiConsumer;
 
 /**
  * A sparse vector represented by an indices array and a values array.
@@ -590,6 +591,13 @@ public class SparseVector extends Vector {
 				throw new RuntimeException("Iterator out of bound.");
 			}
 			return values[cursor];
+		}
+	}
+
+	public void forEach(BiConsumer<Integer, Double> action) {
+		Objects.requireNonNull(action);
+		for(int i = 0; i < indices.length; i++){
+			action.accept(indices[i], values[i]);
 		}
 	}
 }

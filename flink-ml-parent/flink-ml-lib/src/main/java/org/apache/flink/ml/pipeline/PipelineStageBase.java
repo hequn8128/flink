@@ -20,7 +20,7 @@
 package org.apache.flink.ml.pipeline;
 
 import org.apache.flink.ml.api.misc.param.Params;
-import org.apache.flink.ml.api.misc.param.WithParams;
+import org.apache.flink.ml.api.param.WithParams;
 import org.apache.flink.ml.params.shared.HasMLEnvironmentId;
 import org.apache.flink.table.api.Table;
 import org.apache.flink.table.api.TableEnvironment;
@@ -33,7 +33,7 @@ import org.apache.flink.table.api.internal.TableImpl;
  * A default constructor is needed in order to restore a pipeline stage.
  *
  * @param <S> The class type of the {@link PipelineStageBase} implementation itself, used by {@link
- *            org.apache.flink.ml.api.misc.param.WithParams} and Cloneable.
+ *            WithParams} and Cloneable.
  */
 public abstract class PipelineStageBase<S extends PipelineStageBase<S>>
 	implements WithParams <S>, HasMLEnvironmentId<S>, Cloneable {

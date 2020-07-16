@@ -436,4 +436,31 @@ public class TableUtil {
 	public static String columnsToSqlClause(String[] colNames) {
 		return Joiner.on("`,`").appendTo(new StringBuilder("`"), colNames).append("`").toString();
 	}
+
+	public static Row getRow(Row row, int... keepIdxs){
+		Row res = null;
+		if(null != keepIdxs) {
+			res = new Row(keepIdxs.length);
+			for (int i = 0; i < keepIdxs.length; i++) {
+				res.setField(i, row.getField(keepIdxs[i]));
+			}
+		}
+		return res;
+	}
+
+	/**
+	 * Determine whether it is number type, number type includes double, long, byte, int, float and short.
+	 *
+	 * @param dataType the dataType to determine.
+	 * @return whether it is number type
+	 */
+	public static boolean isNumber(TypeInformation dataType) {
+		return Types.DOUBLE.equals(dataType)
+			|| Types.LONG.equals(dataType)
+			|| Types.BYTE.equals(dataType)
+			|| Types.INT.equals(dataType)
+			|| Types.FLOAT.equals(dataType)
+			|| Types.SHORT.equals(dataType)
+			|| Types.BIG_DEC.equals(dataType);
+	}
 }

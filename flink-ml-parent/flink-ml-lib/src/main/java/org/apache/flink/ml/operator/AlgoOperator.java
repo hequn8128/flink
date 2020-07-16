@@ -21,7 +21,7 @@ package org.apache.flink.ml.operator;
 
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.ml.api.misc.param.Params;
-import org.apache.flink.ml.api.misc.param.WithParams;
+import org.apache.flink.ml.api.param.WithParams;
 import org.apache.flink.ml.params.shared.HasMLEnvironmentId;
 import org.apache.flink.table.api.Table;
 import org.apache.flink.table.api.TableSchema;
@@ -196,4 +196,20 @@ public abstract class AlgoOperator<T extends AlgoOperator<T>>
 		Preconditions.checkNotNull(sideOutputs[index],
 			String.format("The %snd of side-outputs is null. Maybe the operator has not been linked.", index));
 	}
+
+	/**
+	 * Evaluate the "select" query on the AlgoOperator.
+	 *
+	 * @param fields The fields to select.
+	 * @return The evaluation result as a AlgoOperator.
+	 */
+	public abstract AlgoOperator<?> select(String fields);
+
+	/**
+	 * Select some columns from the AlgoOperator.
+	 *
+	 * @param fields The names of the columns to select.
+	 * @return The evaluation result as a AlgoOperator.
+	 */
+	public abstract AlgoOperator<?> select(String[] fields);
 }

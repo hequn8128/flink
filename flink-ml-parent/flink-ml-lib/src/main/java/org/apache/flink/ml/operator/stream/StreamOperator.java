@@ -20,9 +20,15 @@
 package org.apache.flink.ml.operator.stream;
 
 import org.apache.flink.ml.api.misc.param.Params;
+import org.apache.flink.ml.common.sql.StreamSqlOperators;
+import org.apache.flink.ml.common.utils.DataStreamConversionUtil;
+import org.apache.flink.ml.common.utils.TableUtil;
 import org.apache.flink.ml.operator.AlgoOperator;
 import org.apache.flink.ml.operator.stream.source.TableSourceStreamOp;
+import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.table.api.Table;
+import org.apache.flink.table.api.TableSchema;
+import org.apache.flink.types.Row;
 
 /**
  * Base class of stream algorithm operators.
@@ -117,5 +123,28 @@ public abstract class StreamOperator<T extends StreamOperator<T>> extends AlgoOp
 	protected static StreamOperator<?> checkAndGetFirst(StreamOperator<?>... inputs) {
 		checkOpSize(1, inputs);
 		return inputs[0];
+	}
+
+	/**
+	 * Get the {@link DataStream} that casted from the output table with the type of {@link Row}.
+	 *
+	 * @return the casted {@link DataStream}
+	 */
+	public DataStream <Row> getDataStream() {
+		return DataStreamConversionUtil.fromTable(getMLEnvironmentId(), getOutput());
+	}
+
+	protected void setOutput(DataStream <Row> dataSet, TableSchema schema) {
+		setOutput(DataStreamConversionUtil.toTable(getMLEnvironmentId(), dataSet, schema));
+	}
+
+	@Override
+	public StreamOperator select(String fields) {
+		return StreamSqlOperators.select(this, fields);
+	}
+
+	@Override
+	public StreamOperator select(String[] fields) {
+		return select(TableUtil.columnsToSqlClause(fields));
 	}
 }
