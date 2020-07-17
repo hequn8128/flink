@@ -19,10 +19,20 @@
 
 package org.apache.flink.ml.operator.batch;
 
+import org.apache.flink.api.java.DataSet;
+import org.apache.flink.api.java.ExecutionEnvironment;
 import org.apache.flink.ml.api.misc.param.Params;
+import org.apache.flink.ml.common.sql.BatchSqlOperators;
+import org.apache.flink.ml.common.utils.DataSetConversionUtil;
+import org.apache.flink.ml.common.utils.TableUtil;
 import org.apache.flink.ml.operator.AlgoOperator;
 import org.apache.flink.ml.operator.batch.source.TableSourceBatchOp;
 import org.apache.flink.table.api.Table;
+import org.apache.flink.table.api.TableSchema;
+import org.apache.flink.types.Row;
+import org.apache.flink.util.Preconditions;
+
+import java.util.function.Function;
 
 /**
  * Base class of batch algorithm operators.
@@ -114,5 +124,60 @@ public abstract class BatchOperator<T extends BatchOperator<T>> extends AlgoOper
 	protected static BatchOperator<?> checkAndGetFirst(BatchOperator<?> ... inputs) {
 		checkOpSize(1, inputs);
 		return inputs[0];
+	}
+
+	/**
+	 * Get the {@link DataSet} that casted from the output table with the type of {@link Row}.
+	 *
+	 * @return the casted {@link DataSet}
+	 */
+	public DataSet <Row> getDataSet() {
+		return DataSetConversionUtil.fromTable(getMLEnvironmentId(), getOutput());
+	}
+
+	protected void setOutput(DataSet <Row> dataSet, TableSchema schema) {
+		setOutput(DataSetConversionUtil.toTable(getMLEnvironmentId(), dataSet, schema));
+	}
+
+	public static ExecutionEnvironment getExecutionEnvironmentFromDataSets(DataSet <?>... dataSets) {
+		return getExecutionEnvironment(DataSet::getExecutionEnvironment, dataSets);
+	}
+
+	private static <T> ExecutionEnvironment getExecutionEnvironment(
+		Function<T, ExecutionEnvironment> getFunction, T[] types) {
+		Preconditions.checkState(types != null && types.length > 0,
+			"The operators must not be empty when get ExecutionEnvironment");
+
+		ExecutionEnvironment env = null;
+
+		for (T type : types) {
+			if (type == null) {
+				continue;
+			}
+
+			ExecutionEnvironment executionEnv = getFunction.apply(type);
+
+			if (env != null && env != executionEnv) {
+				throw new RuntimeException("The operators must be runing in the same ExecutionEnvironment");
+			}
+
+			env = executionEnv;
+		}
+
+		Preconditions.checkNotNull(env,
+			"Could not find the ExecutionEnvironment in the operators. " +
+				"There is a bug. Please contact the developer.");
+
+		return env;
+	}
+
+	@Override
+	public BatchOperator <?> select(String fields) {
+		return BatchSqlOperators.select(this, fields);
+	}
+
+	@Override
+	public BatchOperator <?> select(String[] fields) {
+		return select(TableUtil.columnsToSqlClause(fields));
 	}
 }

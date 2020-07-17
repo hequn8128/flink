@@ -21,6 +21,7 @@ package org.apache.flink.ml.pipeline;
 
 import org.apache.flink.ml.api.core.Estimator;
 import org.apache.flink.ml.api.misc.param.Params;
+import org.apache.flink.ml.api.misc.param.WithParams;
 import org.apache.flink.ml.operator.batch.BatchOperator;
 import org.apache.flink.ml.operator.batch.source.TableSourceBatchOp;
 import org.apache.flink.ml.operator.stream.StreamOperator;
@@ -35,7 +36,7 @@ import org.apache.flink.util.Preconditions;
  * The base class for estimator implementations.
  *
  * @param <E> A subclass of the {@link EstimatorBase}, used by
- *            {@link org.apache.flink.ml.api.misc.param.WithParams}
+ *            {@link WithParams}
  * @param <M> class type of the {@link ModelBase} this Estimator produces.
  */
 public abstract class EstimatorBase<E extends EstimatorBase<E, M>, M extends ModelBase<M>>
