@@ -18,16 +18,15 @@
 from functools import reduce
 from itertools import chain
 
-from apache_beam.runners.worker import operation_specs
 from apache_beam.runners.worker import bundle_processor
+from apache_beam.runners.worker import operation_specs
 from apache_beam.runners.worker.operations import Operation
 from apache_beam.utils.windowed_value import WindowedValue
-from cloudpickle import cloudpickle
 
 from pyflink.fn_execution import flink_fn_execution_pb2, operation_utils
 from pyflink.fn_execution.operation_utils import DATA_STREAM_FUNCTION_URN
-from pyflink.table import FunctionContext
 from pyflink.metrics.metricbase import GenericMetricGroup
+from pyflink.table import FunctionContext
 
 
 class StatelessFunctionOperation(Operation):
@@ -150,12 +149,7 @@ class DataStreamStatelessFunctionOperation(StatelessFunctionOperation):
                                                                    sampler, consumers)
 
     def generate_func(self, udfs):
-        func_type = udfs[0].functionType
-        udf = flink_fn_execution_pb2.UserDefinedDataStreamFunction
-        if func_type == udf.MAP:
-            func = cloudpickle.loads(udfs[0].payload).map
-        elif func_type == udf.FLAT_MAP:
-            func = cloudpickle.loads(udfs[0].payload).flat_map
+        func = operation_utils.extract_data_stream_stateless_funcs(udfs=udfs)
         return lambda it: map(func, it), []
 
 
