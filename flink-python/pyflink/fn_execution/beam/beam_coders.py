@@ -248,13 +248,14 @@ class DataStreamStatelessFlatMapCoder(FastCoder):
     def is_deterministic(self):  # type: () -> bool
         return all(c.is_deterministic() for c in self._field_coder)
 
-    @Coder.register_urn(FLINK_FLAT_MAP_FUNCTION_DATA_STREAM_CODER_URN, flink_fn_execution_pb2.TypeInfo)
+    @Coder.register_urn(FLINK_FLAT_MAP_FUNCTION_DATA_STREAM_CODER_URN,
+                        flink_fn_execution_pb2.TypeInfo)
     def _pickled_from_runner_api_parameter(type_info_proto, unused_components, unused_context):
-        return DataStreamStatelessFlatMapCoder(DataStreamStatelessMapCoder(from_type_info_proto(type_info_proto.field[0].type)))
+        return DataStreamStatelessFlatMapCoder(DataStreamStatelessMapCoder(from_type_info_proto(
+            type_info_proto.field[0].type)))
 
     def to_type_hint(self):
         pass
 
     def __repr__(self):
         return 'DataStreamStatelessFlatMapCoder[%s]' % repr(self._field_coder)
-

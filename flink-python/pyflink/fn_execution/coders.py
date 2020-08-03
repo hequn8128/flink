@@ -17,13 +17,13 @@
 ################################################################################
 
 import os
-from abc import ABC, abstractmethod
+from abc import ABC
 
 import pytz
 
 from pyflink.fn_execution import flink_fn_execution_pb2
-
 from pyflink.fn_execution.beam import beam_coder_impl_slow as coder_impl_slow
+
 try:
     from pyflink.fn_execution import coder_impl_fast as coder_impl
 except:

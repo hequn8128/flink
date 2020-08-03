@@ -84,6 +84,47 @@ class FlatMapFunction(Function):
         pass
 
 
+class KeySelector(Function):
+    """
+    The KeySelector allows to use deterministic objects for operations such as reduce, reduceGroup,
+    join coGroup, etc. If invoked multiple times on the same object, the returned key must be the
+    same. The extractor takes an object an returns the deterministic key for that object.
+    """
+
+    @abc.abstractmethod
+    def get_key(self, value):
+        """
+        User-defined function that deterministically extracts the key from an object.
+
+        :param value: The object to get the key from.
+        :return: The extracted key.
+        """
+        pass
+
+
+class FilterFunction(Function):
+    """
+    A filter function is a predicate applied individually to each record. The predicate decides
+    whether to keep the element, or to discard it.
+    The basic syntax for using a FilterFunction is as follows:
+    :
+         >>> ds = ...;
+         >>> result = ds.filter(new MyFilterFunction())
+    Note that the system assumes that the function does not modify the elemetns on which the
+    predicate is applied. Violating this assumption can lead to incoorect results.
+    """
+
+    @abc.abstractmethod
+    def filter(self, value):
+        """
+        The filter function that evaluates the predicate.
+
+        :param value: The value to be filtered.
+        :return: Tre for values that should be retained, false for values to be filtered out.
+        """
+        pass
+
+
 class FunctionWrappper(object):
     """
     A basic wrapper class for user defined function.
@@ -137,6 +178,31 @@ class FlatMapFunctionWrapper(FunctionWrappper):
 
         :param value: The input value.
         :return: the return value of user defined flat_map function.
+        """
+        return self._func(value)
+
+
+class KeySelectorFunctionWrapper(FunctionWrappper):
+    """
+    A wrapper class for KeySelector. It's used for wrapping up user defined function in a
+    KeySelector when user does not implement a KeySelector but directly pass a function
+    object or a lambda function to key_by() function.
+    """
+
+    def __init__(self, func):
+        """
+        The constructor of MapFunctionWrapper.
+
+        :param func: user defined function object.
+        """
+        super(KeySelectorFunctionWrapper, self).__init__(func)
+
+    def get_key(self, value):
+        """
+        A delegated get_key function to invoke user defined function.
+
+        :param value: The input value.
+        :return: the return value of user defined get_key function.
         """
         return self._func(value)
 
