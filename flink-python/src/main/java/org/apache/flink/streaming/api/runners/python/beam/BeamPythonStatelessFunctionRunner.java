@@ -1,31 +1,7 @@
-/*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+package org.apache.flink.streaming.api.runners.python.beam;
 
-package org.apache.flink.table.runtime.runners.python.beam;
-
-import org.apache.flink.annotation.Internal;
-import org.apache.flink.fnexecution.v1.FlinkFnApi;
 import org.apache.flink.python.env.PythonEnvironmentManager;
 import org.apache.flink.python.metric.FlinkMetricContainer;
-import org.apache.flink.table.runtime.typeutils.PythonTypeUtils;
-import org.apache.flink.table.types.logical.LogicalType;
-import org.apache.flink.table.types.logical.RowType;
-import org.apache.flink.util.Preconditions;
 
 import org.apache.beam.model.pipeline.v1.RunnerApi;
 import org.apache.beam.runners.core.construction.ModelCoders;
@@ -53,8 +29,7 @@ import static org.apache.beam.runners.core.construction.BeamUrns.getUrn;
 /**
  * A {@link BeamPythonFunctionRunner} used to execute Python stateless functions.
  */
-@Internal
-public class BeamPythonStatelessFunctionRunner extends BeamPythonFunctionRunner {
+public abstract class BeamPythonStatelessFunctionRunner  extends BeamPythonFunctionRunner{
 
 	private static final String INPUT_ID = "input";
 	private static final String OUTPUT_ID = "output";
@@ -70,29 +45,15 @@ public class BeamPythonStatelessFunctionRunner extends BeamPythonFunctionRunner 
 	private static final String WINDOW_STRATEGY = "windowing_strategy";
 
 	private final String functionUrn;
-	private final FlinkFnApi.UserDefinedFunctions userDefinedFunctions;
-
-	private final String coderUrn;
-
-	private final RowType inputType;
-	private final RowType outputType;
 
 	public BeamPythonStatelessFunctionRunner(
 		String taskName,
 		PythonEnvironmentManager environmentManager,
-		RowType inputType,
-		RowType outputType,
 		String functionUrn,
-		FlinkFnApi.UserDefinedFunctions userDefinedFunctions,
-		String coderUrn,
 		Map<String, String> jobOptions,
 		FlinkMetricContainer flinkMetricContainer) {
 		super(taskName, environmentManager, StateRequestHandler.unsupported(), jobOptions, flinkMetricContainer);
-		this.functionUrn = Preconditions.checkNotNull(functionUrn);
-		this.coderUrn = Preconditions.checkNotNull(coderUrn);
-		this.userDefinedFunctions = Preconditions.checkNotNull(userDefinedFunctions);
-		this.inputType = Preconditions.checkNotNull(inputType);
-		this.outputType = Preconditions.checkNotNull(outputType);
+		this.functionUrn = functionUrn;
 	}
 
 	@Override
@@ -120,7 +81,7 @@ public class BeamPythonStatelessFunctionRunner extends BeamPythonFunctionRunner 
 							.setUrn(functionUrn)
 							.setPayload(
 								org.apache.beam.vendor.grpc.v1p21p0.com.google.protobuf.ByteString.copyFrom(
-									userDefinedFunctions.toByteArray()))
+									getUserDefinedFunctionsProtoBytes()))
 							.build())
 						.putInputs(MAIN_INPUT_NAME, INPUT_ID)
 						.putOutputs(MAIN_OUTPUT_NAME, OUTPUT_ID)
@@ -170,34 +131,11 @@ public class BeamPythonStatelessFunctionRunner extends BeamPythonFunctionRunner 
 			.build();
 	}
 
-	/**
-	 * Gets the proto representation of the input coder.
-	 */
-	private RunnerApi.Coder getInputCoderProto() {
-		return getRowCoderProto(inputType);
-	}
+	protected  abstract byte[] getUserDefinedFunctionsProtoBytes();
 
-	/**
-	 * Gets the proto representation of the output coder.
-	 */
-	private RunnerApi.Coder getOutputCoderProto() {
-		return getRowCoderProto(outputType);
-	}
+	protected abstract RunnerApi.Coder getInputCoderProto();
 
-	private RunnerApi.Coder getRowCoderProto(RowType rowType) {
-		return RunnerApi.Coder.newBuilder()
-			.setSpec(
-				RunnerApi.FunctionSpec.newBuilder()
-					.setUrn(coderUrn)
-					.setPayload(org.apache.beam.vendor.grpc.v1p21p0.com.google.protobuf.ByteString.copyFrom(
-						toProtoType(rowType).getRowSchema().toByteArray()))
-					.build())
-			.build();
-	}
-
-	private FlinkFnApi.Schema.FieldType toProtoType(LogicalType logicalType) {
-		return logicalType.accept(new PythonTypeUtils.LogicalTypeToProtoTypeConverter());
-	}
+	protected abstract RunnerApi.Coder getOutputCoderProto();
 
 	/**
 	 * Gets the proto representation of the window coder.

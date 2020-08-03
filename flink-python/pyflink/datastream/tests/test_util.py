@@ -33,7 +33,7 @@ class DataStreamTestCollectSink(object):
             .org.apache.flink.python.util.DataStreamTestCollectSink(self._is_python_objects)
 
     def collect(self):
-        j_results = self._j_data_stream_test_collect_sink.collect()
+        j_results = self._j_data_stream_test_collect_sink.collectAndClear()
         results = list(j_results)
         if not self._is_python_objects:
             return results

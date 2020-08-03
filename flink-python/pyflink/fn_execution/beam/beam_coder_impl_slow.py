@@ -18,6 +18,7 @@
 
 import datetime
 import decimal
+import pickle
 import struct
 from typing import Any
 from typing import Generator
@@ -184,6 +185,68 @@ class ArrayCoderImpl(StreamCoderImpl):
 
     def __repr__(self):
         return 'ArrayCoderImpl[%s]' % repr(self._elem_coder)
+
+
+class PickledBytesCoderImpl(StreamCoderImpl):
+
+    def __init__(self):
+        self.field_coder = BinaryCoderImpl()
+
+    def encode_to_stream(self, value, out_stream, nested):
+        coded_data = pickle.dumps(value)
+        real_coded_data = self.field_coder.encode(coded_data)
+        out_stream.write(real_coded_data)
+
+    def decode_from_stream(self, in_stream, nested):
+        return self._decode_one_value_from_stream(in_stream, nested)
+
+    def _decode_one_value_from_stream(self, in_stream: create_InputStream, nested):
+        real_data = self.field_coder.decode_from_stream(in_stream, nested)
+        value = pickle.loads(real_data)
+        return value
+
+    def __repr__(self) -> str:
+        return 'PickledBytesCoderImpl[%s]' % str(self.field_coder)
+
+
+class DataStreamStatelessMapCoderImpl(StreamCoderImpl):
+
+    def __init__(self, field_coder):
+        self._field_coder = field_coder
+        self.data_out_stream = create_OutputStream()
+
+    def encode_to_stream(self, iter_value, stream,
+                         nested):  # type: (Any, create_OutputStream, bool) -> None
+        data_out_stream = self.data_out_stream
+        for value in iter_value:
+            self._field_coder.encode_to_stream(value, data_out_stream, nested)
+            stream.write_var_int64(data_out_stream.size())
+            stream.write(data_out_stream.get())
+            data_out_stream._clear()
+
+    def decode_from_stream(self, stream, nested):  # type: (create_InputStream, bool) -> Any
+        while stream.size() > 0:
+            stream.read_var_int64()
+            yield self._field_coder.decode_from_stream(stream, nested)
+
+    def __repr__(self):
+        return 'DataStreamStatelessMapCoderImpl[%s]' % repr(self._field_coder)
+
+
+class DataStreamStatelessFlatMapCoderImpl(StreamCoderImpl):
+    def __init__(self, field_coder):
+        self._field_coder = field_coder
+
+    def encode_to_stream(self, iter_value, stream,
+                         nested):  # type: (Any, create_OutputStream, bool) -> None
+        for value in iter_value:
+            self._field_coder.encode_to_stream(value, stream, nested)
+
+    def decode_from_stream(self, stream, nested):
+        return self._field_coder.decode_from_stream(stream, nested)
+
+    def __str__(self) -> str:
+        return 'DataStreamStatelessFlatMapCoderImpl[%s]' % repr(self._field_coder)
 
 
 class MapCoderImpl(StreamCoderImpl):

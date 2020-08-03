@@ -48,7 +48,9 @@ public class DataStreamTestCollectSink<IN> implements SinkFunction<IN> {
 		}
 	}
 
-	public List<Object> collect() {
-		return collectedResult;
+	public List<Object> collectAndClear() {
+		List<Object> listToBeReturned = new ArrayList<>(collectedResult);
+		collectedResult.clear();
+		return listToBeReturned;
 	}
 }

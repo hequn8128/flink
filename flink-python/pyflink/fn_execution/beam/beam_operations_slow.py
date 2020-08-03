@@ -22,8 +22,10 @@ from apache_beam.runners.worker import operation_specs
 from apache_beam.runners.worker import bundle_processor
 from apache_beam.runners.worker.operations import Operation
 from apache_beam.utils.windowed_value import WindowedValue
+from cloudpickle import cloudpickle
 
 from pyflink.fn_execution import flink_fn_execution_pb2, operation_utils
+from pyflink.fn_execution.operation_utils import DATA_STREAM_FUNCTION_URN
 from pyflink.table import FunctionContext
 from pyflink.metrics.metricbase import GenericMetricGroup
 
@@ -140,6 +142,23 @@ class TableFunctionOperation(StatelessFunctionOperation):
         mapper = eval('lambda value: %s' % table_function, variable_dict)
         return lambda it: map(mapper, it), user_defined_funcs
 
+
+class DataStreamStatelessFunctionOperation(StatelessFunctionOperation):
+
+    def __init__(self, name, spec, counter_factory, sampler, consumers):
+        super(DataStreamStatelessFunctionOperation, self).__init__(name, spec, counter_factory,
+                                                                   sampler, consumers)
+
+    def generate_func(self, udfs):
+        func_type = udfs[0].functionType
+        udf = flink_fn_execution_pb2.UserDefinedDataStreamFunction
+        if func_type == udf.MAP:
+            func = cloudpickle.loads(udfs[0].payload).map
+        elif func_type == udf.FLAT_MAP:
+            func = cloudpickle.loads(udfs[0].payload).flat_map
+        return lambda it: map(func, it), []
+
+
 @bundle_processor.BeamTransformFactory.register_urn(
     operation_utils.SCALAR_FUNCTION_URN, flink_fn_execution_pb2.UserDefinedFunctions)
 def create_scalar_function(factory, transform_id, transform_proto, parameter, consumers):
@@ -152,6 +171,13 @@ def create_scalar_function(factory, transform_id, transform_proto, parameter, co
 def create_table_function(factory, transform_id, transform_proto, parameter, consumers):
     return _create_user_defined_function_operation(
         factory, transform_proto, consumers, parameter, TableFunctionOperation)
+
+
+@bundle_processor.BeamTransformFactory.register_urn(
+    DATA_STREAM_FUNCTION_URN, flink_fn_execution_pb2.UserDefinedDataStreamFunctions)
+def create_data_stream_function(factory, transform_id, transform_proto, parameter, consumers):
+    return _create_user_defined_function_operation(
+        factory, transform_proto, consumers, parameter, DataStreamStatelessFunctionOperation)
 
 
 def _create_user_defined_function_operation(factory, transform_proto, consumers, udfs_proto,
