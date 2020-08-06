@@ -37,4 +37,5 @@ Python Table API允许用户使用Python语言开发[Table API]({{ site.baseurl 
 - [PyFlink Table 和 Pandas DataFrame 互转]({{ site.baseurl }}/zh/dev/table/python/conversion_of_pandas.html): 介绍了PyFlink Table和Pandas DataFrame之间如何互转。
 - [依赖管理]({{ site.baseurl }}/zh/dev/table/python/dependency_management.html): 在Python Table API作业中如何使用第三方依赖。
 - [配置]({{ site.baseurl }}/zh/dev/table/python/python_config.html): 描述了Python Table API程序的配置项。
+- [Connectors]({{ site.baseurl }}/dev/table/python/connectors.html): 在Python Table API作业中如何使用Connector。
 - [常见问题]({{ site.baseurl }}/zh/dev/table/python/common_questions.html)
