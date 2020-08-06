@@ -19,7 +19,7 @@ from pyflink.common.typeinfo import Types
 
 from pyflink.datastream import StreamExecutionEnvironment
 from pyflink.datastream.tests.test_util import DataStreamTestCollectSink
-from pyflink.datastream.udfs import KeySelector
+from pyflink.datastream.udfs import KeySelector, ReduceFunction
 from pyflink.datastream.udfs import MapFunction, FlatMapFunction
 from pyflink.testing.test_case_utils import PyFlinkTestCase
 
@@ -28,6 +28,18 @@ class DataStreamTests(PyFlinkTestCase):
 
     def setUp(self) -> None:
         self.env = StreamExecutionEnvironment.get_execution_environment()
+
+    def test_reduce_function_without_data_types(self):
+        test_sink = DataStreamTestCollectSink(False)
+        ds = self.env.from_collection([(1, 'a'), (2, 'a'), (3, 'a'), (4, 'b')],
+                                      type_info=Types.ROW([Types.INT(), Types.STRING()]))
+        ds.key_by(lambda a: a[1]).reduce(lambda a, b: (a[0] + b[0], b[1])).add_sink(test_sink)
+        self.env.execute('reduce_function_test')
+        result = test_sink.collect()
+        expected = ["1,a", "3,a", "6,a", "4,b"]
+        expected.sort()
+        result.sort()
+        self.assertEqual(expected, result)
 
     def test_map_function_without_data_types(self):
         test_sink = DataStreamTestCollectSink(True)

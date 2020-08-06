@@ -36,7 +36,7 @@ class MapFunction(Function):
     applications are parsing elements, converting data types, or projecting out fields. Operations
     that produce multiple result elements from a single input element can be implemented using the
     FlatMapFunction.
-    The basic syntax for using a MapFUnction is as follows:
+    The basic syntax for using a MapFunction is as follows:
     ::
         >>> ds = ...
         >>> new_ds = ds.map(MyMapFunction())
@@ -108,7 +108,7 @@ class FilterFunction(Function):
     whether to keep the element, or to discard it.
     The basic syntax for using a FilterFunction is as follows:
     :
-         >>> ds = ...;
+         >>> ds = ...
          >>> result = ds.filter(new MyFilterFunction())
     Note that the system assumes that the function does not modify the elemetns on which the
     predicate is applied. Violating this assumption can lead to incoorect results.
@@ -121,6 +121,33 @@ class FilterFunction(Function):
 
         :param value: The value to be filtered.
         :return: Tre for values that should be retained, false for values to be filtered out.
+        """
+        pass
+
+
+class ReduceFunction(Function):
+    """
+    Base interface for Reduce functions. Reduce functions combine groups of elements to a single
+    value, by taking always two elements and combining them into one. Reduce functions may be
+    used on entire data sets, or on grouped data sets. In the latter case, each group is reduced
+    individually.
+
+    The basic syntax for using a ReduceFunction is as follows:
+    ::
+        >>> ds = ...
+        >>> new_ds = ds.key_by(lambda x: x[1]).reduce(MyReduceFunction())
+    """
+
+    @abc.abstractmethod
+    def reduce(self, value1, value2):
+        """
+        The core method of ReduceFunction, combining two values into one value of the same type.
+        The reduce function is consecutively applied to all values of a group until only a single
+        value remains.
+
+        :param value1: The input value.
+        :param value2: The input value.
+        :return: the return value of user defined reduce function.
         """
         pass
 
@@ -180,6 +207,31 @@ class FlatMapFunctionWrapper(FunctionWrappper):
         :return: the return value of user defined flat_map function.
         """
         return self._func(value)
+
+
+class ReduceFunctionWrapper(FunctionWrappper):
+    """
+    A wrapper class for ReduceFunction. It's used for wrapping up user defined function in a
+    ReduceFunction when user does not implement a ReduceFunction but directly pass a function
+    object or a lambda function to reduce() function.
+    """
+    def __init__(self, func):
+        """
+        The constructor of ReduceFunctionWrapper.
+
+        :param func: user defined function object.
+        """
+        super(ReduceFunctionWrapper, self).__init__(func)
+
+    def reduce(self, value1, value2):
+        """
+        A delegated reduce function to invoke user defined function.
+
+        :param value1: The input value.
+        :param value2: The input value.
+        :return: the return value of user defined reduce function.
+        """
+        return self._func(value1, value2)
 
 
 class KeySelectorFunctionWrapper(FunctionWrappper):

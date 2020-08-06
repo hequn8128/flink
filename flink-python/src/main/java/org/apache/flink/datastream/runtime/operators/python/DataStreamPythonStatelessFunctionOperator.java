@@ -1,3 +1,21 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.flink.datastream.runtime.operators.python;
 
 import org.apache.flink.api.common.typeinfo.TypeInformation;
@@ -31,22 +49,22 @@ public class DataStreamPythonStatelessFunctionOperator<IN, OUT> extends Abstract
 
 	private static final long serialVersionUID = 1L;
 
-	private static final String DATA_STREAM_STATELESS_PYTHON_FUNCTION_URN = "flink:transform:datastream_stateless_function:v1";
-	private static final String DATA_STREAM_MAP_FUNCTION_CODER_URN = "flink:coder:datastream:map_function:v1";
-	private static final String DATA_STREAM_FLAT_MAP_FUNCTION_CODER_URN = "flink:coder:datastream:flatmap_function:v1";
+	protected static final String DATA_STREAM_STATELESS_PYTHON_FUNCTION_URN = "flink:transform:datastream_stateless_function:v1";
+	protected static final String DATA_STREAM_MAP_FUNCTION_CODER_URN = "flink:coder:datastream:map_function:v1";
+	protected static final String DATA_STREAM_FLAT_MAP_FUNCTION_CODER_URN = "flink:coder:datastream:flatmap_function:v1";
 
 
 	protected final DataStreamPythonFunctionInfo pythonFunctionInfo;
 
-	private final TypeInformation<IN> inputTypeInfo;
+	protected final TypeInformation<IN> inputTypeInfo;
 
-	private final TypeInformation<OUT> outputTypeInfo;
+	protected final TypeInformation<OUT> outputTypeInfo;
 
-	private final Map<String, String> jobOptions;
+	protected final Map<String, String> jobOptions;
 
-	private transient TypeSerializer<IN> inputTypeSerializer;
+	protected transient TypeSerializer<IN> inputTypeSerializer;
 
-	private transient TypeSerializer<OUT> outputTypeSerializer;
+	protected transient TypeSerializer<OUT> outputTypeSerializer;
 
 	protected transient LinkedBlockingQueue<byte[]> userDefinedFunctionResultQueue;
 
@@ -135,7 +153,7 @@ public class DataStreamPythonStatelessFunctionOperator<IN, OUT> extends Abstract
 		emitResults();
 	}
 
-	private FlinkFnApi.UserDefinedDataStreamFunctions getUserDefinedDataStreamFunctionsProto() {
+	protected FlinkFnApi.UserDefinedDataStreamFunctions getUserDefinedDataStreamFunctionsProto() {
 		FlinkFnApi.UserDefinedDataStreamFunctions.Builder builder = FlinkFnApi.UserDefinedDataStreamFunctions.newBuilder();
 		builder.addUdfs(getUserDefinedDataStreamFunctionProto(pythonFunctionInfo));
 		return builder.build();

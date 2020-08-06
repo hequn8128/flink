@@ -21,9 +21,11 @@ from pyflink.common import typeinfo, ExecutionConfig
 from pyflink.common.typeinfo import RowTypeInfo, PickledBytesTypeInfo, Types
 from pyflink.common.typeinfo import TypeInformation
 from pyflink.datastream.udfs import _get_python_env, MapFunctionWrapper, MapFunction, \
-    FlatMapFunction, FlatMapFunctionWrapper, KeySelectorFunctionWrapper, KeySelector
+    FlatMapFunction, FlatMapFunctionWrapper, KeySelectorFunctionWrapper, KeySelector, \
+    ReduceFunction, ReduceFunctionWrapper
 from pyflink.fn_execution import flink_fn_execution_pb2
 from pyflink.java_gateway import get_gateway
+from typing import Union, Callable
 
 
 class DataStream(object):
@@ -196,7 +198,7 @@ class DataStream(object):
                                                     .UserDefinedDataStreamFunction.MAP)
         return DataStream(self._j_data_stream.transform(
             func_name,
-            output_type_info.get_java_type_info(),
+            output_type_info,
             j_python_data_stream_scalar_function_operator
         ))
 
@@ -225,7 +227,7 @@ class DataStream(object):
                                                     .UserDefinedDataStreamFunction.FLAT_MAP)
         return DataStream(self._j_data_stream.transform(
             func_name,
-            output_type_info.get_java_type_info(),
+            output_type_info,
             j_python_data_stream_scalar_function_operator
         ))
 
@@ -285,15 +287,29 @@ class DataStream(object):
         PythonConfigUtil = gateway.jvm.org.apache.flink.python.util.PythonConfigUtil
         j_conf = PythonConfigUtil.getMergedConfig(j_env)
 
-        DataStreamPythonFunctionOperator = gateway.jvm.org.apache.flink.datastream.runtime \
-            .operators.python.DataStreamPythonStatelessFunctionOperator
+        # set max bundle size to 1 to force synchronize process for reduce function.
+        if func_type == flink_fn_execution_pb2.UserDefinedDataStreamFunction.REDUCE:
+            j_conf.setInteger(gateway.jvm.org.apache.flink.python.PythonOptions.MAX_BUNDLE_SIZE, 1)
+            DataStreamPythonReduceFunctionOperator = gateway.jvm.org.apache.flink.datastream.runtime \
+                .operators.python.DataStreamPythonReduceFunctionOperator
 
-        j_python_data_stream_scalar_function_operator = DataStreamPythonFunctionOperator(
-            j_conf,
-            j_input_types,
-            output_type_info.get_java_type_info(),
-            j_python_data_stream_function_info)
-        return j_python_data_stream_scalar_function_operator, output_type_info
+            j_output_type_info = j_input_types.getTypeAt(1)
+            j_python_data_stream_function_operator = DataStreamPythonReduceFunctionOperator(
+                j_conf,
+                j_input_types,
+                j_output_type_info,
+                j_python_data_stream_function_info)
+            return j_python_data_stream_function_operator, j_output_type_info
+        else:
+            DataStreamPythonFunctionOperator = gateway.jvm.org.apache.flink.datastream.runtime \
+                .operators.python.DataStreamPythonStatelessFunctionOperator
+            j_python_data_stream_function_operator = DataStreamPythonFunctionOperator(
+                j_conf,
+                j_input_types,
+                output_type_info.get_java_type_info(),
+                j_python_data_stream_function_info)
+
+            return j_python_data_stream_function_operator, output_type_info.get_java_type_info()
 
     def _align_output_type(self):
         """
@@ -506,6 +522,40 @@ class KeyedStream(DataStream):
 
     def flat_map(self, func, type_info=None):
         return self._values().flat_map(func, type_info)
+
+    def reduce(self, func: Union[Callable, ReduceFunction]):
+        """
+        Applies a reduce transformation on the grouped data stream grouped on by the given
+        key position. The `ReduceFunction` will receive input values based on the key value.
+        Only input values with the same key will go to the same reducer.
+
+        Example:
+        ::
+            >>> ds = env.from_collection([(1, 'a'), (2, 'a'), (3, 'a'), (4, 'b'])
+            >>> ds.key_by(lambda x: x[1]).reduce(lambda a, b: a[0] + b[0], b[1])
+
+        :param func: The ReduceFunction that is called for each element of the DataStream.
+        :return: The transformed DataStream.
+        """
+
+        if not isinstance(func, ReduceFunction):
+            if callable(func):
+                func = ReduceFunctionWrapper(func)
+            else:
+                raise TypeError("The input must be a ReduceFunction or a callable function!")
+
+        func_name = "m_reduce_" + str(uuid.uuid1())
+        j_python_data_stream_scalar_function_operator, output_type_info = \
+            self._get_java_python_function_operator(func,
+                                                    None,
+                                                    func_name,
+                                                    flink_fn_execution_pb2
+                                                    .UserDefinedDataStreamFunction.REDUCE)
+        return DataStream(self._j_data_stream.transform(
+            "Keyed Reduce",
+            output_type_info,
+            j_python_data_stream_scalar_function_operator
+        ))
 
     def add_sink(self, sink_func):
         return self._values().add_sink(sink_func)
