@@ -1,7 +1,7 @@
 ---
 title: "Project Configuration"
 nav-parent_id: streaming
-nav-pos: 301
+nav-pos: 302
 ---
 <!--
 Licensed to the Apache Software Foundation (ASF) under one
