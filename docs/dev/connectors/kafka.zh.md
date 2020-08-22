@@ -158,6 +158,12 @@ stream = env
     .print()
 {% endhighlight %}
 </div>
+<div data-lang="python" markdown="1">
+{% highlight python %}
+properties = {'bootstrap.servers': 'localhost:9092', 'group.id': 'test'}
+env.add_source(FlinkKafkaConsumer('topic', SimpleStringSchema(), properties))
+{% endhighlight %}
+</div>
 </div>
 
 ### `DeserializationSchema`
@@ -241,6 +247,20 @@ myConsumer.setStartFromTimestamp(...)  // 从指定的时间开始（毫秒）
 myConsumer.setStartFromGroupOffsets()  // 默认的方法
 
 val stream = env.addSource(myConsumer)
+...
+{% endhighlight %}
+</div>
+<div data-lang="python" markdown="1">
+{% highlight python %}
+env = StreamExecutionEnvironment.get_execution_environment()
+
+my_consumer = FlinkKafkaConsumer(...)
+my_consumer.set_start_from_earliest()       # start from the earliest record possible
+my_consumer.set_start_from_latest()         # start from the latest record
+my_consumer.set_start_from_timestamp()      # start from specified epoch timestamp (milliseconds)
+my_consumer.set_start_from_group_offsets()  # the default behaviour
+
+stream = env.add_source(my_consumer)
 ...
 {% endhighlight %}
 </div>
@@ -458,6 +478,18 @@ myProducer.setWriteTimestampToKafka(true)
 
 stream.addSink(myProducer)
 {% endhighlight %}
+</div>
+<div data-lang="python" markdown="1">
+{% highlight python %}
+stream = ...
+properties = {'bootstrap.servers': 'localhost:9092'}
+my_producer = FlinkKafkaProducer011(
+    "my-topic",                      # 目标 topic
+    SimpleStringSchema(),            # 序列化 schema
+    properties)                      # producer 配置
+
+my_producer.set_write_timestamp_to_kafka(True)
+stream.add_sink(my_producer)
 </div>
 </div>
 

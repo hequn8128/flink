@@ -43,6 +43,53 @@ from pyflink.util.utils import get_j_env_configuration
 
 class TableEnvironmentTest(object):
 
+    def test_xxx(self):
+        env = StreamExecutionEnvironment.get_execution_environment()
+        t_env = StreamTableEnvironment.create(stream_execution_environment=env)
+        t_env.get_config().get_configuration().set_boolean("python.fn-execution.memory.managed", True)
+        # specify connector and format jars
+        t_env.get_config().get_configuration().set_string("pipeline.jars", "file:///my/jar/path/connector.jar;file:///my/jar/path/json.jar")
+
+        source_ddl = """
+                CREATE TABLE source_table(
+                    a VARCHAR,
+                    b INT
+                ) WITH (
+                  'connector.type' = 'kafka',
+                  'connector.version' = 'universal',
+                  'connector.topic' = 'source_topic',
+                  'connector.properties.bootstrap.servers' = 'kafka:9092',
+                  'connector.properties.group.id' = 'test_3',
+                  'connector.startup-mode' = 'latest-offset',
+                  'format.type' = 'json'
+                )
+                """
+
+        sink_ddl = """
+                CREATE TABLE sink_table(
+                    a VARCHAR
+                ) WITH (
+                  'connector.type' = 'kafka',
+                  'connector.version' = 'universal',
+                  'connector.topic' = 'sink_topic',
+                  'connector.properties.bootstrap.servers' = 'kafka:9092',
+                  'format.type' = 'json'
+                )
+                """
+
+        t_env.execute_sql(source_ddl)
+        t_env.execute_sql(sink_ddl)
+
+        # read from Table API connector
+        source_table = t_env.from_path("source_table")
+        # convert the source Table into a DataStream for further processing
+        ds = t_env.to_append_stream(source_table, type_info=Types.ROW([Types.STRING(), Types.INT()]))\
+            .map(lambda record: record[0], output_type=Types.STRING)
+
+        # convert the DataStream into a Table and writes the Table with Table API connector
+        t_env.from_data_stream(ds, ['a']).insert_into("sink_table")
+        t_env.execute()
+
     def test_set_sys_executable_for_local_mode(self):
         jvm = get_gateway().jvm
         actual_executable = get_j_env_configuration(self.t_env) \

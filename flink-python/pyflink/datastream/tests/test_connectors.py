@@ -18,13 +18,13 @@
 
 from pyflink.common import typeinfo
 from pyflink.common.serialization import JsonRowDeserializationSchema, \
-    JsonRowSerializationSchema, SimpleStringEncoder
+    JsonRowSerializationSchema, SimpleStringEncoder, SimpleStringSchema
 from pyflink.common.typeinfo import Types
 from pyflink.datastream import StreamExecutionEnvironment
 from pyflink.datastream.connectors import FlinkKafkaConsumer010, FlinkKafkaProducer010, \
-    FlinkKafkaConsumer011, FlinkKafkaProducer011, FlinkKafkaConsumer, FlinkKafkaProducer, JdbcSink,\
+    FlinkKafkaConsumer011, FlinkKafkaProducer011, FlinkKafkaConsumer, FlinkKafkaProducer, JdbcSink, \
     JdbcConnectionOptions, JdbcExecutionOptions, StreamingFileSink, DefaultRollingPolicy, \
-    OutputFileConfig
+    OutputFileConfig, Semantic
 from pyflink.datastream.tests.test_util import DataStreamTestSinkFunction
 from pyflink.java_gateway import get_gateway
 from pyflink.testing.test_case_utils import PyFlinkTestCase, _load_specific_flink_module_jars, \
@@ -52,6 +52,27 @@ class FlinkKafkaTest(PyFlinkTestCase):
     def test_kafka_connector_universal(self):
         _load_specific_flink_module_jars('/flink-connectors/flink-sql-connector-kafka')
         self.kafka_connector_assertion(FlinkKafkaConsumer, FlinkKafkaProducer)
+
+    def testxxx(self):
+        stream = ...
+        properties = {'bootstrap.servers': 'localhost:9092'}
+        my_producer = FlinkKafkaProducer(
+            "my-topic",                      # target topic
+            SimpleStringSchema(),            # serialization schema
+            properties,                      # producer config
+            semantic=Semantic.EXACTLY_ONCE)  # fault-tolerance
+        stream.add_sink(my_producer)
+
+    def testxxxzh(self):
+        stream = ...
+        properties = {'bootstrap.servers': 'localhost:9092'}
+        my_producer = FlinkKafkaProducer011(
+            "my-topic",                      # target topic
+            SimpleStringSchema(),            # serialization schema
+            properties)                      # producer config
+
+        my_producer.set_write_timestamp_to_kafka(True)
+        stream.add_sink(my_producer)
 
     def kafka_connector_assertion(self, flink_kafka_consumer_clz, flink_kafka_producer_clz):
         source_topic = 'test_source_topic'
@@ -112,6 +133,22 @@ class FlinkJdbcSinkTest(PyFlinkTestCase):
         self._cxt_clz_loader = get_gateway().jvm.Thread.currentThread().getContextClassLoader()
         _load_specific_flink_module_jars('/flink-connectors/flink-connector-jdbc')
 
+
+    def test_yy(self):
+        env = StreamExecutionEnvironment.get_execution_environment()
+        env.from_collection([(1, 'book1', 'tom', 1.11, 1), (2, 'book2', 'harry', 1.45, 1)],
+                            type_info=Types.ROW([Types.INT(), Types.STRING(), Types.STRING, Types.DOUBLE, Types.INT]))\
+            .add_sink(
+                JdbcSink.sink(
+                    "insert into books (id, title, author, price, qty) values (?,?,?,?,?)",
+                    Types.ROW([Types.INT(), Types.STRING(), Types.STRING, Types.DOUBLE, Types.INT]),
+                    JdbcConnectionOptions.JdbcConnectionOptionsBuilder()
+                        .with_driver_name('com.mysql.jdbc.Driver')
+                        .with_url('jdbc:mysql://server-name:server-port/database-name').build()))
+
+        env.execute()
+
+
     def test_jdbc_sink(self):
         ds = self.env.from_collection([('ab', 1), ('bdc', 2), ('cfgs', 3), ('deeefg', 4)],
                                       type_info=Types.ROW([Types.STRING(), Types.INT()]))
@@ -159,6 +196,20 @@ class ConnectorTests(PyFlinkTestCase):
     def setUp(self) -> None:
         self.env = StreamExecutionEnvironment.get_execution_environment()
         self.test_sink = DataStreamTestSinkFunction()
+
+    def testxxxxxxxx(self):
+        input_ds = ...
+        sink = StreamingFileSink.for_row_format(self.tempdir, SimpleStringEncoder())\
+            .with_rolling_policy(
+                DefaultRollingPolicy.builder()
+                    .with_rollover_interval(15 * 60 * 1000)
+                    .with_inactivity_interval(5 * 60 * 1000)
+                    .with_max_part_size(1024 * 1024 * 1024).build())\
+            .build()
+
+        input_ds.add_sink(sink)
+
+
 
     def test_stream_file_sink(self):
         self.env.set_parallelism(2)

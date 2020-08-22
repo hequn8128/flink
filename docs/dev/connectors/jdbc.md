@@ -44,6 +44,9 @@ Created JDBC sink provides at-least-once guarantee.
 Effectively exactly-once can be achieved using upsert statements or idempotent updates.
 
 Example usage:
+
+<div class="codetabs" markdown="1">
+<div data-lang="java" markdown="1">
 {% highlight java %}
 StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
 env
@@ -63,5 +66,26 @@ env
                         .build()));
 env.execute();
 {% endhighlight %}
+</div>
+<div data-lang="python" markdown="1">
+{% highlight python %}
+env = StreamExecutionEnvironment.get_execution_environment()
+
+env.add_user_jars(...)  # add jdbc jars
+
+env.from_collection([(1, 'book1', 'tom', 1.11, 1), (2, 'book2', 'harry', 1.45, 1)],
+                    type_info=Types.ROW([Types.INT(), Types.STRING(), Types.STRING, Types.DOUBLE, Types.INT]))\
+    .add_sink(
+        JdbcSink.sink(
+            "insert into books (id, title, author, price, qty) values (?,?,?,?,?)",
+            Types.ROW([Types.INT(), Types.STRING(), Types.STRING, Types.DOUBLE, Types.INT]),
+            JdbcConnectionOptions.JdbcConnectionOptionsBuilder()
+                .with_driver_name('com.mysql.jdbc.Driver')
+                .with_url('jdbc:mysql://server-name:server-port/database-name').build()))
+
+env.execute()
+{% endhighlight %}
+</div>
+</div>
 
 Please refer to the [API documentation]({{ site.javadocs_baseurl }}/api/java/org/apache/flink/connector/jdbc/JdbcSink.html) for more details.

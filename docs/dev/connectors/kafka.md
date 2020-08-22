@@ -105,6 +105,12 @@ val stream = env
     .addSource(new FlinkKafkaConsumer[String]("topic", new SimpleStringSchema(), properties))
 {% endhighlight %}
 </div>
+<div data-lang="python" markdown="1">
+{% highlight python %}
+properties = {'bootstrap.servers': 'localhost:9092', 'group.id': 'test'}
+env.add_source(FlinkKafkaConsumer('topic', SimpleStringSchema(), properties))
+{% endhighlight %}
+</div>
 </div>
 
 ### The `DeserializationSchema`
@@ -190,6 +196,20 @@ myConsumer.setStartFromTimestamp(...)  // start from specified epoch timestamp (
 myConsumer.setStartFromGroupOffsets()  // the default behaviour
 
 val stream = env.addSource(myConsumer)
+...
+{% endhighlight %}
+</div>
+<div data-lang="python" markdown="1">
+{% highlight python %}
+env = StreamExecutionEnvironment.get_execution_environment()
+
+my_consumer = FlinkKafkaConsumer(...)
+my_consumer.set_start_from_earliest()       # start from the earliest record possible
+my_consumer.set_start_from_latest()         # start from the latest record
+my_consumer.set_start_from_timestamp()      # start from specified epoch timestamp (milliseconds)
+my_consumer.set_start_from_group_offsets()  # the default behaviour
+
+stream = env.add_source(my_consumer)
 ...
 {% endhighlight %}
 </div>
@@ -447,6 +467,18 @@ val myProducer = new FlinkKafkaProducer[String](
         FlinkKafkaProducer.Semantic.EXACTLY_ONCE) // fault-tolerance
 
 stream.addSink(myProducer)
+{% endhighlight %}
+</div>
+<div data-lang="python" markdown="1">
+{% highlight python %}
+stream = ...
+properties = {'bootstrap.servers': 'localhost:9092'}
+my_producer = FlinkKafkaProducer(
+    "my-topic",                      # target topic
+    SimpleStringSchema(),            # serialization schema
+    properties,                      # producer config
+    semantic=Semantic.EXACTLY_ONCE)  # fault-tolerance
+stream.add_sink(my_producer)
 {% endhighlight %}
 </div>
 </div>
